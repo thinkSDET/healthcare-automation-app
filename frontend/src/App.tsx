@@ -14,6 +14,7 @@ import ResetPassword from "./pages/ResetPassword";
 import ChangePassword from "./pages/ChangePassword";
 
 import ProtectedRoute from "./pages/ProtectedRoute";
+import PatientDetails from "./pages/PatientDetails";
 
 import "./App.css";
 
@@ -99,6 +100,15 @@ function App() {
           />
 
         </Route>
+
+        <Route
+          path="/patients/:id"
+          element={
+            <PatientDetails />
+
+          }
+        />
+
 
 
         {/* =========================
