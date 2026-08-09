@@ -7,6 +7,7 @@ import doctorRoutes from "./routes/doctor.routes";
 import appointmentRoutes from "./routes/appointment.routes";
 import cors from "cors";
 
+
 const app = express();
 
 const PORT = 4000;

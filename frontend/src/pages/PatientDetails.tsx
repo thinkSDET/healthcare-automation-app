@@ -32,6 +32,15 @@ interface Dependent {
   updatedAt?: string;
 }
 
+interface PatientDocument {
+  id: number;
+  originalName: string;
+  documentType: string;
+  mimeType: string;
+  size: number;
+  createdAt: string;
+}
+
 function PatientDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -55,7 +64,8 @@ function PatientDetails() {
   const [editing, setEditing] =
     useState(false);
 
-    const [deactivating, setDeactivating] = useState(false);
+  const [deactivating, setDeactivating] =
+    useState(false);
 
   const [dependents, setDependents] =
     useState<Dependent[]>([]);
@@ -66,33 +76,47 @@ function PatientDetails() {
   const [dependentLoading, setDependentLoading] =
     useState(false);
 
-  const [dependentForm, setDependentForm] = useState({
-    firstName: "",
-    lastName: "",
-    relationship: "",
-    dateOfBirth: "",
-    gender: "OTHER",
-    phone: "",
-    email: "",
-  });
+  const [dependentForm, setDependentForm] =
+    useState({
+      firstName: "",
+      lastName: "",
+      relationship: "",
+      dateOfBirth: "",
+      gender: "OTHER",
+      phone: "",
+      email: "",
+    });
 
-  const [formData, setFormData] = useState({
-    medicalId: "",
-    firstName: "",
-    lastName: "",
-    dateOfBirth: "",
-    gender: "MALE",
-    email: "",
-    phone: "",
-    address: "",
-    bloodGroup: "",
-    status: "ACTIVE",
-  });
+  const [documents, setDocuments] =
+    useState<PatientDocument[]>([]);
 
+  const [documentLoading, setDocumentLoading] =
+    useState(false);
+
+  const [uploadingDocument, setUploadingDocument] =
+    useState(false);
+
+  const [documentType, setDocumentType] =
+    useState("MEDICAL_RECORD");
+
+  const [formData, setFormData] =
+    useState({
+      medicalId: "",
+      firstName: "",
+      lastName: "",
+      dateOfBirth: "",
+      gender: "MALE",
+      email: "",
+      phone: "",
+      address: "",
+      bloodGroup: "",
+      status: "ACTIVE",
+    });
 
   useEffect(() => {
     fetchPatient();
     fetchDependents();
+    fetchDocuments();
   }, [id]);
 
   const getToken = () => {
@@ -119,9 +143,13 @@ function PatientDetails() {
         }
       );
 
-      const result = await response.json();
+      const result =
+        await response.json();
 
-      if (!response.ok || !result.success) {
+      if (
+        !response.ok ||
+        !result.success
+      ) {
         throw new Error(
           result.message ||
             "Failed to fetch patient"
@@ -147,6 +175,46 @@ function PatientDetails() {
     }
   };
 
+  const fetchDocuments = async () => {
+    try {
+      setDocumentLoading(true);
+
+      const response = await fetch(
+        `http://localhost:4000/api/patients/${id}/documents`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+            "Content-Type":
+              "application/json",
+          },
+        }
+      );
+
+      const result =
+        await response.json();
+
+      if (
+        !response.ok ||
+        !result.success
+      ) {
+        throw new Error(
+          result.message ||
+            "Failed to fetch documents"
+        );
+      }
+
+      setDocuments(result.data);
+    } catch (error) {
+      console.error(
+        "Failed to fetch documents:",
+        error
+      );
+    } finally {
+      setDocumentLoading(false);
+    }
+  };
+
   const fetchDependents = async () => {
     try {
       const response = await fetch(
@@ -155,14 +223,19 @@ function PatientDetails() {
           method: "GET",
           headers: {
             Authorization: `Bearer ${getToken()}`,
-            "Content-Type": "application/json",
+            "Content-Type":
+              "application/json",
           },
         }
       );
 
-      const result = await response.json();
+      const result =
+        await response.json();
 
-      if (response.ok && result.success) {
+      if (
+        response.ok &&
+        result.success
+      ) {
         setDependents(result.data);
       }
     } catch (error) {
@@ -199,15 +272,22 @@ function PatientDetails() {
           method: "POST",
           headers: {
             Authorization: `Bearer ${getToken()}`,
-            "Content-Type": "application/json",
+            "Content-Type":
+              "application/json",
           },
-          body: JSON.stringify(dependentForm),
+          body: JSON.stringify(
+            dependentForm
+          ),
         }
       );
 
-      const result = await response.json();
+      const result =
+        await response.json();
 
-      if (!response.ok || !result.success) {
+      if (
+        !response.ok ||
+        !result.success
+      ) {
         throw new Error(
           result.message ||
             "Failed to add dependent"
@@ -230,6 +310,7 @@ function PatientDetails() {
       });
 
       setShowDependentForm(false);
+
       setSuccess(
         "Dependent added successfully."
       );
@@ -249,12 +330,222 @@ function PatientDetails() {
     }
   };
 
+  const handleDocumentDelete = async (
+    documentId: number
+  ) => {
+    const confirmed =
+      window.confirm(
+        "Are you sure you want to delete this document?"
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setError("");
+      setSuccess("");
+
+      const response = await fetch(
+        `http://localhost:4000/api/patients/${id}/documents/${documentId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+            "Content-Type":
+              "application/json",
+          },
+        }
+      );
+
+      const result =
+        await response.json();
+
+      if (
+        !response.ok ||
+        !result.success
+      ) {
+        throw new Error(
+          result.message ||
+            "Failed to delete document"
+        );
+      }
+
+      setDocuments(
+        (previous) =>
+          previous.filter(
+            (document) =>
+              document.id !==
+              documentId
+          )
+      );
+
+      setSuccess(
+        "Document deleted successfully."
+      );
+    } catch (error) {
+      console.error(
+        "Document delete error:",
+        error
+      );
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to delete document"
+      );
+    }
+  };
+
+  const handleDocumentDownload = async (
+    documentId: number,
+    fileName: string
+  ) => {
+    try {
+      const response = await fetch(
+        `http://localhost:4000/api/patients/${id}/documents/${documentId}/download`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const result =
+          await response.json();
+
+        throw new Error(
+          result.message ||
+            "Failed to download document"
+        );
+      }
+
+      const blob =
+        await response.blob();
+
+      const url =
+        window.URL.createObjectURL(
+          blob
+        );
+
+      const link =
+        document.createElement("a");
+
+      link.href = url;
+      link.download = fileName;
+
+      document.body.appendChild(link);
+
+      link.click();
+
+      link.remove();
+
+      window.URL.revokeObjectURL(
+        url
+      );
+    } catch (error) {
+      console.error(
+        "Document download error:",
+        error
+      );
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to download document"
+      );
+    }
+  };
+
+  const handleDocumentUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file =
+      e.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    try {
+      setUploadingDocument(true);
+      setError("");
+      setSuccess("");
+
+      const formData =
+        new FormData();
+
+      formData.append(
+        "document",
+        file
+      );
+
+      formData.append(
+        "documentType",
+        documentType
+      );
+
+      const response = await fetch(
+        `http://localhost:4000/api/patients/${id}/documents`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+          },
+          body: formData,
+        }
+      );
+
+      const result =
+        await response.json();
+
+      if (
+        !response.ok ||
+        !result.success
+      ) {
+        throw new Error(
+          result.message ||
+            "Failed to upload document"
+        );
+      }
+
+      setDocuments(
+        (previous) => [
+          result.data,
+          ...previous,
+        ]
+      );
+
+      setSuccess(
+        "Document uploaded successfully."
+      );
+
+      e.target.value = "";
+    } catch (error) {
+      console.error(
+        "Document upload error:",
+        error
+      );
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to upload document"
+      );
+    } finally {
+      setUploadingDocument(false);
+    }
+  };
+
   const handleDeleteDependent = async (
     dependentId: number
   ) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to remove this dependent?"
-    );
+    const confirmed =
+      window.confirm(
+        "Are you sure you want to remove this dependent?"
+      );
 
     if (!confirmed) {
       return;
@@ -270,25 +561,32 @@ function PatientDetails() {
           method: "DELETE",
           headers: {
             Authorization: `Bearer ${getToken()}`,
-            "Content-Type": "application/json",
+            "Content-Type":
+              "application/json",
           },
         }
       );
 
-      const result = await response.json();
+      const result =
+        await response.json();
 
-      if (!response.ok || !result.success) {
+      if (
+        !response.ok ||
+        !result.success
+      ) {
         throw new Error(
           result.message ||
             "Failed to remove dependent"
         );
       }
 
-      setDependents((previous) =>
-        previous.filter(
-          (dependent) =>
-            dependent.id !== dependentId
-        )
+      setDependents(
+        (previous) =>
+          previous.filter(
+            (dependent) =>
+              dependent.id !==
+              dependentId
+          )
       );
 
       setSuccess(
@@ -312,18 +610,31 @@ function PatientDetails() {
     data: Patient
   ) => {
     setFormData({
-      medicalId: data.medicalId || "",
-      firstName: data.firstName || "",
-      lastName: data.lastName || "",
-      dateOfBirth: data.dateOfBirth
-        ? data.dateOfBirth.substring(0, 10)
-        : "",
-      gender: data.gender || "MALE",
-      email: data.email || "",
-      phone: data.phone || "",
-      address: data.address || "",
-      bloodGroup: data.bloodGroup || "",
-      status: data.status || "ACTIVE",
+      medicalId:
+        data.medicalId || "",
+      firstName:
+        data.firstName || "",
+      lastName:
+        data.lastName || "",
+      dateOfBirth:
+        data.dateOfBirth
+          ? data.dateOfBirth.substring(
+              0,
+              10
+            )
+          : "",
+      gender:
+        data.gender || "MALE",
+      email:
+        data.email || "",
+      phone:
+        data.phone || "",
+      address:
+        data.address || "",
+      bloodGroup:
+        data.bloodGroup || "",
+      status:
+        data.status || "ACTIVE",
     });
   };
 
@@ -375,7 +686,8 @@ function PatientDetails() {
           method: "PUT",
           headers: {
             Authorization: `Bearer ${getToken()}`,
-            "Content-Type": "application/json",
+            "Content-Type":
+              "application/json",
           },
           body: JSON.stringify({
             medicalId:
@@ -444,66 +756,73 @@ function PatientDetails() {
       setSaving(false);
     }
   };
+
   const handleDeactivate = async () => {
-  if (!patient) {
-    return;
-  }
-
-  const confirmed = window.confirm(
-    `Are you sure you want to deactivate ${patient.firstName} ${patient.lastName}?`
-  );
-
-  if (!confirmed) {
-    return;
-  }
-
-  try {
-    setDeactivating(true);
-    setError("");
-    setSuccess("");
-
-    const response = await fetch(
-      `http://localhost:4000/api/patients/${patient.id}/deactivate`,
-      {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${getToken()}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    const result = await response.json();
-
-    if (!response.ok || !result.success) {
-      throw new Error(
-        result.message ||
-          "Failed to deactivate patient"
-      );
+    if (!patient) {
+      return;
     }
 
-    setPatient(result.data);
+    const confirmed =
+      window.confirm(
+        `Are you sure you want to deactivate ${patient.firstName} ${patient.lastName}?`
+      );
 
-    populateForm(result.data);
+    if (!confirmed) {
+      return;
+    }
 
-    setSuccess(
-      "Patient deactivated successfully."
-    );
-  } catch (error) {
-    console.error(
-      "Failed to deactivate patient:",
-      error
-    );
+    try {
+      setDeactivating(true);
+      setError("");
+      setSuccess("");
 
-    setError(
-      error instanceof Error
-        ? error.message
-        : "Failed to deactivate patient"
-    );
-  } finally {
-    setDeactivating(false);
-  }
-};
+      const response = await fetch(
+        `http://localhost:4000/api/patients/${patient.id}/deactivate`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+            "Content-Type":
+              "application/json",
+          },
+        }
+      );
+
+      const result =
+        await response.json();
+
+      if (
+        !response.ok ||
+        !result.success
+      ) {
+        throw new Error(
+          result.message ||
+            "Failed to deactivate patient"
+        );
+      }
+
+      setPatient(result.data);
+
+      populateForm(result.data);
+
+      setSuccess(
+        "Patient deactivated successfully."
+      );
+    } catch (error) {
+      console.error(
+        "Failed to deactivate patient:",
+        error
+      );
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to deactivate patient"
+      );
+    } finally {
+      setDeactivating(false);
+    }
+  };
 
   const formatDate = (
     date?: string
@@ -515,6 +834,25 @@ function PatientDetails() {
     return new Date(
       date
     ).toLocaleDateString();
+  };
+
+  const formatFileSize = (
+    bytes: number
+  ) => {
+    if (bytes < 1024) {
+      return `${bytes} B`;
+    }
+
+    if (bytes < 1024 * 1024) {
+      return `${(
+        bytes / 1024
+      ).toFixed(1)} KB`;
+    }
+
+    return `${(
+      bytes /
+      (1024 * 1024)
+    ).toFixed(1)} MB`;
   };
 
   if (loading) {
@@ -536,6 +874,7 @@ function PatientDetails() {
       <div className="patients-page">
 
         <header className="patients-header">
+
           <div>
             <h1>
               Patient Details
@@ -555,10 +894,13 @@ function PatientDetails() {
           >
             ← Back to Patients
           </button>
+
         </header>
 
         <main className="patients-content">
+
           <div className="patients-card">
+
             <div
               className="empty-state"
               style={{
@@ -567,7 +909,9 @@ function PatientDetails() {
             >
               {error}
             </div>
+
           </div>
+
         </main>
 
       </div>
@@ -588,6 +932,7 @@ function PatientDetails() {
       <header className="patients-header">
 
         <div>
+
           <h1>
             Patient Details
           </h1>
@@ -596,6 +941,7 @@ function PatientDetails() {
             View and manage patient
             information.
           </p>
+
         </div>
 
         <button
@@ -622,6 +968,7 @@ function PatientDetails() {
             <div className="patient-profile">
 
               <div className="patient-avatar">
+
                 {patient.firstName
                   .charAt(0)
                   .toUpperCase()}
@@ -629,6 +976,7 @@ function PatientDetails() {
                 {patient.lastName
                   .charAt(0)
                   .toUpperCase()}
+
               </div>
 
               <div>
@@ -663,7 +1011,8 @@ function PatientDetails() {
             <div
               className="auth-error"
               style={{
-                margin: "20px 30px 0",
+                margin:
+                  "20px 30px 0",
               }}
             >
               {error}
@@ -674,7 +1023,8 @@ function PatientDetails() {
             <div
               className="auth-success"
               style={{
-                margin: "20px 30px 0",
+                margin:
+                  "20px 30px 0",
               }}
             >
               {success}
@@ -701,6 +1051,7 @@ function PatientDetails() {
                 <div className="patient-edit-grid">
 
                   <div className="form-group">
+
                     <label>
                       Medical ID
                     </label>
@@ -718,9 +1069,11 @@ function PatientDetails() {
                       }
                       required
                     />
+
                   </div>
 
                   <div className="form-group">
+
                     <label>
                       First Name
                     </label>
@@ -738,9 +1091,11 @@ function PatientDetails() {
                       }
                       required
                     />
+
                   </div>
 
                   <div className="form-group">
+
                     <label>
                       Last Name
                     </label>
@@ -758,9 +1113,11 @@ function PatientDetails() {
                       }
                       required
                     />
+
                   </div>
 
                   <div className="form-group">
+
                     <label>
                       Date of Birth
                     </label>
@@ -778,9 +1135,11 @@ function PatientDetails() {
                       }
                       required
                     />
+
                   </div>
 
                   <div className="form-group">
+
                     <label>
                       Gender
                     </label>
@@ -796,6 +1155,7 @@ function PatientDetails() {
                         )
                       }
                     >
+
                       <option value="MALE">
                         Male
                       </option>
@@ -807,10 +1167,13 @@ function PatientDetails() {
                       <option value="OTHER">
                         Other
                       </option>
+
                     </select>
+
                   </div>
 
                   <div className="form-group">
+
                     <label>
                       Blood Group
                     </label>
@@ -827,9 +1190,11 @@ function PatientDetails() {
                         )
                       }
                     />
+
                   </div>
 
                   <div className="form-group">
+
                     <label>
                       Email
                     </label>
@@ -846,9 +1211,11 @@ function PatientDetails() {
                         )
                       }
                     />
+
                   </div>
 
                   <div className="form-group">
+
                     <label>
                       Phone
                     </label>
@@ -866,9 +1233,11 @@ function PatientDetails() {
                       }
                       required
                     />
+
                   </div>
 
                   <div className="form-group">
+
                     <label>
                       Status
                     </label>
@@ -884,6 +1253,7 @@ function PatientDetails() {
                         )
                       }
                     >
+
                       <option value="ACTIVE">
                         Active
                       </option>
@@ -895,10 +1265,13 @@ function PatientDetails() {
                       <option value="DECEASED">
                         Deceased
                       </option>
+
                     </select>
+
                   </div>
 
                   <div className="form-group patient-address-field">
+
                     <label>
                       Address
                     </label>
@@ -915,6 +1288,7 @@ function PatientDetails() {
                       }
                       rows={4}
                     />
+
                   </div>
 
                 </div>
@@ -951,6 +1325,7 @@ function PatientDetails() {
           ) : (
 
             <>
+
               {/* =========================
                   Personal Information
               ========================= */}
@@ -964,6 +1339,7 @@ function PatientDetails() {
                 <div className="patient-details-grid">
 
                   <div className="patient-detail-item">
+
                     <span>
                       First Name
                     </span>
@@ -971,9 +1347,11 @@ function PatientDetails() {
                     <strong>
                       {patient.firstName}
                     </strong>
+
                   </div>
 
                   <div className="patient-detail-item">
+
                     <span>
                       Last Name
                     </span>
@@ -981,9 +1359,11 @@ function PatientDetails() {
                     <strong>
                       {patient.lastName}
                     </strong>
+
                   </div>
 
                   <div className="patient-detail-item">
+
                     <span>
                       Date of Birth
                     </span>
@@ -993,9 +1373,11 @@ function PatientDetails() {
                         patient.dateOfBirth
                       )}
                     </strong>
+
                   </div>
 
                   <div className="patient-detail-item">
+
                     <span>
                       Gender
                     </span>
@@ -1003,9 +1385,11 @@ function PatientDetails() {
                     <strong>
                       {patient.gender}
                     </strong>
+
                   </div>
 
                   <div className="patient-detail-item">
+
                     <span>
                       Blood Group
                     </span>
@@ -1014,9 +1398,11 @@ function PatientDetails() {
                       {patient.bloodGroup ||
                         "-"}
                     </strong>
+
                   </div>
 
                   <div className="patient-detail-item">
+
                     <span>
                       Patient Status
                     </span>
@@ -1024,6 +1410,7 @@ function PatientDetails() {
                     <strong>
                       {patient.status}
                     </strong>
+
                   </div>
 
                 </div>
@@ -1043,6 +1430,7 @@ function PatientDetails() {
                 <div className="patient-details-grid">
 
                   <div className="patient-detail-item">
+
                     <span>
                       Email
                     </span>
@@ -1051,9 +1439,11 @@ function PatientDetails() {
                       {patient.email ||
                         "-"}
                     </strong>
+
                   </div>
 
                   <div className="patient-detail-item">
+
                     <span>
                       Phone
                     </span>
@@ -1061,6 +1451,7 @@ function PatientDetails() {
                     <strong>
                       {patient.phone}
                     </strong>
+
                   </div>
 
                 </div>
@@ -1097,6 +1488,7 @@ function PatientDetails() {
                 <div className="patient-details-grid">
 
                   <div className="patient-detail-item">
+
                     <span>
                       Patient ID
                     </span>
@@ -1104,9 +1496,11 @@ function PatientDetails() {
                     <strong>
                       #{patient.id}
                     </strong>
+
                   </div>
 
                   <div className="patient-detail-item">
+
                     <span>
                       Created
                     </span>
@@ -1116,9 +1510,11 @@ function PatientDetails() {
                         patient.createdAt
                       )}
                     </strong>
+
                   </div>
 
                   <div className="patient-detail-item">
+
                     <span>
                       Last Updated
                     </span>
@@ -1128,6 +1524,7 @@ function PatientDetails() {
                         patient.updatedAt
                       )}
                     </strong>
+
                   </div>
 
                 </div>
@@ -1143,12 +1540,16 @@ function PatientDetails() {
                 <div className="section-heading-row">
 
                   <div>
-                    <h3>Dependents</h3>
+
+                    <h3>
+                      Dependents
+                    </h3>
 
                     <p className="section-description">
                       Manage family members and dependents
                       associated with this patient.
                     </p>
+
                   </div>
 
                   <button
@@ -1168,17 +1569,27 @@ function PatientDetails() {
                 </div>
 
                 {showDependentForm && (
+
                   <form
                     className="dependent-form"
-                    onSubmit={handleAddDependent}
+                    onSubmit={
+                      handleAddDependent
+                    }
                   >
+
                     <div className="patient-edit-grid">
 
                       <div className="form-group">
-                        <label>First Name</label>
+
+                        <label>
+                          First Name
+                        </label>
+
                         <input
                           type="text"
-                          value={dependentForm.firstName}
+                          value={
+                            dependentForm.firstName
+                          }
                           onChange={(e) =>
                             handleDependentChange(
                               "firstName",
@@ -1187,13 +1598,20 @@ function PatientDetails() {
                           }
                           required
                         />
+
                       </div>
 
                       <div className="form-group">
-                        <label>Last Name</label>
+
+                        <label>
+                          Last Name
+                        </label>
+
                         <input
                           type="text"
-                          value={dependentForm.lastName}
+                          value={
+                            dependentForm.lastName
+                          }
                           onChange={(e) =>
                             handleDependentChange(
                               "lastName",
@@ -1202,12 +1620,19 @@ function PatientDetails() {
                           }
                           required
                         />
+
                       </div>
 
                       <div className="form-group">
-                        <label>Relationship</label>
+
+                        <label>
+                          Relationship
+                        </label>
+
                         <select
-                          value={dependentForm.relationship}
+                          value={
+                            dependentForm.relationship
+                          }
                           onChange={(e) =>
                             handleDependentChange(
                               "relationship",
@@ -1216,32 +1641,46 @@ function PatientDetails() {
                           }
                           required
                         >
+
                           <option value="">
                             Select relationship
                           </option>
+
                           <option value="SPOUSE">
                             Spouse
                           </option>
+
                           <option value="CHILD">
                             Child
                           </option>
+
                           <option value="PARENT">
                             Parent
                           </option>
+
                           <option value="SIBLING">
                             Sibling
                           </option>
+
                           <option value="OTHER">
                             Other
                           </option>
+
                         </select>
+
                       </div>
 
                       <div className="form-group">
-                        <label>Date of Birth</label>
+
+                        <label>
+                          Date of Birth
+                        </label>
+
                         <input
                           type="date"
-                          value={dependentForm.dateOfBirth}
+                          value={
+                            dependentForm.dateOfBirth
+                          }
                           onChange={(e) =>
                             handleDependentChange(
                               "dateOfBirth",
@@ -1249,12 +1688,19 @@ function PatientDetails() {
                             )
                           }
                         />
+
                       </div>
 
                       <div className="form-group">
-                        <label>Gender</label>
+
+                        <label>
+                          Gender
+                        </label>
+
                         <select
-                          value={dependentForm.gender}
+                          value={
+                            dependentForm.gender
+                          }
                           onChange={(e) =>
                             handleDependentChange(
                               "gender",
@@ -1262,23 +1708,34 @@ function PatientDetails() {
                             )
                           }
                         >
+
                           <option value="MALE">
                             Male
                           </option>
+
                           <option value="FEMALE">
                             Female
                           </option>
+
                           <option value="OTHER">
                             Other
                           </option>
+
                         </select>
+
                       </div>
 
                       <div className="form-group">
-                        <label>Phone</label>
+
+                        <label>
+                          Phone
+                        </label>
+
                         <input
                           type="text"
-                          value={dependentForm.phone}
+                          value={
+                            dependentForm.phone
+                          }
                           onChange={(e) =>
                             handleDependentChange(
                               "phone",
@@ -1286,13 +1743,20 @@ function PatientDetails() {
                             )
                           }
                         />
+
                       </div>
 
                       <div className="form-group">
-                        <label>Email</label>
+
+                        <label>
+                          Email
+                        </label>
+
                         <input
                           type="email"
-                          value={dependentForm.email}
+                          value={
+                            dependentForm.email
+                          }
                           onChange={(e) =>
                             handleDependentChange(
                               "email",
@@ -1300,6 +1764,7 @@ function PatientDetails() {
                             )
                           }
                         />
+
                       </div>
 
                     </div>
@@ -1309,7 +1774,9 @@ function PatientDetails() {
                       <button
                         type="submit"
                         className="primary-button"
-                        disabled={dependentLoading}
+                        disabled={
+                          dependentLoading
+                        }
                       >
                         {dependentLoading
                           ? "Adding..."
@@ -1317,30 +1784,39 @@ function PatientDetails() {
                       </button>
 
                     </div>
+
                   </form>
+
                 )}
 
                 {dependents.length === 0 ? (
+
                   <div className="empty-state">
                     No dependents added.
                   </div>
+
                 ) : (
+
                   <div className="dependents-list">
 
                     {dependents.map(
                       (dependent) => (
+
                         <div
                           className="dependent-card"
                           key={dependent.id}
                         >
 
                           <div className="dependent-avatar">
+
                             {dependent.firstName
                               .charAt(0)
                               .toUpperCase()}
+
                             {dependent.lastName
                               .charAt(0)
                               .toUpperCase()}
+
                           </div>
 
                           <div className="dependent-info">
@@ -1381,10 +1857,12 @@ function PatientDetails() {
                           </button>
 
                         </div>
+
                       )
                     )}
 
                   </div>
+
                 )}
 
               </section>
@@ -1402,45 +1880,53 @@ function PatientDetails() {
                 <div className="patient-history-grid">
 
                   <div className="patient-history-card">
+
                     <span className="history-icon">
                       📅
                     </span>
 
                     <div>
+
                       <strong>
                         Appointments
                       </strong>
 
                       <p>
-                        View appointment
-                        history
+                        View appointment history
                       </p>
+
                     </div>
+
                   </div>
 
                   <div className="patient-history-card">
+
                     <span className="history-icon">
                       💊
                     </span>
 
                     <div>
+
                       <strong>
                         Prescriptions
                       </strong>
 
                       <p>
-                        View prescription
-                        history
+                        View prescription history
                       </p>
+
                     </div>
+
                   </div>
 
                   <div className="patient-history-card">
+
                     <span className="history-icon">
                       📦
                     </span>
 
                     <div>
+
                       <strong>
                         Orders
                       </strong>
@@ -1448,27 +1934,193 @@ function PatientDetails() {
                       <p>
                         View order history
                       </p>
+
                     </div>
-                  </div>
 
-                  <div className="patient-history-card">
-                    <span className="history-icon">
-                      📄
-                    </span>
-
-                    <div>
-                      <strong>
-                        Documents
-                      </strong>
-
-                      <p>
-                        View patient
-                        documents
-                      </p>
-                    </div>
                   </div>
 
                 </div>
+
+              </section>
+
+              {/* =========================
+                  Documents
+              ========================= */}
+
+              <section className="patient-details-section">
+
+                <div className="section-heading-row">
+
+                  <div>
+
+                    <h3>
+                      Documents
+                    </h3>
+
+                    <p className="section-description">
+                      Upload and manage patient documents.
+                    </p>
+
+                  </div>
+
+                </div>
+
+                <div className="documents-upload-box">
+
+                  <div className="document-upload-controls">
+
+                    <select
+                      value={documentType}
+                      onChange={(e) =>
+                        setDocumentType(
+                          e.target.value
+                        )
+                      }
+                      className="document-type-select"
+                    >
+
+                      <option value="MEDICAL_RECORD">
+                        Medical Record
+                      </option>
+
+                      <option value="LAB_REPORT">
+                        Lab Report
+                      </option>
+
+                      <option value="PRESCRIPTION">
+                        Prescription
+                      </option>
+
+                      <option value="INSURANCE">
+                        Insurance
+                      </option>
+
+                      <option value="IDENTIFICATION">
+                        Identification
+                      </option>
+
+                      <option value="OTHER">
+                        Other
+                      </option>
+
+                    </select>
+
+                    <label className="primary-button upload-document-button">
+
+                      {uploadingDocument
+                        ? "Uploading..."
+                        : "+ Upload Document"}
+
+                      <input
+                        type="file"
+                        hidden
+                        disabled={
+                          uploadingDocument
+                        }
+                        accept=".pdf,.jpg,.jpeg,.png,.webp,.txt,.doc,.docx"
+                        onChange={
+                          handleDocumentUpload
+                        }
+                      />
+
+                    </label>
+
+                  </div>
+
+                  <p className="document-upload-help">
+                    PDF, JPG, PNG, WEBP, DOC, DOCX or TXT.
+                    Maximum size: 10 MB.
+                  </p>
+
+                </div>
+
+                {documentLoading ? (
+
+                  <div className="loading">
+                    Loading documents...
+                  </div>
+
+                ) : documents.length === 0 ? (
+
+                  <div className="empty-state">
+                    No documents uploaded.
+                  </div>
+
+                ) : (
+
+                  <div className="documents-list">
+
+                    {documents.map(
+                      (document) => (
+
+                        <div
+                          className="document-card"
+                          key={document.id}
+                        >
+
+                          <div className="document-icon">
+                            📄
+                          </div>
+
+                          <div className="document-info">
+
+                            <strong>
+                              {document.originalName}
+                            </strong>
+
+                            <span>
+                              {document.documentType}
+                            </span>
+
+                            <small>
+                              {formatFileSize(
+                                document.size
+                              )}{" "}
+                              •{" "}
+                              {new Date(
+                                document.createdAt
+                              ).toLocaleDateString()}
+                            </small>
+
+                          </div>
+
+                          <div className="document-actions">
+
+                            <button
+                              type="button"
+                              className="secondary-button"
+                              onClick={() =>
+                                handleDocumentDownload(
+                                  document.id,
+                                  document.originalName
+                                )
+                              }
+                            >
+                              Download
+                            </button>
+
+                            <button
+                              type="button"
+                              className="danger-button"
+                              onClick={() =>
+                                handleDocumentDelete(
+                                  document.id
+                                )
+                              }
+                            >
+                              Delete
+                            </button>
+
+                          </div>
+
+                        </div>
+
+                      )
+                    )}
+
+                  </div>
+
+                )}
 
               </section>
 
@@ -1489,7 +2141,9 @@ function PatientDetails() {
                 </button>
 
                 {patient.status === "ACTIVE" && (
+
                   <>
+
                     <button
                       type="button"
                       className="primary-button"
@@ -1502,17 +2156,23 @@ function PatientDetails() {
                       type="button"
                       className="danger-button"
                       onClick={handleDeactivate}
-                      disabled={deactivating}
+                      disabled={
+                        deactivating
+                      }
                     >
                       {deactivating
                         ? "Deactivating..."
                         : "Deactivate Patient"}
                     </button>
+
                   </>
+
                 )}
 
               </div>
+
             </>
+
           )}
 
         </div>

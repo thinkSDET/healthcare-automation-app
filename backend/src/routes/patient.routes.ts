@@ -15,6 +15,14 @@ import {
 import { authenticate, authorize } from "../middleware/auth";
 
 import { validate } from "../middleware/validate";
+import { patientDocumentUpload } from "../middleware/upload";
+
+import {
+  getPatientDocuments,
+  uploadPatientDocument,
+  downloadPatientDocument,
+  deletePatientDocument,
+} from "../controllers/patient-document.controller";;
 
 import {
   createPatientSchema,
@@ -78,6 +86,40 @@ router.delete(
   "/:id/dependents/:dependentId",
   authenticate,
   deletePatientDependent
+);
+router.get("/", authenticate, getPatients);
+
+router.get(
+  "/:id/documents",
+  authenticate,
+  getPatientDocuments
+);
+
+router.post(
+  "/:id/documents",
+  authenticate,
+  authorize("ADMIN", "DOCTOR"),
+  patientDocumentUpload.single("document"),
+  uploadPatientDocument
+);
+
+router.get(
+  "/:id/documents/:documentId/download",
+  authenticate,
+  downloadPatientDocument
+);
+
+router.delete(
+  "/:id/documents/:documentId",
+  authenticate,
+  authorize("ADMIN", "DOCTOR"),
+  deletePatientDocument
+);
+
+router.get(
+  "/:id",
+  authenticate,
+  getPatientById
 );
 
 export default router;
