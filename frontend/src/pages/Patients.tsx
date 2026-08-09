@@ -40,7 +40,7 @@ function Patients() {
 
   const fetchPatients = async () => {
     try {
-      const currentToken = token || localStorage.getItem("token");
+      const currentToken = token;
 
       const response = await fetch(
         "http://localhost:4000/api/patients",
@@ -55,13 +55,19 @@ function Patients() {
 
       const result = await response.json();
 
-      console.log("Patients API response:", result);
+      console.log(
+        "Patients API response:",
+        result
+      );
 
       if (response.ok && result.success) {
         setPatients(result.data);
       }
     } catch (error) {
-      console.error("Failed to fetch patients:", error);
+      console.error(
+        "Failed to fetch patients:",
+        error
+      );
     } finally {
       setLoading(false);
     }
@@ -75,7 +81,7 @@ function Patients() {
     try {
       setSaving(true);
 
-      const currentToken = token || localStorage.getItem("token");
+      const currentToken = token;
 
       const response = await fetch(
         "http://localhost:4000/api/patients",
@@ -91,11 +97,15 @@ function Patients() {
 
       const result = await response.json();
 
-      console.log("Create patient response:", result);
+      console.log(
+        "Create patient response:",
+        result
+      );
 
       if (!response.ok || !result.success) {
         throw new Error(
-          result.message || "Failed to create patient"
+          result.message ||
+            "Failed to create patient"
         );
       }
 
@@ -116,14 +126,19 @@ function Patients() {
       });
 
       await fetchPatients();
+
     } catch (error) {
-      console.error("Failed to create patient:", error);
+      console.error(
+        "Failed to create patient:",
+        error
+      );
 
       alert(
         error instanceof Error
           ? error.message
           : "Failed to create patient"
       );
+
     } finally {
       setSaving(false);
     }
@@ -133,17 +148,25 @@ function Patients() {
     <div className="patients-page">
 
       <header className="patients-header">
+
         <div>
           <h1>Patients</h1>
-          <p>Manage patient records and information.</p>
+
+          <p>
+            Manage patient records and
+            information.
+          </p>
         </div>
 
         <button
           className="primary-button"
-          onClick={() => setShowForm(true)}
+          onClick={() =>
+            setShowForm(true)
+          }
         >
           + Add Patient
         </button>
+
       </header>
 
       <main className="patients-content">
@@ -155,12 +178,18 @@ function Patients() {
               <h2>Add New Patient</h2>
             </div>
 
-            <form onSubmit={handleAddPatient}>
+            <form
+              onSubmit={handleAddPatient}
+            >
 
               <div className="form-grid">
 
                 <div className="form-group">
-                  <label>Medical ID</label>
+
+                  <label>
+                    Medical ID
+                  </label>
+
                   <input
                     type="text"
                     placeholder="PAT-10002"
@@ -168,15 +197,21 @@ function Patients() {
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        medicalId: e.target.value,
+                        medicalId:
+                          e.target.value,
                       })
                     }
                     required
                   />
+
                 </div>
 
                 <div className="form-group">
-                  <label>First Name</label>
+
+                  <label>
+                    First Name
+                  </label>
+
                   <input
                     type="text"
                     placeholder="First name"
@@ -184,15 +219,21 @@ function Patients() {
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        firstName: e.target.value,
+                        firstName:
+                          e.target.value,
                       })
                     }
                     required
                   />
+
                 </div>
 
                 <div className="form-group">
-                  <label>Last Name</label>
+
+                  <label>
+                    Last Name
+                  </label>
+
                   <input
                     type="text"
                     placeholder="Last name"
@@ -200,47 +241,73 @@ function Patients() {
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        lastName: e.target.value,
+                        lastName:
+                          e.target.value,
                       })
                     }
                     required
                   />
+
                 </div>
 
                 <div className="form-group">
-                  <label>Date of Birth</label>
+
+                  <label>
+                    Date of Birth
+                  </label>
+
                   <input
                     type="date"
                     value={formData.dateOfBirth}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        dateOfBirth: e.target.value,
+                        dateOfBirth:
+                          e.target.value,
                       })
                     }
                     required
                   />
+
                 </div>
 
                 <div className="form-group">
-                  <label>Gender</label>
+
+                  <label>
+                    Gender
+                  </label>
+
                   <select
                     value={formData.gender}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        gender: e.target.value,
+                        gender:
+                          e.target.value,
                       })
                     }
                   >
-                    <option value="MALE">Male</option>
-                    <option value="FEMALE">Female</option>
-                    <option value="OTHER">Other</option>
+                    <option value="MALE">
+                      Male
+                    </option>
+
+                    <option value="FEMALE">
+                      Female
+                    </option>
+
+                    <option value="OTHER">
+                      Other
+                    </option>
                   </select>
+
                 </div>
 
                 <div className="form-group">
-                  <label>Email</label>
+
+                  <label>
+                    Email
+                  </label>
+
                   <input
                     type="email"
                     placeholder="patient@example.com"
@@ -248,15 +315,21 @@ function Patients() {
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        email: e.target.value,
+                        email:
+                          e.target.value,
                       })
                     }
                     required
                   />
+
                 </div>
 
                 <div className="form-group">
-                  <label>Phone</label>
+
+                  <label>
+                    Phone
+                  </label>
+
                   <input
                     type="text"
                     placeholder="9876543210"
@@ -264,15 +337,21 @@ function Patients() {
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        phone: e.target.value,
+                        phone:
+                          e.target.value,
                       })
                     }
                     required
                   />
+
                 </div>
 
                 <div className="form-group">
-                  <label>Address</label>
+
+                  <label>
+                    Address
+                  </label>
+
                   <input
                     type="text"
                     placeholder="Address"
@@ -280,14 +359,20 @@ function Patients() {
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        address: e.target.value,
+                        address:
+                          e.target.value,
                       })
                     }
                   />
+
                 </div>
 
                 <div className="form-group">
-                  <label>Blood Group</label>
+
+                  <label>
+                    Blood Group
+                  </label>
+
                   <input
                     type="text"
                     placeholder="O+"
@@ -295,10 +380,12 @@ function Patients() {
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        bloodGroup: e.target.value,
+                        bloodGroup:
+                          e.target.value,
                       })
                     }
                   />
+
                 </div>
 
               </div>
@@ -308,7 +395,9 @@ function Patients() {
                 <button
                   type="button"
                   className="secondary-button"
-                  onClick={() => setShowForm(false)}
+                  onClick={() =>
+                    setShowForm(false)
+                  }
                 >
                   Cancel
                 </button>
@@ -318,25 +407,32 @@ function Patients() {
                   className="primary-button"
                   disabled={saving}
                 >
-                  {saving ? "Saving..." : "Save Patient"}
+                  {saving
+                    ? "Saving..."
+                    : "Save Patient"}
                 </button>
 
               </div>
 
             </form>
+
           </div>
         )}
 
         <div className="patients-card">
 
           <div className="table-header">
-            <h2>Patient Records</h2>
+
+            <h2>
+              Patient Records
+            </h2>
 
             <input
               type="text"
               placeholder="Search patients..."
               className="search-input"
             />
+
           </div>
 
           {loading ? (
@@ -353,6 +449,7 @@ function Patients() {
               <table>
 
                 <thead>
+
                   <tr>
                     <th>Medical ID</th>
                     <th>Patient</th>
@@ -361,52 +458,59 @@ function Patients() {
                     <th>Phone</th>
                     <th>Status</th>
                   </tr>
+
                 </thead>
 
                 <tbody>
 
-                  {patients.map((patient) => (
+                  {patients.map(
+                    (patient) => (
+                      <tr
+                        key={patient.id}
+                      >
 
-                    <tr key={patient.id}>
+                        <td>
+                          {patient.medicalId}
+                        </td>
 
-                      <td>
-                        {patient.medicalId}
-                      </td>
+                        <td>
 
-                      <td>
-                        <strong>
-                          {patient.firstName}{" "}
-                          {patient.lastName}
-                        </strong>
+                          <strong>
+                            {patient.firstName}{" "}
+                            {patient.lastName}
+                          </strong>
 
-                        <small>
-                          {patient.email}
-                        </small>
-                      </td>
+                          <small>
+                            {patient.email}
+                          </small>
 
-                      <td>
-                        {new Date(
-                          patient.dateOfBirth
-                        ).toLocaleDateString()}
-                      </td>
+                        </td>
 
-                      <td>
-                        {patient.gender}
-                      </td>
+                        <td>
+                          {new Date(
+                            patient.dateOfBirth
+                          ).toLocaleDateString()}
+                        </td>
 
-                      <td>
-                        {patient.phone}
-                      </td>
+                        <td>
+                          {patient.gender}
+                        </td>
 
-                      <td>
-                        <span className="status-badge">
-                          {patient.status}
-                        </span>
-                      </td>
+                        <td>
+                          {patient.phone}
+                        </td>
 
-                    </tr>
+                        <td>
 
-                  ))}
+                          <span className="status-badge">
+                            {patient.status}
+                          </span>
+
+                        </td>
+
+                      </tr>
+                    )
+                  )}
 
                 </tbody>
 

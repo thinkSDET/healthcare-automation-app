@@ -5,60 +5,191 @@ export const register = async (req: Request, res: Response) => {
   try {
     const user = await authService.register(req.body);
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
-      data: user
+      data: user,
     });
   } catch (error) {
-    if (error instanceof Error && error.message === "EMAIL_ALREADY_EXISTS") {
+    if (
+      error instanceof Error &&
+      error.message === "EMAIL_ALREADY_EXISTS"
+    ) {
       return res.status(409).json({
         success: false,
-        message: "Email already exists"
+        message: "Email already exists",
       });
     }
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: "Registration failed"
+      message: "Registration failed",
     });
   }
 };
 
-export const login = async (req: Request, res: Response) => {
+export const login = async (
+  req: Request,
+  res: Response
+) => {
   try {
-    const result = await authService.login(
-      req.body.email,
-      req.body.password
-    );
+    const {
+      email,
+      password,
+      rememberMe,
+    } = req.body;
 
-    res.status(200).json({
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required",
+      });
+    }
+
+    const result = await authService.loginUser({
+      email,
+      password,
+      rememberMe: Boolean(rememberMe),
+    });
+
+    return res.status(200).json({
       success: true,
-      data: result
+      message: "Login successful",
+      data: result,
     });
   } catch (error) {
-    if (
-      error instanceof Error &&
-      error.message === "INVALID_CREDENTIALS"
-    ) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid email or password"
-      });
-    }
+    console.error("LOGIN ERROR:", error);
 
-    if (
-      error instanceof Error &&
-      error.message === "USER_NOT_ACTIVE"
-    ) {
-      return res.status(403).json({
-        success: false,
-        message: "User account is not active"
-      });
-    }
-
-    res.status(500).json({
+    return res.status(401).json({
       success: false,
-      message: "Login failed"
+      message:
+        error instanceof Error
+          ? error.message
+          : "Login failed",
+    });
+  }
+};
+
+export const forgotPasswordController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required",
+      });
+    }
+
+    const result =
+      await authService.forgotPassword(email);
+
+    return res.status(200).json({
+      success: true,
+      ...result,
+    });
+  } catch (error) {
+    console.error(
+      "FORGOT PASSWORD ERROR:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to process request",
+    });
+  }
+};
+
+export const resetPasswordController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const {
+      token,
+      newPassword,
+    } = req.body;
+
+    if (!token || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Token and new password are required",
+      });
+    }
+
+    const result =
+      await authService.resetPassword(
+        token,
+        newPassword
+      );
+
+    return res.status(200).json({
+      success: true,
+      ...result,
+    });
+  } catch (error) {
+    console.error(
+      "RESET PASSWORD ERROR:",
+      error
+    );
+
+    return res.status(400).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Password reset failed",
+    });
+  }
+};
+
+export const changePasswordController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const {
+      currentPassword,
+      newPassword,
+    } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Current password and new password are required",
+      });
+    }
+
+    const userId = req.user.userId;
+
+    const result =
+      await authService.changePassword(
+        userId,
+        currentPassword,
+        newPassword
+      );
+
+    return res.status(200).json({
+      success: true,
+      ...result,
+    });
+  } catch (error) {
+    console.error(
+      "CHANGE PASSWORD ERROR:",
+      error
+    );
+
+    return res.status(400).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Password change failed",
     });
   }
 };

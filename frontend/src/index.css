@@ -30,15 +30,28 @@ input {
 }
 
 .login-container {
+  min-height: 100vh;
   width: 100%;
-  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  box-sizing: border-box;
 }
 
 .login-brand {
+  width: 100%;
+  max-width: 720px;
   text-align: center;
-  margin-bottom: 28px;
+  margin-bottom: 30px;
 }
 
+.login-card {
+  width: 100%;
+  max-width: 520px;
+  box-sizing: border-box;
+}
 .brand-icon {
   width: 58px;
   height: 58px;
@@ -808,4 +821,141 @@ td small {
   .register-card {
     max-width: 100%;
   }
+}
+/* =========================================
+   AUTHENTICATION
+   ========================================= */
+
+.login-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  margin: 6px 0 18px;
+}
+
+.remember-me {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+
+  font-size: 13px;
+  color: #64748b;
+
+  cursor: pointer;
+}
+
+.remember-me input {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+.forgot-link {
+  padding: 0;
+
+  border: none;
+  background: transparent;
+
+  color: #0f8b83;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.forgot-link:hover {
+  text-decoration: underline;
+}
+
+.auth-error {
+  margin-bottom: 18px;
+  padding: 12px 14px;
+
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+
+  background: #fef2f2;
+  color: #b91c1c;
+
+  font-size: 14px;
+}
+
+.auth-success {
+  margin-bottom: 18px;
+  padding: 12px 14px;
+
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+
+  background: #f0fdf4;
+  color: #166534;
+
+  font-size: 14px;
+}
+
+.auth-form-card {
+  width: 100%;
+  max-width: 550px;
+
+  margin: 0 auto;
+
+  padding: 30px;
+
+  background: #ffffff;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+
+  box-shadow:
+    0 8px 25px rgba(
+      15,
+      23,
+      42,
+      0.06
+    );
+}
+
+.auth-form-card .form-group {
+  margin-bottom: 20px;
+}
+/* =========================
+   LOGIN - REMEMBER ME
+   ========================= */
+
+.remember-me-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: -4px 0 20px;
+}
+
+.remember-me-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #334e68;
+}
+
+.remember-me-label input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.forgot-password-link {
+  border: none;
+  background: none;
+  padding: 0;
+  color: #0f8b83;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.forgot-password-link:hover {
+  text-decoration: underline;
 }

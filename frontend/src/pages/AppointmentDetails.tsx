@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import {
+  useNavigate,
+  useParams,
+} from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 interface Appointment {
   id: number;
@@ -37,12 +41,19 @@ function AppointmentDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  const { token } = useAuth();
+
   const [appointment, setAppointment] =
     useState<Appointment | null>(null);
 
-  const [loading, setLoading] = useState(true);
-  const [cancelling, setCancelling] = useState(false);
-  const [error, setError] = useState("");
+  const [loading, setLoading] =
+    useState(true);
+
+  const [cancelling, setCancelling] =
+    useState(false);
+
+  const [error, setError] =
+    useState("");
 
   useEffect(() => {
     fetchAppointment();
@@ -53,27 +64,39 @@ function AppointmentDetails() {
       setLoading(true);
       setError("");
 
-      const token = localStorage.getItem("token");
+      /*
+       * Token is provided by AuthContext.
+       *
+       * AuthContext handles whether the token
+       * comes from localStorage or sessionStorage.
+       */
+      const currentToken = token;
 
       const response = await fetch(
         `http://localhost:4000/api/appointments/${id}`,
         {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${currentToken}`,
             "Content-Type": "application/json",
           },
         }
       );
 
-      const result = await response.json();
+      const result =
+        await response.json();
 
-      if (!response.ok || !result.success) {
+      if (
+        !response.ok ||
+        !result.success
+      ) {
         throw new Error(
-          result.message || "Failed to fetch appointment"
+          result.message ||
+            "Failed to fetch appointment"
         );
       }
 
       setAppointment(result.data);
+
     } catch (error) {
       console.error(error);
 
@@ -82,15 +105,17 @@ function AppointmentDetails() {
           ? error.message
           : "Failed to fetch appointment"
       );
+
     } finally {
       setLoading(false);
     }
   };
 
   const cancelAppointment = async () => {
-    const confirmed = window.confirm(
-      "Are you sure you want to cancel this appointment?"
-    );
+    const confirmed =
+      window.confirm(
+        "Are you sure you want to cancel this appointment?"
+      );
 
     if (!confirmed) {
       return;
@@ -100,28 +125,40 @@ function AppointmentDetails() {
       setCancelling(true);
       setError("");
 
-      const token = localStorage.getItem("token");
+      /*
+       * Use token from AuthContext.
+       */
+      const currentToken = token;
 
       const response = await fetch(
         `http://localhost:4000/api/appointments/${id}/cancel`,
         {
           method: "PATCH",
+
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${currentToken}`,
             "Content-Type": "application/json",
           },
         }
       );
 
-      const result = await response.json();
+      const result =
+        await response.json();
 
-      if (!response.ok || !result.success) {
+      if (
+        !response.ok ||
+        !result.success
+      ) {
         throw new Error(
-          result.message || "Failed to cancel appointment"
+          result.message ||
+            "Failed to cancel appointment"
         );
       }
 
-      setAppointment(result.data);
+      setAppointment(
+        result.data
+      );
+
     } catch (error) {
       console.error(error);
 
@@ -130,25 +167,36 @@ function AppointmentDetails() {
           ? error.message
           : "Failed to cancel appointment"
       );
+
     } finally {
       setCancelling(false);
     }
   };
 
-  const formatDateTime = (date: string) => {
-    return new Date(date).toLocaleString();
+  const formatDateTime = (
+    date: string
+  ) => {
+    return new Date(
+      date
+    ).toLocaleString();
   };
 
   if (loading) {
     return (
       <div className="page">
+
         <main className="patients-content">
-          <div className="appointment-details-card">
+
+          <div className="patients-card">
+
             <div className="loading">
               Loading appointment...
             </div>
+
           </div>
+
         </main>
+
       </div>
     );
   }
@@ -156,24 +204,34 @@ function AppointmentDetails() {
   if (error && !appointment) {
     return (
       <div className="page">
+
         <main className="patients-content">
-          <div className="appointment-details-card">
+
+          <div className="patients-card">
+
             <div className="error-message">
               {error}
             </div>
 
             <div className="details-actions">
+
               <button
                 className="secondary-button"
                 onClick={() =>
-                  navigate("/appointments")
+                  navigate(
+                    "/appointments"
+                  )
                 }
               >
                 ← Back to Appointments
               </button>
+
             </div>
+
           </div>
+
         </main>
+
       </div>
     );
   }
@@ -188,23 +246,31 @@ function AppointmentDetails() {
       {/* Page Header */}
 
       <header className="patients-header">
+
         <div>
-          <h1>Appointment Details</h1>
+
+          <h1>
+            Appointment Details
+          </h1>
 
           <p>
-            View appointment information and manage
-            appointment status.
+            View appointment information
+            and manage appointment status.
           </p>
+
         </div>
 
         <button
           className="secondary-button"
           onClick={() =>
-            navigate("/appointments")
+            navigate(
+              "/appointments"
+            )
           }
         >
           ← Back
         </button>
+
       </header>
 
       {/* Main Content */}
@@ -218,13 +284,17 @@ function AppointmentDetails() {
           <div className="details-header">
 
             <div>
+
               <span className="details-label">
                 Appointment
               </span>
 
               <h2>
-                {appointment.appointmentNo}
+                {
+                  appointment.appointmentNo
+                }
               </h2>
+
             </div>
 
             <span className="status-badge">
@@ -245,42 +315,63 @@ function AppointmentDetails() {
 
           <section className="details-section">
 
-            <h3>Appointment Information</h3>
+            <h3>
+              Appointment Information
+            </h3>
 
             <div className="details-grid">
 
               <div className="detail-item">
-                <span>Date & Time</span>
+
+                <span>
+                  Date & Time
+                </span>
 
                 <strong>
                   {formatDateTime(
                     appointment.appointmentAt
                   )}
                 </strong>
+
               </div>
 
               <div className="detail-item">
-                <span>Duration</span>
+
+                <span>
+                  Duration
+                </span>
 
                 <strong>
-                  {appointment.duration} minutes
+                  {
+                    appointment.duration
+                  }{" "}
+                  minutes
                 </strong>
+
               </div>
 
               <div className="detail-item">
-                <span>Type</span>
+
+                <span>
+                  Type
+                </span>
 
                 <strong>
                   {appointment.type}
                 </strong>
+
               </div>
 
               <div className="detail-item">
-                <span>Reason</span>
+
+                <span>
+                  Reason
+                </span>
 
                 <strong>
                   {appointment.reason}
                 </strong>
+
               </div>
 
             </div>
@@ -291,9 +382,12 @@ function AppointmentDetails() {
 
           <section className="details-section">
 
-            <h3>Patient Information</h3>
+            <h3>
+              Patient Information
+            </h3>
 
             {appointment.patient ? (
+
               <div className="person-card">
 
                 <div className="person-icon">
@@ -301,30 +395,53 @@ function AppointmentDetails() {
                 </div>
 
                 <div>
+
                   <strong>
-                    {appointment.patient.firstName}{" "}
-                    {appointment.patient.lastName}
+                    {
+                      appointment.patient
+                        .firstName
+                    }{" "}
+                    {
+                      appointment.patient
+                        .lastName
+                    }
                   </strong>
 
                   <span>
                     Medical ID:{" "}
-                    {appointment.patient.medicalId}
+                    {
+                      appointment.patient
+                        .medicalId
+                    }
                   </span>
 
                   <span>
-                    {appointment.patient.email}
+                    {
+                      appointment.patient
+                        .email
+                    }
                   </span>
 
                   <span>
-                    {appointment.patient.phone}
+                    {
+                      appointment.patient
+                        .phone
+                    }
                   </span>
+
                 </div>
 
               </div>
+
             ) : (
+
               <div className="notes-box">
-                Patient #{appointment.patientId}
+                Patient #
+                {
+                  appointment.patientId
+                }
               </div>
+
             )}
 
           </section>
@@ -333,9 +450,12 @@ function AppointmentDetails() {
 
           <section className="details-section">
 
-            <h3>Doctor Information</h3>
+            <h3>
+              Doctor Information
+            </h3>
 
             {appointment.doctor ? (
+
               <div className="person-card">
 
                 <div className="person-icon">
@@ -343,35 +463,61 @@ function AppointmentDetails() {
                 </div>
 
                 <div>
+
                   <strong>
                     Dr.{" "}
-                    {appointment.doctor.firstName}{" "}
-                    {appointment.doctor.lastName}
+                    {
+                      appointment.doctor
+                        .firstName
+                    }{" "}
+                    {
+                      appointment.doctor
+                        .lastName
+                    }
                   </strong>
 
                   <span>
                     Doctor Code:{" "}
-                    {appointment.doctor.doctorCode}
+                    {
+                      appointment.doctor
+                        .doctorCode
+                    }
                   </span>
 
                   <span>
-                    {appointment.doctor.specialization}
+                    {
+                      appointment.doctor
+                        .specialization
+                    }
                   </span>
 
                   <span>
-                    {appointment.doctor.email}
+                    {
+                      appointment.doctor
+                        .email
+                    }
                   </span>
 
                   <span>
-                    {appointment.doctor.phone}
+                    {
+                      appointment.doctor
+                        .phone
+                    }
                   </span>
+
                 </div>
 
               </div>
+
             ) : (
+
               <div className="notes-box">
-                Doctor #{appointment.doctorId}
+                Doctor #
+                {
+                  appointment.doctorId
+                }
               </div>
+
             )}
 
           </section>
@@ -381,7 +527,9 @@ function AppointmentDetails() {
           {appointment.notes && (
             <section className="details-section">
 
-              <h3>Notes</h3>
+              <h3>
+                Notes
+              </h3>
 
               <div className="notes-box">
                 {appointment.notes}
@@ -397,22 +545,29 @@ function AppointmentDetails() {
             <button
               className="secondary-button"
               onClick={() =>
-                navigate("/appointments")
+                navigate(
+                  "/appointments"
+                )
               }
             >
-              ← Back to Appointments
+              Back to Appointments
             </button>
 
-            {appointment.status !== "CANCELLED" && (
+            {appointment.status !==
+              "CANCELLED" && (
+
               <button
                 className="danger-button"
-                onClick={cancelAppointment}
+                onClick={
+                  cancelAppointment
+                }
                 disabled={cancelling}
               >
                 {cancelling
                   ? "Cancelling..."
                   : "Cancel Appointment"}
               </button>
+
             )}
 
           </div>

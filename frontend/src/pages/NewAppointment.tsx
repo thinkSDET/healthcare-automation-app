@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 interface Patient {
   id: number;
@@ -19,20 +20,43 @@ interface Doctor {
 function NewAppointment() {
   const navigate = useNavigate();
 
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const { token } = useAuth();
 
-  const [patientId, setPatientId] = useState("");
-  const [doctorId, setDoctorId] = useState("");
-  const [appointmentAt, setAppointmentAt] = useState("");
-  const [duration, setDuration] = useState("30");
-  const [type, setType] = useState("IN_PERSON");
-  const [reason, setReason] = useState("");
-  const [notes, setNotes] = useState("");
+  const [patients, setPatients] =
+    useState<Patient[]>([]);
 
-  const [loading, setLoading] = useState(false);
-  const [loadingData, setLoadingData] = useState(true);
-  const [error, setError] = useState("");
+  const [doctors, setDoctors] =
+    useState<Doctor[]>([]);
+
+  const [patientId, setPatientId] =
+    useState("");
+
+  const [doctorId, setDoctorId] =
+    useState("");
+
+  const [appointmentAt, setAppointmentAt] =
+    useState("");
+
+  const [duration, setDuration] =
+    useState("30");
+
+  const [type, setType] =
+    useState("IN_PERSON");
+
+  const [reason, setReason] =
+    useState("");
+
+  const [notes, setNotes] =
+    useState("");
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [loadingData, setLoadingData] =
+    useState(true);
+
+  const [error, setError] =
+    useState("");
 
   useEffect(() => {
     loadFormData();
@@ -40,22 +64,37 @@ function NewAppointment() {
 
   const loadFormData = async () => {
     try {
-      const token = localStorage.getItem("token");
+      /*
+       * Token is provided by AuthContext.
+       *
+       * AuthContext handles whether the token
+       * comes from localStorage or sessionStorage.
+       */
+      const currentToken = token;
 
       const headers = {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${currentToken}`,
         "Content-Type": "application/json",
       };
 
-      const [patientsResponse, doctorsResponse] =
-        await Promise.all([
-          fetch("http://localhost:4000/api/patients", {
+      const [
+        patientsResponse,
+        doctorsResponse,
+      ] = await Promise.all([
+        fetch(
+          "http://localhost:4000/api/patients",
+          {
             headers,
-          }),
-          fetch("http://localhost:4000/api/doctors", {
+          }
+        ),
+
+        fetch(
+          "http://localhost:4000/api/doctors",
+          {
             headers,
-          }),
-        ]);
+          }
+        ),
+      ]);
 
       const patientsResult =
         await patientsResponse.json();
@@ -67,20 +106,27 @@ function NewAppointment() {
         patientsResponse.ok &&
         patientsResult.success
       ) {
-        setPatients(patientsResult.data);
+        setPatients(
+          patientsResult.data
+        );
       }
 
       if (
         doctorsResponse.ok &&
         doctorsResult.success
       ) {
-        setDoctors(doctorsResult.data);
+        setDoctors(
+          doctorsResult.data
+        );
       }
+
     } catch (error) {
       console.error(error);
+
       setError(
         "Unable to load patients and doctors."
       );
+
     } finally {
       setLoadingData(false);
     }
@@ -95,41 +141,67 @@ function NewAppointment() {
     setLoading(true);
 
     try {
-      const token = localStorage.getItem("token");
+      /*
+       * Use token supplied by AuthContext.
+       */
+      const currentToken = token;
 
       const response = await fetch(
         "http://localhost:4000/api/appointments",
         {
           method: "POST",
+
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${currentToken}`,
             "Content-Type": "application/json",
           },
+
           body: JSON.stringify({
             appointmentNo: `APT-${Date.now()}`,
-            patientId: Number(patientId),
-            doctorId: Number(doctorId),
-            appointmentAt: new Date(
-              appointmentAt
-            ).toISOString(),
-            duration: Number(duration),
+
+            patientId: Number(
+              patientId
+            ),
+
+            doctorId: Number(
+              doctorId
+            ),
+
+            appointmentAt:
+              new Date(
+                appointmentAt
+              ).toISOString(),
+
+            duration: Number(
+              duration
+            ),
+
             type,
+
             reason,
+
             notes,
           }),
         }
       );
 
-      const result = await response.json();
+      const result =
+        await response.json();
 
-      if (!response.ok || !result.success) {
+      if (
+        !response.ok ||
+        !result.success
+      ) {
         throw new Error(
           result.message ||
             "Failed to create appointment"
         );
       }
 
-      navigate("/appointments");
+      navigate(
+        "/appointments"
+      );
+
     } catch (error) {
       console.error(error);
 
@@ -138,6 +210,7 @@ function NewAppointment() {
           ? error.message
           : "Failed to create appointment"
       );
+
     } finally {
       setLoading(false);
     }
@@ -146,13 +219,19 @@ function NewAppointment() {
   if (loadingData) {
     return (
       <div className="page">
+
         <main className="patients-content">
+
           <div className="patients-card">
+
             <div className="loading">
               Loading appointment form...
             </div>
+
           </div>
+
         </main>
+
       </div>
     );
   }
@@ -163,23 +242,32 @@ function NewAppointment() {
       {/* Header */}
 
       <header className="patients-header">
+
         <div>
-          <h1>New Appointment</h1>
+
+          <h1>
+            New Appointment
+          </h1>
 
           <p>
-            Schedule a new appointment for a patient.
+            Schedule a new appointment
+            for a patient.
           </p>
+
         </div>
 
         <button
           type="button"
           className="secondary-button"
           onClick={() =>
-            navigate("/appointments")
+            navigate(
+              "/appointments"
+            )
           }
         >
           ← Back
         </button>
+
       </header>
 
       {/* Content */}
@@ -193,18 +281,24 @@ function NewAppointment() {
           <div className="appointment-form-header">
 
             <div>
+
               <div className="appointment-icon">
                 📅
               </div>
 
               <div>
-                <h2>Appointment Details</h2>
+
+                <h2>
+                  Appointment Details
+                </h2>
 
                 <p>
-                  Enter the details below to schedule
-                  an appointment.
+                  Enter the details below
+                  to schedule an appointment.
                 </p>
+
               </div>
+
             </div>
 
           </div>
@@ -228,7 +322,9 @@ function NewAppointment() {
 
             <div className="form-section">
 
-              <h3>Patient & Doctor</h3>
+              <h3>
+                Patient & Doctor
+              </h3>
 
               <div className="form-grid">
 
@@ -242,24 +338,37 @@ function NewAppointment() {
                     id="patient"
                     value={patientId}
                     onChange={(e) =>
-                      setPatientId(e.target.value)
+                      setPatientId(
+                        e.target.value
+                      )
                     }
                     required
                   >
+
                     <option value="">
                       Select patient
                     </option>
 
-                    {patients.map((patient) => (
-                      <option
-                        key={patient.id}
-                        value={patient.id}
-                      >
-                        {patient.medicalId} —{" "}
-                        {patient.firstName}{" "}
-                        {patient.lastName}
-                      </option>
-                    ))}
+                    {patients.map(
+                      (patient) => (
+                        <option
+                          key={patient.id}
+                          value={patient.id}
+                        >
+                          {
+                            patient.medicalId
+                          }{" "}
+                          —{" "}
+                          {
+                            patient.firstName
+                          }{" "}
+                          {
+                            patient.lastName
+                          }
+                        </option>
+                      )
+                    )}
+
                   </select>
 
                 </div>
@@ -274,24 +383,38 @@ function NewAppointment() {
                     id="doctor"
                     value={doctorId}
                     onChange={(e) =>
-                      setDoctorId(e.target.value)
+                      setDoctorId(
+                        e.target.value
+                      )
                     }
                     required
                   >
+
                     <option value="">
                       Select doctor
                     </option>
 
-                    {doctors.map((doctor) => (
-                      <option
-                        key={doctor.id}
-                        value={doctor.id}
-                      >
-                        Dr. {doctor.firstName}{" "}
-                        {doctor.lastName} —{" "}
-                        {doctor.specialization}
-                      </option>
-                    ))}
+                    {doctors.map(
+                      (doctor) => (
+                        <option
+                          key={doctor.id}
+                          value={doctor.id}
+                        >
+                          Dr.{" "}
+                          {
+                            doctor.firstName
+                          }{" "}
+                          {
+                            doctor.lastName
+                          }{" "}
+                          —{" "}
+                          {
+                            doctor.specialization
+                          }
+                        </option>
+                      )
+                    )}
+
                   </select>
 
                 </div>
@@ -304,7 +427,9 @@ function NewAppointment() {
 
             <div className="form-section">
 
-              <h3>Schedule</h3>
+              <h3>
+                Schedule
+              </h3>
 
               <div className="form-grid">
 
@@ -319,7 +444,9 @@ function NewAppointment() {
                     type="datetime-local"
                     value={appointmentAt}
                     onChange={(e) =>
-                      setAppointmentAt(e.target.value)
+                      setAppointmentAt(
+                        e.target.value
+                      )
                     }
                     required
                   />
@@ -336,9 +463,12 @@ function NewAppointment() {
                     id="duration"
                     value={duration}
                     onChange={(e) =>
-                      setDuration(e.target.value)
+                      setDuration(
+                        e.target.value
+                      )
                     }
                   >
+
                     <option value="15">
                       15 minutes
                     </option>
@@ -354,6 +484,7 @@ function NewAppointment() {
                     <option value="60">
                       60 minutes
                     </option>
+
                   </select>
 
                 </div>
@@ -366,7 +497,9 @@ function NewAppointment() {
 
             <div className="form-section">
 
-              <h3>Appointment Information</h3>
+              <h3>
+                Appointment Information
+              </h3>
 
               <div className="form-grid">
 
@@ -380,9 +513,12 @@ function NewAppointment() {
                     id="type"
                     value={type}
                     onChange={(e) =>
-                      setType(e.target.value)
+                      setType(
+                        e.target.value
+                      )
                     }
                   >
+
                     <option value="IN_PERSON">
                       In Person
                     </option>
@@ -394,6 +530,7 @@ function NewAppointment() {
                     <option value="PHONE">
                       Phone Consultation
                     </option>
+
                   </select>
 
                 </div>
@@ -410,7 +547,9 @@ function NewAppointment() {
                     placeholder="Routine consultation"
                     value={reason}
                     onChange={(e) =>
-                      setReason(e.target.value)
+                      setReason(
+                        e.target.value
+                      )
                     }
                     required
                   />
@@ -431,7 +570,9 @@ function NewAppointment() {
                   placeholder="Add any additional notes..."
                   value={notes}
                   onChange={(e) =>
-                    setNotes(e.target.value)
+                    setNotes(
+                      e.target.value
+                    )
                   }
                 />
 
@@ -447,7 +588,9 @@ function NewAppointment() {
                 type="button"
                 className="secondary-button"
                 onClick={() =>
-                  navigate("/appointments")
+                  navigate(
+                    "/appointments"
+                  )
                 }
                 disabled={loading}
               >

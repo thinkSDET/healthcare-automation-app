@@ -5,119 +5,278 @@ import { useNavigate } from "react-router-dom";
 function Login() {
   const { login } = useAuth();
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleLogin = async (
+    e: React.FormEvent
+  ) => {
     e.preventDefault();
+
+    setError("");
 
     try {
       setLoading(true);
 
-      const response = await fetch("http://localhost:4000/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
-      });
+      const response = await fetch(
+        "http://localhost:4000/api/auth/login",
+        {
+          method: "POST",
 
-      const result = await response.json();
+          headers: {
+            "Content-Type": "application/json",
+          },
+
+          body: JSON.stringify({
+            email,
+            password,
+            rememberMe,
+          }),
+        }
+      );
+
+      const result =
+        await response.json();
 
       if (!response.ok || !result.success) {
-        throw new Error(result.message || "Login failed");
+        throw new Error(
+          result.message ||
+            "Invalid email or password"
+        );
       }
 
-      const { token, user } = result.data;
+      const { token, user } =
+        result.data;
 
-      // Store the actual JWT token + user
-      login(user, token);
+      /*
+       * Pass rememberMe to AuthContext
+       *
+       * AuthContext will decide whether
+       * to store the session in:
+       *
+       * localStorage  -> Remember Me checked
+       * sessionStorage -> Remember Me unchecked
+       */
+      login(
+        user,
+        token,
+        rememberMe
+      );
 
-      navigate("/dashboard");
+      // Role based login
+      switch (
+        user.role?.toUpperCase()
+      ) {
+        case "ADMIN":
+          navigate("/dashboard");
+          break;
+
+        case "DOCTOR":
+          navigate("/dashboard");
+          break;
+
+        case "PHARMACIST":
+          navigate("/dashboard");
+          break;
+
+        case "PATIENT":
+          navigate("/dashboard");
+          break;
+
+        default:
+          navigate("/dashboard");
+      }
+
     } catch (error) {
-      console.error("LOGIN ERROR:", error);
+      console.error(
+        "LOGIN ERROR:",
+        error
+      );
 
-      alert(
+      setError(
         error instanceof Error
           ? error.message
-          : "Login failed"
+          : "Invalid email or password"
       );
+
     } finally {
       setLoading(false);
     }
   };
-  return (
-    <div className="login-page">
-      <div className="login-container">
 
-        <div className="login-brand">
-          <div className="brand-icon">+</div>
-          <h1>Healthcare Automation</h1>
-          <p>Secure Healthcare Management Platform</p>
+  return (
+    <div className="login-container">
+
+      <div className="login-brand">
+
+        <div className="brand-icon">
+          +
         </div>
 
-        <div className="login-card">
-          <h2>Welcome back</h2>
-          <p className="login-subtitle">
-            Sign in to access your healthcare dashboard
-          </p>
+        <h1>
+          Healthcare Automation
+        </h1>
 
-          <form onSubmit={handleLogin}>
+        <p>
+          Secure Healthcare Management
+          Platform
+        </p>
 
-            <div className="form-group">
-              <label>Email address</label>
+      </div>
+
+      <div className="login-card">
+
+        <h2>
+          Welcome back
+        </h2>
+
+        <p className="login-subtitle">
+          Sign in to access your
+          healthcare dashboard
+        </p>
+
+        {error && (
+          <div className="auth-error">
+            {error}
+          </div>
+        )}
+
+        <form
+          onSubmit={handleLogin}
+        >
+
+          {/* Email */}
+
+          <div className="form-group">
+
+            <label>
+              Email address
+            </label>
+
+            <input
+              type="email"
+              placeholder="Enter your email"
+              value={email}
+              onChange={(e) =>
+                setEmail(
+                  e.target.value
+                )
+              }
+              required
+            />
+
+          </div>
+
+          {/* Password */}
+
+          <div className="form-group">
+
+            <label>
+              Password
+            </label>
+
+            <input
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) =>
+                setPassword(
+                  e.target.value
+                )
+              }
+              required
+            />
+
+          </div>
+
+          {/* Remember Me + Forgot Password */}
+
+          <div className="login-options">
+
+            <label className="remember-me">
+
               <input
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) =>
+                  setRememberMe(
+                    e.target.checked
+                  )
+                }
               />
-            </div>
 
-            <div className="form-group">
-              <label>Password</label>
-              <input
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
+              <span>
+                Remember me
+              </span>
 
-            <button
-              type="submit"
-              className="login-button"
-              disabled={loading}
-            >
-              {loading ? "Signing in..." : "Sign in"}
-            </button>
-
-          </form>
-          <div className="register-footer">
-            <span>Don't have an account?</span>
+            </label>
 
             <button
               type="button"
-              className="link-button"
-              onClick={() => navigate("/register")}
+              className="forgot-link"
+              onClick={() =>
+                navigate(
+                  "/forgot-password"
+                )
+              }
             >
-              Create account
+              Forgot password?
             </button>
+
           </div>
 
-          <div className="login-footer">
-            <span>Secure access to your healthcare services</span>
-          </div>
+          {/* Login */}
+
+          <button
+            type="submit"
+            className="login-button"
+            disabled={loading}
+          >
+            {loading
+              ? "Signing in..."
+              : "Sign in"}
+          </button>
+
+        </form>
+
+        {/* Registration */}
+
+        <div className="register-footer">
+
+          <span>
+            Don't have an account?
+          </span>
+
+          <button
+            type="button"
+            className="link-button"
+            onClick={() =>
+              navigate("/register")
+            }
+          >
+            Create account
+          </button>
+
+        </div>
+
+        {/* Footer */}
+
+        <div className="login-footer">
+
+          <span>
+            Secure access to your
+            healthcare services
+          </span>
+
         </div>
 
       </div>
+
     </div>
   );
 }
