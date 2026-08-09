@@ -1,0 +1,811 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  background: #f4f7fb;
+  color: #172033;
+}
+
+button,
+input {
+  font-family: inherit;
+}
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  background:
+    linear-gradient(135deg, #eef7ff 0%, #f8fbff 50%, #eef9f6 100%);
+}
+
+.login-container {
+  width: 100%;
+  max-width: 460px;
+}
+
+.login-brand {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.brand-icon {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 16px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0f766e;
+  color: white;
+  font-size: 34px;
+  font-weight: 700;
+  box-shadow: 0 10px 25px rgba(15, 118, 110, 0.2);
+}
+
+.login-brand h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.login-brand p {
+  margin: 8px 0 0;
+  color: #667085;
+  font-size: 14px;
+}
+
+.login-card {
+  background: white;
+  padding: 38px;
+  border-radius: 20px;
+  border: 1px solid #e5eaf0;
+  box-shadow: 0 20px 50px rgba(16, 24, 40, 0.08);
+}
+
+.login-card h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 650;
+}
+
+.login-subtitle {
+  margin: 8px 0 28px;
+  color: #667085;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #344054;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.form-group input {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  border: 1px solid #d0d5dd;
+  border-radius: 10px;
+  outline: none;
+  background: #fff;
+  color: #101828;
+  font-size: 15px;
+  transition: all 0.2s ease;
+}
+
+.form-group input::placeholder {
+  color: #98a2b3;
+}
+
+.form-group input:focus {
+  border-color: #0f766e;
+  box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.1);
+}
+
+.login-button {
+  width: 100%;
+  height: 48px;
+  margin-top: 6px;
+  border: none;
+  border-radius: 10px;
+  background: #0f766e;
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.login-button:hover {
+  background: #0b5f59;
+  transform: translateY(-1px);
+}
+
+.login-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.login-footer {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #eaecf0;
+  text-align: center;
+}
+
+.login-footer span {
+  color: #98a2b3;
+  font-size: 12px;
+}
+
+@media (max-width: 520px) {
+  .login-page {
+    padding: 24px 16px;
+  }
+
+  .login-card {
+    padding: 28px 22px;
+  }
+
+  .login-brand h1 {
+    font-size: 24px;
+  }
+}
+
+.dashboard {
+  min-height: 100vh;
+  background: #f4f7fb;
+}
+
+.dashboard-header {
+  background: white;
+  border-bottom: 1px solid #e5eaf0;
+  padding: 24px 50px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dashboard-header h1 {
+  margin: 0;
+  font-size: 28px;
+  color: #172033;
+}
+
+.dashboard-header p {
+  margin: 6px 0 0;
+  color: #667085;
+  font-size: 14px;
+}
+
+.logout-button {
+  padding: 10px 20px;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  background: white;
+  color: #344054;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.logout-button:hover {
+  background: #f9fafb;
+}
+
+.dashboard-content {
+  padding: 40px 50px;
+  max-width: 1200px;
+  margin: auto;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.dashboard-card {
+  background: white;
+  border: 1px solid #e5eaf0;
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(16, 24, 40, 0.08);
+}
+
+.card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #e6f4f1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 23px;
+}
+
+.dashboard-card h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.dashboard-card p {
+  margin: 5px 0 0;
+  color: #667085;
+  font-size: 13px;
+}
+
+.dashboard-welcome {
+  margin-top: 30px;
+  background: white;
+  border-radius: 16px;
+  padding: 30px;
+  border: 1px solid #e5eaf0;
+}
+
+.dashboard-welcome h2 {
+  margin: 0 0 8px;
+}
+
+.dashboard-welcome p {
+  margin: 0;
+  color: #667085;
+}
+
+@media (max-width: 900px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .dashboard-header,
+  .dashboard-content {
+    padding-left: 25px;
+    padding-right: 25px;
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-header {
+    padding: 20px;
+  }
+
+  .dashboard-content {
+    padding: 25px 20px;
+  }
+}
+/* =========================
+   Patients Page
+========================= */
+
+.patients-page {
+  min-height: 100vh;
+  background: #f4f7fb;
+  color: #102a43;
+}
+
+/* =========================
+   Header
+========================= */
+
+.patients-header {
+  background: #ffffff;
+  padding: 38px 50px 32px;
+  border-bottom: 1px solid #e2e8f0;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.patients-header h1 {
+  margin: 0;
+  font-size: 34px;
+  font-weight: 700;
+  color: #102a43;
+}
+
+.patients-header p {
+  margin: 8px 0 0;
+  color: #627d98;
+  font-size: 17px;
+}
+
+/* =========================
+   Main Content
+========================= */
+
+.patients-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 50px;
+}
+
+/* =========================
+   Cards
+========================= */
+
+.patients-card {
+  background: #ffffff;
+  border: 1px solid #e1e8f0;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 8px 25px rgba(16, 42, 67, 0.05);
+}
+
+.patient-form-card {
+  margin-bottom: 30px;
+}
+
+/* =========================
+   Primary Button
+========================= */
+
+.primary-button {
+  border: none;
+  background: #087f73;
+  color: white;
+
+  padding: 13px 22px;
+
+  border-radius: 9px;
+
+  font-size: 15px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.primary-button:hover {
+  background: #06665d;
+  transform: translateY(-1px);
+}
+
+.primary-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* =========================
+   Secondary Button
+========================= */
+
+.secondary-button {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334e68;
+
+  padding: 13px 22px;
+
+  border-radius: 9px;
+
+  font-size: 15px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: background 0.2s ease;
+}
+
+.secondary-button:hover {
+  background: #f1f5f9;
+}
+
+/* =========================
+   Table Header
+========================= */
+
+.table-header {
+  padding: 25px 32px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.table-header h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #102a43;
+}
+
+/* =========================
+   Search
+========================= */
+
+.search-input {
+  width: 300px;
+
+  padding: 12px 15px;
+
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+
+  font-size: 14px;
+
+  outline: none;
+}
+
+.search-input:focus {
+  border-color: #087f73;
+  box-shadow: 0 0 0 3px rgba(8, 127, 115, 0.1);
+}
+
+/* =========================
+   Add Patient Form
+========================= */
+
+.patient-form-card .table-header {
+  background: #fbfcfe;
+}
+
+.patient-form-card form {
+  padding: 32px;
+}
+
+/* 2-column layout */
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px 28px;
+}
+
+/* =========================
+   Form Fields
+========================= */
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334e68;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  box-sizing: border-box;
+
+  padding: 13px 14px;
+
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+
+  background: #ffffff;
+
+  color: #102a43;
+
+  font-size: 15px;
+
+  outline: none;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  border-color: #087f73;
+
+  box-shadow:
+    0 0 0 3px rgba(8, 127, 115, 0.1);
+}
+
+.form-group input::placeholder {
+  color: #9aa5b1;
+}
+
+/* Address can span both columns */
+
+.form-group:nth-child(8) {
+  grid-column: 1 / -1;
+}
+
+/* =========================
+   Form Actions
+========================= */
+
+.form-actions {
+  margin-top: 32px;
+
+  padding-top: 24px;
+
+  border-top: 1px solid #e5e7eb;
+
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* =========================
+   Table
+========================= */
+
+.table-container {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead {
+  background: #f8fafc;
+}
+
+th {
+  padding: 17px 24px;
+
+  text-align: left;
+
+  font-size: 13px;
+  font-weight: 700;
+
+  color: #627d98;
+
+  text-transform: uppercase;
+
+  letter-spacing: 0.3px;
+
+  border-bottom: 1px solid #e5e7eb;
+}
+
+td {
+  padding: 20px 24px;
+
+  border-bottom: 1px solid #edf2f7;
+
+  font-size: 14px;
+
+  color: #334e68;
+}
+
+tbody tr:hover {
+  background: #f8fafc;
+}
+
+td strong {
+  display: block;
+
+  color: #102a43;
+
+  font-size: 15px;
+
+  margin-bottom: 4px;
+}
+
+td small {
+  display: block;
+
+  color: #829ab1;
+
+  font-size: 13px;
+}
+
+/* =========================
+   Status
+========================= */
+
+.status-badge {
+  display: inline-flex;
+
+  align-items: center;
+
+  padding: 6px 12px;
+
+  border-radius: 999px;
+
+  background: #e7f8f5;
+
+  color: #087f73;
+
+  font-size: 12px;
+
+  font-weight: 700;
+}
+
+/* =========================
+   Loading / Empty
+========================= */
+
+.loading,
+.empty-state {
+  padding: 70px 20px;
+
+  text-align: center;
+
+  color: #627d98;
+
+  font-size: 15px;
+}
+
+/* =========================
+   Responsive
+========================= */
+
+@media (max-width: 900px) {
+  .patients-header {
+    padding: 30px;
+  }
+
+  .patients-content {
+    padding: 30px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-group:nth-child(8) {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .patients-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+  }
+
+  .patients-content {
+    padding: 20px;
+  }
+
+  .table-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 15px;
+  }
+
+  .search-input {
+    width: 100%;
+  }
+
+  .form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .form-actions button {
+    width: 100%;
+  }
+}
+/* =========================================
+   REGISTRATION
+   ========================================= */
+
+.register-card {
+  width: 100%;
+  max-width: 620px;
+}
+
+.register-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.register-card select {
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+
+  background: #ffffff;
+  color: #243b53;
+
+  font-size: 14px;
+  font-family: inherit;
+
+  outline: none;
+}
+
+.register-card select:focus {
+  border-color: #0f8b83;
+  box-shadow:
+    0 0 0 3px rgba(15, 139, 131, 0.12);
+}
+
+.register-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+
+  margin-top: 22px;
+  padding-top: 20px;
+
+  border-top: 1px solid #e5e7eb;
+
+  font-size: 14px;
+  color: #64748b;
+}
+
+.link-button {
+  padding: 0;
+  border: none;
+  background: transparent;
+
+  color: #0f8b83;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.link-button:hover {
+  text-decoration: underline;
+}
+
+.success-message {
+  margin-bottom: 18px;
+  padding: 12px 14px;
+
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+
+  background: #f0fdf4;
+  color: #166534;
+
+  font-size: 14px;
+}
+
+@media (max-width: 600px) {
+  .register-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .register-card {
+    max-width: 100%;
+  }
+}
