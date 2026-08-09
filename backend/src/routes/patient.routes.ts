@@ -5,7 +5,11 @@ import {
   getPatientById,
   createPatient,
   updatePatient,
-  deletePatient
+  deletePatient,
+  deactivatePatient,
+  getPatientDependents,
+  createPatientDependent,
+  deletePatientDependent
 } from "../controllers/patient.controller";
 
 import { authenticate, authorize } from "../middleware/auth";
@@ -52,6 +56,28 @@ router.delete(
   authenticate,
   authorize("ADMIN"),
   deletePatient
+);
+router.patch(
+  "/:id/deactivate",
+  authenticate,
+  deactivatePatient
+);
+router.get(
+  "/:id/dependents",
+  authenticate,
+  getPatientDependents
+);
+
+router.post(
+  "/:id/dependents",
+  authenticate,
+  createPatientDependent
+);
+
+router.delete(
+  "/:id/dependents/:dependentId",
+  authenticate,
+  deletePatientDependent
 );
 
 export default router;

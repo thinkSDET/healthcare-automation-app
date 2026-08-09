@@ -53,3 +53,33 @@ export const deletePatient = async (id: number) => {
     where: { id }
   });
 };
+
+export const deactivatePatient = async (
+  patientId: number
+) => {
+  const patient =
+    await prisma.patient.findUnique({
+      where: {
+        id: patientId,
+      },
+    });
+
+  if (!patient) {
+    throw new Error("PATIENT_NOT_FOUND");
+  }
+
+  if (patient.status === "INACTIVE") {
+    throw new Error(
+      "PATIENT_ALREADY_INACTIVE"
+    );
+  }
+
+  return prisma.patient.update({
+    where: {
+      id: patientId,
+    },
+    data: {
+      status: "INACTIVE",
+    },
+  });
+};

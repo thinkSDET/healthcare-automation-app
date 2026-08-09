@@ -1,4 +1,10 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
 
 interface User {
   id: number;
@@ -11,50 +17,308 @@ interface User {
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (user: User, token: string) => void;
+
+  login: (
+    user: User,
+    token: string,
+    rememberMe?: boolean
+  ) => void;
+
   logout: () => void;
+
+  isAuthenticated: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext =
+  createContext<AuthContextType | undefined>(
+    undefined
+  );
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(() => {
-    const storedUser = localStorage.getItem("user");
-    return storedUser ? JSON.parse(storedUser) : null;
-  });
+/* =========================================================
+   STORAGE HELPERS
+========================================================= */
 
-  const [token, setToken] = useState<string | null>(() => {
-    return localStorage.getItem("token");
-  });
+const getStoredValue = (key: string) => {
+  return (
+    localStorage.getItem(key) ||
+    sessionStorage.getItem(key)
+  );
+};
 
-  const login = (user: User, token: string) => {
-    localStorage.setItem("user", JSON.stringify(user));
-    localStorage.setItem("token", token);
+const removeStoredValue = (key: string) => {
+  localStorage.removeItem(key);
+  sessionStorage.removeItem(key);
+};
 
-    setUser(user);
-    setToken(token);
-  };
+/* =========================================================
+   JWT EXPIRY
+========================================================= */
+
+const decodeTokenExpiry = (
+  token: string
+): number | null => {
+  try {
+    const parts = token.split(".");
+
+    if (parts.length !== 3) {
+      return null;
+    }
+
+    /*
+     * JWT uses Base64URL.
+     * Convert it to normal Base64 before atob().
+     */
+
+    let base64 = parts[1]
+      .replace(/-/g, "+")
+      .replace(/_/g, "/");
+
+    while (base64.length % 4) {
+      base64 += "=";
+    }
+
+    const payload = JSON.parse(
+      atob(base64)
+    );
+
+    if (!payload.exp) {
+      return null;
+    }
+
+    return payload.exp * 1000;
+  } catch (error) {
+    console.error(
+      "Failed to decode JWT:",
+      error
+    );
+
+    return null;
+  }
+};
+
+/* =========================================================
+   AUTH PROVIDER
+========================================================= */
+
+export const AuthProvider = ({
+  children,
+}: {
+  children: ReactNode;
+}) => {
+  /* =======================================================
+     INITIAL USER
+  ======================================================= */
+
+  const [user, setUser] =
+    useState<User | null>(() => {
+      const storedUser =
+        getStoredValue("user");
+
+      if (!storedUser) {
+        return null;
+      }
+
+      try {
+        return JSON.parse(storedUser);
+      } catch {
+        return null;
+      }
+    });
+
+  /* =======================================================
+     INITIAL TOKEN
+  ======================================================= */
+
+  const [token, setToken] =
+    useState<string | null>(() =>
+      getStoredValue("token")
+    );
+
+  /* =======================================================
+     LOGOUT
+  ======================================================= */
 
   const logout = () => {
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
+    removeStoredValue("user");
+    removeStoredValue("token");
+    removeStoredValue("rememberMe");
 
     setUser(null);
     setToken(null);
   };
 
+  /* =======================================================
+     LOGIN
+  ======================================================= */
+
+  const login = (
+    user: User,
+    token: string,
+    rememberMe = false
+  ) => {
+    /*
+     * Clear previous authentication data
+     */
+
+    removeStoredValue("user");
+    removeStoredValue("token");
+    removeStoredValue("rememberMe");
+
+    /*
+     * Remember Me:
+     *
+     * checked    -> localStorage
+     * unchecked  -> sessionStorage
+     */
+
+    const storage = rememberMe
+      ? localStorage
+      : sessionStorage;
+
+    storage.setItem(
+      "user",
+      JSON.stringify(user)
+    );
+
+    storage.setItem(
+      "token",
+      token
+    );
+
+    storage.setItem(
+      "rememberMe",
+      String(rememberMe)
+    );
+
+    /*
+     * Update React state
+     */
+
+    setUser(user);
+    setToken(token);
+  };
+
+  /* =======================================================
+     SESSION TIMEOUT
+  ======================================================= */
+
+ useEffect(() => {
+  if (!token) {
+    return;
+  }
+
+  const checkSessionExpiry = () => {
+    const expiry = decodeTokenExpiry(token);
+
+    if (!expiry) {
+      console.warn(
+        "Unable to determine JWT expiry."
+      );
+      return;
+    }
+
+    const remainingTime =
+      expiry - Date.now();
+
+    console.log(
+      "Token expires at:",
+      new Date(expiry).toLocaleString()
+    );
+
+    console.log(
+      "Remaining session time:",
+      Math.round(
+        remainingTime / 1000 / 60
+      ),
+      "minutes"
+    );
+
+    // Token already expired
+    if (remainingTime <= 0) {
+      alert(
+        "Your session has expired. Please login again."
+      );
+
+      logout();
+      return;
+    }
+
+    /*
+     * Browser setTimeout maximum delay is
+     * approximately 24.8 days.
+     *
+     * Remember Me token = 30 days.
+     *
+     * Therefore, never pass more than
+     * MAX_TIMEOUT to setTimeout.
+     */
+
+    const MAX_TIMEOUT =
+      2147483647;
+
+    const timeout =
+      Math.min(
+        remainingTime,
+        MAX_TIMEOUT
+      );
+
+    const timer =
+      window.setTimeout(() => {
+        /*
+         * If the actual JWT expiry is still
+         * further away, check again.
+         *
+         * This handles long-lived tokens such
+         * as the 30-day Remember Me token.
+         */
+        checkSessionExpiry();
+      }, timeout);
+
+    return timer;
+  };
+
+  const timer =
+    checkSessionExpiry();
+
+  return () => {
+    if (timer) {
+      window.clearTimeout(timer);
+    }
+  };
+}, [token]);
+
+  /* =======================================================
+     CONTEXT
+  ======================================================= */
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        login,
+        logout,
+        isAuthenticated:
+          !!user && !!token,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
 
+/* =========================================================
+   USE AUTH
+========================================================= */
+
 export const useAuth = () => {
-  const context = useContext(AuthContext);
+  const context =
+    useContext(AuthContext);
 
   if (!context) {
-    throw new Error("useAuth must be used inside AuthProvider");
+    throw new Error(
+      "useAuth must be used inside AuthProvider"
+    );
   }
 
   return context;
