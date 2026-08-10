@@ -26,6 +26,12 @@ interface Order {
   items: OrderItem[];
 }
 
+interface DraftOrderItem {
+  productName: string;
+  quantity: number;
+  unitPrice: string;
+}
+
 interface Patient {
   id: number;
   medicalId: string;
@@ -55,6 +61,31 @@ function PatientOrders() {
 
   const [selectedOrder, setSelectedOrder] =
     useState<Order | null>(null);
+
+  const [showCreateOrder, setShowCreateOrder] =
+    useState(false);
+
+  const [creatingOrder, setCreatingOrder] =
+    useState(false);
+
+  const [orderItems, setOrderItems] =
+    useState<DraftOrderItem[]>([
+      {
+        productName: "",
+        quantity: 1,
+        unitPrice: "",
+      },
+    ]);
+
+  const [deliveryAddress, setDeliveryAddress] =
+    useState("");
+
+  const [orderNotes, setOrderNotes] =
+    useState("");
+
+  const [orderPaymentStatus, setOrderPaymentStatus] =
+    useState("PENDING");
+
 
   const getToken = () => {
     return (
@@ -400,6 +431,169 @@ function PatientOrders() {
       }
     };
 
+  const resetCreateOrderForm = () => {
+    setOrderItems([
+      {
+        productName: "",
+        quantity: 1,
+        unitPrice: "",
+      },
+    ]);
+
+    setDeliveryAddress("");
+    setOrderNotes("");
+    setOrderPaymentStatus("PENDING");
+  };
+
+  const addOrderItem = () => {
+    setOrderItems((previous) => [
+      ...previous,
+      {
+        productName: "",
+        quantity: 1,
+        unitPrice: "",
+      },
+    ]);
+  };
+
+  const removeOrderItem = (index: number) => {
+    setOrderItems((previous) =>
+      previous.filter(
+        (_, itemIndex) => itemIndex !== index
+      )
+    );
+  };
+
+  const updateOrderItem = (
+    index: number,
+    field:
+      | "productName"
+      | "quantity"
+      | "unitPrice",
+    value: string
+  ) => {
+    setOrderItems((previous) =>
+      previous.map((item, itemIndex) =>
+        itemIndex === index
+          ? {
+              ...item,
+              [field]:
+                field === "quantity"
+                  ? Math.max(
+                      1,
+                      Number(value) || 1
+                    )
+                  : value,
+            }
+          : item
+      )
+    );
+  };
+
+  const calculateDraftTotal = () =>
+    orderItems.reduce(
+      (total, item) =>
+        total +
+        (Number(item.quantity) || 0) *
+          (Number(item.unitPrice) || 0),
+      0
+    );
+
+  const handleCreateOrder = async () => {
+    try {
+      setError("");
+      setSuccess("");
+
+      if (!id) {
+        throw new Error("Patient ID is missing");
+      }
+
+      const validItems = orderItems.every(
+        (item) =>
+          item.productName.trim() &&
+          Number(item.quantity) > 0 &&
+          Number(item.unitPrice) >= 0
+      );
+
+      if (!validItems) {
+        setError(
+          "Please provide product name, quantity and price for every item."
+        );
+        return;
+      }
+
+      setCreatingOrder(true);
+
+      const response = await fetch(
+        "http://localhost:4000/api/orders",
+        {
+          method: "POST",
+          headers: {
+            Authorization:
+              `Bearer ${getToken()}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            patientId: Number(id),
+            paymentStatus:
+              orderPaymentStatus,
+            deliveryAddress:
+              deliveryAddress.trim() ||
+              undefined,
+            notes:
+              orderNotes.trim() ||
+              undefined,
+            items: orderItems.map(
+              (item) => ({
+                productName:
+                  item.productName.trim(),
+                quantity:
+                  Number(item.quantity),
+                unitPrice:
+                  Number(item.unitPrice),
+              })
+            ),
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message ||
+            "Failed to create order"
+        );
+      }
+
+      setOrders((previous) => [
+        result.data,
+        ...previous,
+      ]);
+
+      setSelectedOrder(result.data);
+      setShowCreateOrder(false);
+      resetCreateOrderForm();
+
+      setSuccess(
+        "Order created successfully."
+      );
+    } catch (error) {
+      console.error(
+        "Create order error:",
+        error
+      );
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to create order"
+      );
+    } finally {
+      setCreatingOrder(false);
+    }
+  };
+
   const formatDate = (
     value: string
   ) => {
@@ -587,8 +781,247 @@ function PatientOrders() {
                 </p>
               </div>
 
+              <button
+                type="button"
+                className="primary-button"
+                onClick={() => {
+                  setError("");
+                  setSuccess("");
+                  setShowCreateOrder(
+                    (previous) => !previous
+                  );
+                }}
+              >
+                {showCreateOrder
+                  ? "Close"
+                  : "+ Create Order"}
+              </button>
+
             </div>
 
+
+            {showCreateOrder && (
+              <div className="create-order-panel">
+
+                <div className="create-order-panel-header">
+                  <div>
+                    <h4>
+                      Create New Order
+                    </h4>
+
+                    <p>
+                      Add one or more products
+                      to create an order for this patient.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="order-items-form">
+
+                  {orderItems.map(
+                    (item, index) => (
+                      <div
+                        className="order-item-form-row"
+                        key={index}
+                      >
+
+                        <div>
+                          <label>
+                            Product Name
+                          </label>
+
+                          <input
+                            type="text"
+                            value={item.productName}
+                            placeholder="e.g. Prescription refill"
+                            onChange={(e) =>
+                              updateOrderItem(
+                                index,
+                                "productName",
+                                e.target.value
+                              )
+                            }
+                          />
+                        </div>
+
+                        <div>
+                          <label>
+                            Quantity
+                          </label>
+
+                          <input
+                            type="number"
+                            min="1"
+                            value={item.quantity}
+                            onChange={(e) =>
+                              updateOrderItem(
+                                index,
+                                "quantity",
+                                e.target.value
+                              )
+                            }
+                          />
+                        </div>
+
+                        <div>
+                          <label>
+                            Unit Price
+                          </label>
+
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={item.unitPrice}
+                            placeholder="0.00"
+                            onChange={(e) =>
+                              updateOrderItem(
+                                index,
+                                "unitPrice",
+                                e.target.value
+                              )
+                            }
+                          />
+                        </div>
+
+                        {orderItems.length > 1 && (
+                          <button
+                            type="button"
+                            className="danger-button"
+                            onClick={() =>
+                              removeOrderItem(index)
+                            }
+                          >
+                            Remove
+                          </button>
+                        )}
+
+                      </div>
+                    )
+                  )}
+
+                </div>
+
+                <div className="create-order-form-actions">
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={addOrderItem}
+                  >
+                    + Add Item
+                  </button>
+                </div>
+
+                <div className="create-order-extra-grid">
+
+                  <div>
+                    <label>
+                      Payment Status
+                    </label>
+
+                    <select
+                      value={orderPaymentStatus}
+                      onChange={(e) =>
+                        setOrderPaymentStatus(
+                          e.target.value
+                        )
+                      }
+                    >
+                      <option value="PENDING">
+                        Pending
+                      </option>
+
+                      <option value="PAID">
+                        Paid
+                      </option>
+
+                      <option value="FAILED">
+                        Failed
+                      </option>
+
+                      <option value="REFUNDED">
+                        Refunded
+                      </option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label>
+                      Delivery Address
+                    </label>
+
+                    <textarea
+                      value={deliveryAddress}
+                      placeholder="Optional delivery address"
+                      onChange={(e) =>
+                        setDeliveryAddress(
+                          e.target.value
+                        )
+                      }
+                      rows={3}
+                    />
+                  </div>
+
+                  <div>
+                    <label>
+                      Notes
+                    </label>
+
+                    <textarea
+                      value={orderNotes}
+                      placeholder="Optional order notes"
+                      onChange={(e) =>
+                        setOrderNotes(
+                          e.target.value
+                        )
+                      }
+                      rows={3}
+                    />
+                  </div>
+
+                </div>
+
+                <div className="create-order-total">
+                  <span>
+                    Order Total
+                  </span>
+
+                  <strong>
+                    {formatCurrency(
+                      calculateDraftTotal()
+                    )}
+                  </strong>
+                </div>
+
+                <div className="create-order-form-actions">
+
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    disabled={creatingOrder}
+                    onClick={() => {
+                      resetCreateOrderForm();
+                      setShowCreateOrder(false);
+                    }}
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="button"
+                    className="primary-button"
+                    disabled={creatingOrder}
+                    onClick={handleCreateOrder}
+                  >
+                    {creatingOrder
+                      ? "Creating..."
+                      : "Create Order"}
+                  </button>
+
+                </div>
+
+              </div>
+            )}
 
             {orders.length === 0 ? (
 

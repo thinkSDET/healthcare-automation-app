@@ -773,3 +773,134 @@
     width: 100% !important;
   }
 }
+/* =========================================================
+   Create Order
+========================================================= */
+
+.create-order-panel {
+  margin: 20px 0 24px;
+  padding: 22px;
+  border: 1px solid #dfe7ef;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.create-order-panel-header {
+  margin-bottom: 20px;
+}
+
+.create-order-panel-header h4 {
+  margin: 0 0 6px;
+  color: #102a43;
+  font-size: 18px;
+}
+
+.create-order-panel-header p {
+  margin: 0;
+  color: #627d98;
+  font-size: 13px;
+}
+
+.order-items-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.order-item-form-row {
+  display: grid;
+  grid-template-columns: 2fr 100px 140px auto;
+  gap: 12px;
+  align-items: end;
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid #e1e8ef;
+  border-radius: 10px;
+}
+
+.order-item-form-row > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.order-item-form-row label,
+.create-order-extra-grid label {
+  color: #243b53;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.order-item-form-row input,
+.create-order-extra-grid input,
+.create-order-extra-grid select,
+.create-order-extra-grid textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.create-order-extra-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 1.5fr;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.create-order-extra-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.create-order-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.create-order-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20px;
+  padding: 16px 18px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid #dfe7ef;
+}
+
+.create-order-total span {
+  color: #627d98;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.create-order-total strong {
+  color: #102a43;
+  font-size: 20px;
+}
+
+@media (max-width: 900px) {
+  .order-item-form-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .create-order-extra-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .order-item-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .create-order-form-actions {
+    flex-direction: column;
+  }
+
+  .create-order-form-actions button {
+    width: 100%;
+  }
+}
