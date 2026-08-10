@@ -1598,3 +1598,176 @@ input {
     flex: 1;
   }
 }
+
+/* =========================================================
+   Appointment History
+========================================================= */
+
+.appointment-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.appointment-history-card {
+  border: 1px solid #e1e8ef;
+  border-radius: 12px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.appointment-history-main {
+  display: grid;
+  grid-template-columns: 150px 1fr 140px 120px;
+  gap: 24px;
+  align-items: center;
+  padding: 20px;
+}
+
+.appointment-history-date {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.appointment-history-date strong {
+  color: #102a43;
+  font-size: 15px;
+}
+
+.appointment-history-date span {
+  color: #6b7c93;
+  font-size: 13px;
+}
+
+.appointment-history-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.appointment-history-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.appointment-history-title strong {
+  color: #102a43;
+  font-size: 15px;
+}
+
+.appointment-history-info p {
+  margin: 0;
+  color: #243b53;
+  font-size: 14px;
+}
+
+.appointment-history-info small {
+  color: #6b7c93;
+  font-size: 13px;
+}
+
+.appointment-history-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.appointment-history-meta span {
+  color: #829ab1;
+  font-size: 12px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.appointment-history-meta strong {
+  color: #243b53;
+  font-size: 13px;
+  text-transform: capitalize;
+}
+
+.appointment-history-reason {
+  border-top: 1px solid #edf1f5;
+  padding: 16px 20px;
+  background: #f8fafc;
+}
+
+.appointment-history-reason span {
+  display: block;
+  margin-bottom: 5px;
+  color: #829ab1;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.appointment-history-reason p {
+  margin: 0 0 12px;
+  color: #243b53;
+  font-size: 14px;
+}
+
+.appointment-history-reason p:last-child {
+  margin-bottom: 0;
+}
+
+
+/* Status badges */
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.status-scheduled {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.status-confirmed {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.status-completed {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.status-cancelled {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.status-no-show {
+  background: #f5f3ff;
+  color: #6d28d9;
+}
+
+
+/* Responsive */
+
+@media (max-width: 900px) {
+
+  .appointment-history-main {
+    grid-template-columns: 1fr 1fr;
+  }
+
+}
+
+@media (max-width: 600px) {
+
+  .appointment-history-main {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+}

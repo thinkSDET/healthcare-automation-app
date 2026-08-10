@@ -285,3 +285,48 @@ export const upsertPatientMedicalProfile =
       },
     });
   };
+
+  /*
+|--------------------------------------------------------------------------
+| Patient Appointment History
+|--------------------------------------------------------------------------
+*/
+
+export const getPatientAppointments = async (
+  patientId: number
+) => {
+  const patient =
+    await prisma.patient.findUnique({
+      where: {
+        id: patientId,
+      },
+    });
+
+  if (!patient) {
+    throw new Error(
+      "PATIENT_NOT_FOUND"
+    );
+  }
+
+  return prisma.appointment.findMany({
+    where: {
+      patientId,
+    },
+
+    include: {
+      doctor: {
+        select: {
+          id: true,
+          doctorCode: true,
+          firstName: true,
+          lastName: true,
+          specialization: true,
+        },
+      },
+    },
+
+    orderBy: {
+      appointmentAt: "desc",
+    },
+  });
+};

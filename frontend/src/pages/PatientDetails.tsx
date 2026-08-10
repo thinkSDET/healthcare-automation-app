@@ -67,6 +67,24 @@ interface EmergencyContact {
   createdAt?: string;
   updatedAt?: string;
 }
+interface PatientAppointment {
+  id: number;
+  appointmentNo: string;
+  appointmentAt: string;
+  duration: number;
+  type: string;
+  status: string;
+  reason: string;
+  notes?: string | null;
+
+  doctor: {
+    id: number;
+    doctorCode: string;
+    firstName: string;
+    lastName: string;
+    specialization: string;
+  };
+}
 
 
 function PatientDetails() {
@@ -186,6 +204,11 @@ function PatientDetails() {
       currentMedications: "",
       medicalNotes: "",
     });
+  const [appointments, setAppointments] =
+    useState<PatientAppointment[]>([]);
+
+  const [appointmentLoading, setAppointmentLoading] =
+    useState(false);
 
   useEffect(() => {
     fetchPatient();
@@ -193,6 +216,7 @@ function PatientDetails() {
     fetchDocuments();
     fetchEmergencyContact();
     fetchMedicalProfile();
+    fetchAppointments();
   }, [id]);
 
   const getToken = () => {
@@ -201,6 +225,55 @@ function PatientDetails() {
       localStorage.getItem("token") ||
       sessionStorage.getItem("token")
     );
+  };
+
+  const fetchAppointments = async () => {
+    try {
+      setAppointmentLoading(true);
+
+      const response = await fetch(
+        `http://localhost:4000/api/patients/${id}/appointments`,
+        {
+          method: "GET",
+
+          headers: {
+            Authorization:
+              `Bearer ${getToken()}`,
+
+            "Content-Type":
+              "application/json",
+          },
+        }
+      );
+
+      const result =
+        await response.json();
+
+      if (
+        !response.ok ||
+        !result.success
+      ) {
+        throw new Error(
+          result.message ||
+          "Failed to fetch appointments"
+        );
+      }
+
+      setAppointments(
+        result.data || []
+      );
+
+    } catch (error) {
+
+      console.error(
+        "Failed to fetch appointments:",
+        error
+      );
+
+    } finally {
+
+      setAppointmentLoading(false);
+    }
   };
 
   const fetchPatient = async () => {
@@ -1436,6 +1509,60 @@ function PatientDetails() {
       (1024 * 1024)
     ).toFixed(1)} MB`;
   };
+  const formatAppointmentDate = (
+    value: string
+  ) => {
+    return new Date(
+      value
+    ).toLocaleDateString(
+      "en-IN",
+      {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }
+    );
+  };
+
+
+  const formatAppointmentTime = (
+    value: string
+  ) => {
+    return new Date(
+      value
+    ).toLocaleTimeString(
+      "en-IN",
+      {
+        hour: "2-digit",
+        minute: "2-digit",
+      }
+    );
+  };
+
+
+  const getAppointmentStatusClass = (
+    status: string
+  ) => {
+    switch (
+    status.toUpperCase()
+    ) {
+      case "COMPLETED":
+        return "status-badge status-completed";
+
+      case "CONFIRMED":
+        return "status-badge status-confirmed";
+
+      case "CANCELLED":
+        return "status-badge status-cancelled";
+
+      case "NO_SHOW":
+        return "status-badge status-no-show";
+
+      default:
+        return "status-badge status-scheduled";
+    }
+  };
+
 
   if (loading) {
     return (
@@ -3087,69 +3214,250 @@ function PatientDetails() {
                   Patient History
                 </h3>
 
-                <div className="patient-history-grid">
+                <div
+                  className="patient-history-card"
+                  onClick={() => {
+                    document
+                      .getElementById(
+                        "patient-appointments"
+                      )
+                      ?.scrollIntoView({
+                        behavior: "smooth",
+                      });
+                  }}
+                  style={{
+                    cursor: "pointer",
+                  }}
+                >
+                  <span className="history-icon">
+                    📅
+                  </span>
 
-                  <div className="patient-history-card">
+                  <div>
+                    <strong>
+                      Appointments
+                    </strong>
 
-                    <span className="history-icon">
-                      📅
-                    </span>
-
-                    <div>
-
-                      <strong>
-                        Appointments
-                      </strong>
-
-                      <p>
-                        View appointment history
-                      </p>
-
-                    </div>
-
-                  </div>
-
-                  <div className="patient-history-card">
-
-                    <span className="history-icon">
-                      💊
-                    </span>
-
-                    <div>
-
-                      <strong>
-                        Prescriptions
-                      </strong>
-
-                      <p>
-                        View prescription history
-                      </p>
-
-                    </div>
-
-                  </div>
-
-                  <div className="patient-history-card">
-
-                    <span className="history-icon">
-                      📦
-                    </span>
-
-                    <div>
-
-                      <strong>
-                        Orders
-                      </strong>
-
-                      <p>
-                        View order history
-                      </p>
-
-                    </div>
-
+                    <p>
+                      {appointments.length} appointment
+                      {appointments.length === 1
+                        ? ""
+                        : "s"} in history
+                    </p>
                   </div>
 
                 </div>
+
+              </section>
+
+              {/* =========================
+    Appointment History
+========================= */}
+
+              <section
+                id="patient-appointments"
+                className="patient-details-section"
+              >
+
+                <div className="section-heading-row">
+
+                  <div>
+
+                    <h3>
+                      Appointment History
+                    </h3>
+
+                    <p className="section-description">
+                      View all appointments associated
+                      with this patient.
+                    </p>
+
+                  </div>
+
+                  <button
+                    type="button"
+                    className="primary-button"
+                    onClick={() =>
+                      navigate(
+                        `/appointments/new?patientId=${id}`
+                      )
+                    }
+                  >
+                    + New Appointment
+                  </button>
+
+                </div>
+
+
+                {appointmentLoading ? (
+
+                  <div className="loading">
+                    Loading appointment history...
+                  </div>
+
+                ) : appointments.length === 0 ? (
+
+                  <div className="empty-state">
+
+                    <div
+                      style={{
+                        fontSize: "32px",
+                        marginBottom: "10px",
+                      }}
+                    >
+                      📅
+                    </div>
+
+                    <strong>
+                      No appointments found
+                    </strong>
+
+                    <p>
+                      This patient does not have any
+                      appointments yet.
+                    </p>
+
+                  </div>
+
+                ) : (
+
+                  <div className="appointment-history-list">
+
+                    {appointments.map(
+                      (appointment) => (
+
+                        <div
+                          key={appointment.id}
+                          className="appointment-history-card"
+                        >
+
+                          <div className="appointment-history-main">
+
+                            <div className="appointment-history-date">
+
+                              <strong>
+                                {formatAppointmentDate(
+                                  appointment.appointmentAt
+                                )}
+                              </strong>
+
+                              <span>
+                                {formatAppointmentTime(
+                                  appointment.appointmentAt
+                                )}
+                              </span>
+
+                            </div>
+
+
+                            <div className="appointment-history-info">
+
+                              <div className="appointment-history-title">
+
+                                <strong>
+                                  {appointment.appointmentNo}
+                                </strong>
+
+                                <span
+                                  className={getAppointmentStatusClass(
+                                    appointment.status
+                                  )}
+                                >
+                                  {appointment.status.replace(
+                                    "_",
+                                    " "
+                                  )}
+                                </span>
+
+                              </div>
+
+
+                              <p>
+                                Dr.{" "}
+                                {
+                                  appointment.doctor
+                                    .firstName
+                                }{" "}
+                                {
+                                  appointment.doctor
+                                    .lastName
+                                }
+                              </p>
+
+
+                              <small>
+                                {
+                                  appointment.doctor
+                                    .specialization
+                                }
+                              </small>
+
+                            </div>
+
+
+                            <div className="appointment-history-meta">
+
+                              <span>
+                                Type
+                              </span>
+
+                              <strong>
+                                {appointment.type.replace(
+                                  "_",
+                                  " "
+                                )}
+                              </strong>
+
+                            </div>
+
+
+                            <div className="appointment-history-meta">
+
+                              <span>
+                                Duration
+                              </span>
+
+                              <strong>
+                                {appointment.duration} min
+                              </strong>
+
+                            </div>
+
+                          </div>
+
+
+                          <div className="appointment-history-reason">
+
+                            <span>
+                              Reason
+                            </span>
+
+                            <p>
+                              {appointment.reason}
+                            </p>
+
+                            {appointment.notes && (
+                              <>
+                                <span>
+                                  Notes
+                                </span>
+
+                                <p>
+                                  {appointment.notes}
+                                </p>
+                              </>
+                            )}
+
+                          </div>
+
+                        </div>
+
+                      )
+                    )}
+
+                  </div>
+
+                )}
 
               </section>
 

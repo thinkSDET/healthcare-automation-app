@@ -14,7 +14,8 @@ import {
   savePatientEmergencyContact,
   deletePatientEmergencyContact,
   getPatientMedicalProfile,
-  savePatientMedicalProfile
+  savePatientMedicalProfile,
+   getPatientAppointments,
 } from "../controllers/patient.controller";
 
 import {
@@ -215,6 +216,31 @@ router.put(
   "/:id/medical-profile",
   authenticate,
   savePatientMedicalProfile
+);
+
+/*
+|--------------------------------------------------------------------------
+| Appointment History
+|--------------------------------------------------------------------------
+*/
+
+router.get(
+  "/:id/appointments",
+  authenticate,
+  getPatientAppointments
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| Documents
+|--------------------------------------------------------------------------
+*/
+
+router.get(
+  "/:id/documents",
+  authenticate,
+  getPatientDocuments
 );
 
 export default router;

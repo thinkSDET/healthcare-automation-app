@@ -710,3 +710,63 @@ export const savePatientMedicalProfile =
       });
     }
   };
+
+  /*
+|--------------------------------------------------------------------------
+| Patient Appointment History
+|--------------------------------------------------------------------------
+*/
+
+export const getPatientAppointments =
+  async (
+    req: Request,
+    res: Response
+  ) => {
+    try {
+      const patientId =
+        Number(req.params.id);
+
+      if (Number.isNaN(patientId)) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Invalid patient ID",
+        });
+      }
+
+      const appointments =
+        await patientService.getPatientAppointments(
+          patientId
+        );
+
+      return res.status(200).json({
+        success: true,
+        data: appointments,
+      });
+
+    } catch (error) {
+
+      console.error(
+        "GET PATIENT APPOINTMENTS ERROR:",
+        error
+      );
+
+      if (
+        error instanceof Error &&
+        error.message ===
+          "PATIENT_NOT_FOUND"
+      ) {
+        return res.status(404).json({
+          success: false,
+          message:
+            "Patient not found",
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "Failed to fetch appointment history",
+      });
+    }
+  };
