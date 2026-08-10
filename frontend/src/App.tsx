@@ -22,6 +22,7 @@ import ProtectedRoute from "./pages/ProtectedRoute";
 import PatientDetails from "./pages/PatientDetails";
 import PatientPrescriptions from "./pages/PatientPrescriptions";
 
+import PatientOrders from "./pages/PatientOrders";
 import "./App.css";
 
 function App() {
@@ -128,6 +129,11 @@ function App() {
         <Route
           path="/patients/:id/prescriptions"
           element={<PatientPrescriptions />}
+        />
+
+        <Route
+          path="/patients/:id/orders"
+          element={<PatientOrders />}
         />
 
 

@@ -48,6 +48,22 @@ enum Gender {
   OTHER
 }
 
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
 model Patient {
   id          Int           @id @default(autoincrement())
   medicalId   String        @unique
@@ -69,6 +85,7 @@ model Patient {
   emergencyContact  PatientEmergencyContact?
   medicalProfile   PatientMedicalProfile?
   prescriptions Prescription[]
+  orders        Order[]
 }
 
 enum DoctorStatus {
@@ -262,4 +279,42 @@ model PrescriptionItem {
   prescription Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
 
   @@index([prescriptionId])
+}
+
+model Order {
+  id              Int           @id @default(autoincrement())
+  orderNo         String        @unique
+  patientId       Int
+  orderDate       DateTime      @default(now())
+  status          OrderStatus   @default(PENDING)
+  paymentStatus   PaymentStatus @default(PENDING)
+  totalAmount     Decimal       @db.Decimal(10, 2)
+  deliveryAddress String?
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  patient Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  items   OrderItem[]
+
+  @@index([patientId])
+  @@index([orderDate])
+  @@index([status])
+  @@index([paymentStatus])
+}
+
+model OrderItem {
+  id         Int     @id @default(autoincrement())
+  orderId    Int
+  productName String
+  quantity   Int
+  unitPrice  Decimal @db.Decimal(10, 2)
+  totalPrice Decimal @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
 }

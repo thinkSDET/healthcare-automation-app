@@ -3274,7 +3274,33 @@ function PatientDetails() {
                     </p>
                   </div>
                 </div>
-              </section>
+              
+                <div
+                  className="patient-history-card"
+                  onClick={() =>
+                    navigate(
+                      `/patients/${id}/orders`
+                    )
+                  }
+                  style={{
+                    cursor: "pointer",
+                  }}
+                >
+                  <span className="history-icon">
+                    📦
+                  </span>
+
+                  <div>
+                    <strong>
+                      Orders
+                    </strong>
+
+                    <p>
+                      View order history
+                    </p>
+                  </div>
+                </div>
+</section>
 
               {/* =========================
     Appointment History

@@ -7,6 +7,8 @@ import doctorRoutes from "./routes/doctor.routes";
 import appointmentRoutes from "./routes/appointment.routes";
 import cors from "cors";
 import prescriptionRoutes from "./routes/prescription.routes";
+import orderRoutes
+  from "./routes/order.routes";
 
 
 const app = express();
@@ -26,6 +28,10 @@ app.use("/api/appointments", appointmentRoutes);
 app.use(
   "/api/prescriptions",
   prescriptionRoutes
+);
+app.use(
+  "/api/orders",
+  orderRoutes
 );
 
 // Health check
