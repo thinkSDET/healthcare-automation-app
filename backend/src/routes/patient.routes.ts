@@ -9,27 +9,47 @@ import {
   deactivatePatient,
   getPatientDependents,
   createPatientDependent,
-  deletePatientDependent
+  deletePatientDependent,
+  getPatientEmergencyContact,
+  savePatientEmergencyContact,
+  deletePatientEmergencyContact,
+  getPatientMedicalProfile,
+  savePatientMedicalProfile,
+   getPatientAppointments,
 } from "../controllers/patient.controller";
 
-import { authenticate, authorize } from "../middleware/auth";
+import {
+  authenticate,
+  authorize,
+} from "../middleware/auth";
 
-import { validate } from "../middleware/validate";
-import { patientDocumentUpload } from "../middleware/upload";
+import {
+  validate,
+} from "../middleware/validate";
+
+import {
+  patientDocumentUpload,
+} from "../middleware/upload";
 
 import {
   getPatientDocuments,
   uploadPatientDocument,
   downloadPatientDocument,
   deletePatientDocument,
-} from "../controllers/patient-document.controller";;
+} from "../controllers/patient-document.controller";
 
 import {
   createPatientSchema,
-  updatePatientSchema
+  updatePatientSchema,
 } from "../validators/patient.validator";
 
 const router = Router();
+
+/*
+|--------------------------------------------------------------------------
+| Patients
+|--------------------------------------------------------------------------
+*/
 
 router.get(
   "/",
@@ -65,11 +85,19 @@ router.delete(
   authorize("ADMIN"),
   deletePatient
 );
+
 router.patch(
   "/:id/deactivate",
   authenticate,
   deactivatePatient
 );
+
+/*
+|--------------------------------------------------------------------------
+| Dependents
+|--------------------------------------------------------------------------
+*/
+
 router.get(
   "/:id/dependents",
   authenticate,
@@ -87,7 +115,36 @@ router.delete(
   authenticate,
   deletePatientDependent
 );
-router.get("/", authenticate, getPatients);
+
+/*
+|--------------------------------------------------------------------------
+| Emergency Contact
+|--------------------------------------------------------------------------
+*/
+
+router.get(
+  "/:id/emergency-contact",
+  authenticate,
+  getPatientEmergencyContact
+);
+
+router.put(
+  "/:id/emergency-contact",
+  authenticate,
+  savePatientEmergencyContact
+);
+
+router.delete(
+  "/:id/emergency-contact",
+  authenticate,
+  deletePatientEmergencyContact
+);
+
+/*
+|--------------------------------------------------------------------------
+| Documents
+|--------------------------------------------------------------------------
+*/
 
 router.get(
   "/:id/documents",
@@ -116,10 +173,74 @@ router.delete(
   deletePatientDocument
 );
 
+
+
+/*
+|--------------------------------------------------------------------------
+| Emergency Contact
+|--------------------------------------------------------------------------
+*/
+
 router.get(
-  "/:id",
+  "/:id/emergency-contact",
   authenticate,
-  getPatientById
+  getPatientEmergencyContact
+);
+
+router.put(
+  "/:id/emergency-contact",
+  authenticate,
+  savePatientEmergencyContact
+);
+
+router.delete(
+  "/:id/emergency-contact",
+  authenticate,
+  deletePatientEmergencyContact
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| Medical Profile
+|--------------------------------------------------------------------------
+*/
+
+router.get(
+  "/:id/medical-profile",
+  authenticate,
+  getPatientMedicalProfile
+);
+
+router.put(
+  "/:id/medical-profile",
+  authenticate,
+  savePatientMedicalProfile
+);
+
+/*
+|--------------------------------------------------------------------------
+| Appointment History
+|--------------------------------------------------------------------------
+*/
+
+router.get(
+  "/:id/appointments",
+  authenticate,
+  getPatientAppointments
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| Documents
+|--------------------------------------------------------------------------
+*/
+
+router.get(
+  "/:id/documents",
+  authenticate,
+  getPatientDocuments
 );
 
 export default router;

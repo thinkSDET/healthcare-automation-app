@@ -41,6 +41,52 @@ interface PatientDocument {
   createdAt: string;
 }
 
+interface MedicalProfile {
+  id?: number;
+  patientId: number;
+  medicalConditions?: string;
+  allergies?: string;
+  currentMedications?: string;
+  medicalNotes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+interface EmergencyContact {
+  id: number;
+  patientId: number;
+  firstName?: string;
+  lastName?: string;
+  // Kept optional for backward compatibility if an older API response returns name.
+  name?: string;
+  relationship: string;
+  phone: string;
+  alternatePhone?: string;
+  email?: string;
+  address?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+interface PatientAppointment {
+  id: number;
+  appointmentNo: string;
+  appointmentAt: string;
+  duration: number;
+  type: string;
+  status: string;
+  reason: string;
+  notes?: string | null;
+
+  doctor: {
+    id: number;
+    doctorCode: string;
+    firstName: string;
+    lastName: string;
+    specialization: string;
+  };
+}
+
+
 function PatientDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -99,6 +145,32 @@ function PatientDetails() {
   const [documentType, setDocumentType] =
     useState("MEDICAL_RECORD");
 
+
+  const [emergencyContact, setEmergencyContact] =
+    useState<EmergencyContact | null>(null);
+
+  const [emergencyContactLoading, setEmergencyContactLoading] =
+    useState(false);
+
+  const [savingEmergencyContact, setSavingEmergencyContact] =
+    useState(false);
+
+  const [editingEmergencyContact, setEditingEmergencyContact] =
+    useState(false);
+
+
+
+  const [emergencyContactForm, setEmergencyContactForm] =
+    useState({
+      name: "",
+      relationship: "",
+      phone: "",
+      alternatePhone: "",
+      email: "",
+      address: "",
+    });
+
+
   const [formData, setFormData] =
     useState({
       medicalId: "",
@@ -113,10 +185,38 @@ function PatientDetails() {
       status: "ACTIVE",
     });
 
+  const [medicalProfile, setMedicalProfile] =
+    useState<MedicalProfile | null>(null);
+
+  const [medicalProfileLoading, setMedicalProfileLoading] =
+    useState(false);
+
+  const [savingMedicalProfile, setSavingMedicalProfile] =
+    useState(false);
+
+  const [editingMedicalProfile, setEditingMedicalProfile] =
+    useState(false);
+
+  const [medicalProfileForm, setMedicalProfileForm] =
+    useState({
+      medicalConditions: "",
+      allergies: "",
+      currentMedications: "",
+      medicalNotes: "",
+    });
+  const [appointments, setAppointments] =
+    useState<PatientAppointment[]>([]);
+
+  const [appointmentLoading, setAppointmentLoading] =
+    useState(false);
+
   useEffect(() => {
     fetchPatient();
     fetchDependents();
     fetchDocuments();
+    fetchEmergencyContact();
+    fetchMedicalProfile();
+    fetchAppointments();
   }, [id]);
 
   const getToken = () => {
@@ -125,6 +225,55 @@ function PatientDetails() {
       localStorage.getItem("token") ||
       sessionStorage.getItem("token")
     );
+  };
+
+  const fetchAppointments = async () => {
+    try {
+      setAppointmentLoading(true);
+
+      const response = await fetch(
+        `http://localhost:4000/api/patients/${id}/appointments`,
+        {
+          method: "GET",
+
+          headers: {
+            Authorization:
+              `Bearer ${getToken()}`,
+
+            "Content-Type":
+              "application/json",
+          },
+        }
+      );
+
+      const result =
+        await response.json();
+
+      if (
+        !response.ok ||
+        !result.success
+      ) {
+        throw new Error(
+          result.message ||
+          "Failed to fetch appointments"
+        );
+      }
+
+      setAppointments(
+        result.data || []
+      );
+
+    } catch (error) {
+
+      console.error(
+        "Failed to fetch appointments:",
+        error
+      );
+
+    } finally {
+
+      setAppointmentLoading(false);
+    }
   };
 
   const fetchPatient = async () => {
@@ -152,7 +301,7 @@ function PatientDetails() {
       ) {
         throw new Error(
           result.message ||
-            "Failed to fetch patient"
+          "Failed to fetch patient"
         );
       }
 
@@ -200,7 +349,7 @@ function PatientDetails() {
       ) {
         throw new Error(
           result.message ||
-            "Failed to fetch documents"
+          "Failed to fetch documents"
         );
       }
 
@@ -215,6 +364,512 @@ function PatientDetails() {
     }
   };
 
+  const getEmergencyContactName = (contact: EmergencyContact) => {
+    return (
+      contact.name?.trim() ||
+      [contact.firstName, contact.lastName]
+        .filter(Boolean)
+        .join(" ")
+        .trim()
+    );
+  };
+
+  const fetchEmergencyContact = async () => {
+    try {
+      setEmergencyContactLoading(true);
+
+      const response = await fetch(
+        `http://localhost:4000/api/patients/${id}/emergency-contact`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (response.status === 404) {
+        setEmergencyContact(null);
+        setEmergencyContactForm({
+          name: "",
+          relationship: "",
+          phone: "",
+          alternatePhone: "",
+          email: "",
+          address: "",
+        });
+        return;
+      }
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message || "Failed to fetch emergency contact"
+        );
+      }
+
+      const contact = result.data
+        ? {
+          ...result.data,
+          name: getEmergencyContactName(result.data),
+        }
+        : null;
+
+      setEmergencyContact(contact);
+
+      if (contact) {
+        setEmergencyContactForm({
+          name: getEmergencyContactName(contact),
+          relationship: contact.relationship || "",
+          phone: contact.phone || "",
+          alternatePhone: contact.alternatePhone || "",
+          email: contact.email || "",
+          address: contact.address || "",
+        });
+      }
+    } catch (error) {
+      console.error(
+        "Failed to fetch emergency contact:",
+        error
+      );
+    } finally {
+      setEmergencyContactLoading(false);
+    }
+  };
+
+  const handleEmergencyContactChange = (
+    field: keyof typeof emergencyContactForm,
+    value: string
+  ) => {
+    setEmergencyContactForm((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
+  };
+
+  const handleSaveEmergencyContact = async (
+    e: React.FormEvent
+  ) => {
+    e.preventDefault();
+
+    const nameParts = emergencyContactForm.name
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
+    if (nameParts.length < 2) {
+      setError(
+        "Please enter both first name and last name for the emergency contact."
+      );
+      setSuccess("");
+      return;
+    }
+
+    const firstName = nameParts[0];
+    const lastName = nameParts.slice(1).join(" ");
+
+    try {
+      setSavingEmergencyContact(true);
+      setError("");
+      setSuccess("");
+
+      const response = await fetch(
+        `http://localhost:4000/api/patients/${id}/emergency-contact`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            firstName,
+            lastName,
+            relationship: emergencyContactForm.relationship,
+            phone: emergencyContactForm.phone,
+            alternatePhone: emergencyContactForm.alternatePhone,
+            email: emergencyContactForm.email,
+            address: emergencyContactForm.address,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message ||
+          "Failed to save emergency contact"
+        );
+      }
+
+      const savedContact = result.data
+        ? {
+          ...result.data,
+          name: getEmergencyContactName(result.data),
+        }
+        : null;
+
+      setEmergencyContact(savedContact);
+      setEditingEmergencyContact(false);
+
+      setSuccess(
+        "Emergency contact saved successfully."
+      );
+    } catch (error) {
+      console.error(
+        "Emergency contact save error:",
+        error
+      );
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to save emergency contact"
+      );
+    } finally {
+      setSavingEmergencyContact(false);
+    }
+  };
+
+  const handleEditEmergencyContact = () => {
+    if (emergencyContact) {
+      setEmergencyContactForm({
+        name: getEmergencyContactName(emergencyContact),
+        relationship:
+          emergencyContact.relationship || "",
+        phone: emergencyContact.phone || "",
+        alternatePhone:
+          emergencyContact.alternatePhone || "",
+        email: emergencyContact.email || "",
+        address: emergencyContact.address || "",
+      });
+    }
+
+    setError("");
+    setSuccess("");
+    setEditingEmergencyContact(true);
+  };
+
+  const handleCancelEmergencyContactEdit = () => {
+    if (emergencyContact) {
+      setEmergencyContactForm({
+        name: getEmergencyContactName(emergencyContact),
+        relationship:
+          emergencyContact.relationship || "",
+        phone: emergencyContact.phone || "",
+        alternatePhone:
+          emergencyContact.alternatePhone || "",
+        email: emergencyContact.email || "",
+        address: emergencyContact.address || "",
+      });
+    } else {
+      setEmergencyContactForm({
+        name: "",
+        relationship: "",
+        phone: "",
+        alternatePhone: "",
+        email: "",
+        address: "",
+      });
+    }
+
+    setError("");
+    setSuccess("");
+    setEditingEmergencyContact(false);
+  };
+
+  const handleDeleteEmergencyContact = async () => {
+    if (!emergencyContact) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Are you sure you want to remove this emergency contact?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setEmergencyContactLoading(true);
+      setError("");
+      setSuccess("");
+
+      const response = await fetch(
+        `http://localhost:4000/api/patients/${id}/emergency-contact`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message ||
+          "Failed to remove emergency contact"
+        );
+      }
+
+      setEmergencyContact(null);
+      setEmergencyContactForm({
+        name: "",
+        relationship: "",
+        phone: "",
+        alternatePhone: "",
+        email: "",
+        address: "",
+      });
+
+      setEditingEmergencyContact(false);
+
+      setSuccess(
+        "Emergency contact removed successfully."
+      );
+    } catch (error) {
+      console.error(
+        "Emergency contact delete error:",
+        error
+      );
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to remove emergency contact"
+      );
+    } finally {
+      setEmergencyContactLoading(false);
+    }
+  };
+  const fetchMedicalProfile = async () => {
+    try {
+      setMedicalProfileLoading(true);
+
+      const response = await fetch(
+        `http://localhost:4000/api/patients/${id}/medical-profile`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+            "Content-Type":
+              "application/json",
+          },
+        }
+      );
+
+      const result =
+        await response.json();
+
+      if (
+        !response.ok ||
+        !result.success
+      ) {
+        throw new Error(
+          result.message ||
+          "Failed to fetch medical profile"
+        );
+      }
+
+      const profile =
+        result.data || null;
+
+      setMedicalProfile(profile);
+
+      setMedicalProfileForm({
+        medicalConditions:
+          profile?.medicalConditions || "",
+
+        allergies:
+          profile?.allergies || "",
+
+        currentMedications:
+          profile?.currentMedications || "",
+
+        medicalNotes:
+          profile?.medicalNotes || "",
+      });
+
+    } catch (error) {
+
+      console.error(
+        "Failed to fetch medical profile:",
+        error
+      );
+
+    } finally {
+      setMedicalProfileLoading(false);
+    }
+  };
+
+
+  const handleMedicalProfileChange = (
+    field:
+      keyof typeof medicalProfileForm,
+    value: string
+  ) => {
+
+    setMedicalProfileForm(
+      (previous) => ({
+        ...previous,
+        [field]: value,
+      })
+    );
+  };
+
+
+  const handleSaveMedicalProfile = async (
+    e: React.FormEvent
+  ) => {
+
+    e.preventDefault();
+
+    try {
+
+      setSavingMedicalProfile(true);
+      setError("");
+      setSuccess("");
+
+      const response =
+        await fetch(
+          `http://localhost:4000/api/patients/${id}/medical-profile`,
+          {
+            method: "PUT",
+
+            headers: {
+              Authorization:
+                `Bearer ${getToken()}`,
+
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify(
+              medicalProfileForm
+            ),
+          }
+        );
+
+      const result =
+        await response.json();
+
+      if (
+        !response.ok ||
+        !result.success
+      ) {
+        throw new Error(
+          result.message ||
+          "Failed to save medical profile"
+        );
+      }
+
+      setMedicalProfile(
+        result.data
+      );
+
+      setMedicalProfileForm({
+        medicalConditions:
+          result.data?.medicalConditions ||
+          "",
+
+        allergies:
+          result.data?.allergies ||
+          "",
+
+        currentMedications:
+          result.data?.currentMedications ||
+          "",
+
+        medicalNotes:
+          result.data?.medicalNotes ||
+          "",
+      });
+
+      setEditingMedicalProfile(false);
+
+      setSuccess(
+        "Medical profile saved successfully."
+      );
+
+    } catch (error) {
+
+      console.error(
+        "Medical profile save error:",
+        error
+      );
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to save medical profile"
+      );
+
+    } finally {
+
+      setSavingMedicalProfile(false);
+    }
+  };
+
+
+  const handleEditMedicalProfile = () => {
+
+    setMedicalProfileForm({
+      medicalConditions:
+        medicalProfile?.medicalConditions ||
+        "",
+
+      allergies:
+        medicalProfile?.allergies ||
+        "",
+
+      currentMedications:
+        medicalProfile?.currentMedications ||
+        "",
+
+      medicalNotes:
+        medicalProfile?.medicalNotes ||
+        "",
+    });
+
+    setError("");
+    setSuccess("");
+
+    setEditingMedicalProfile(true);
+  };
+
+
+  const handleCancelMedicalProfileEdit =
+    () => {
+
+      setMedicalProfileForm({
+        medicalConditions:
+          medicalProfile?.medicalConditions ||
+          "",
+
+        allergies:
+          medicalProfile?.allergies ||
+          "",
+
+        currentMedications:
+          medicalProfile?.currentMedications ||
+          "",
+
+        medicalNotes:
+          medicalProfile?.medicalNotes ||
+          "",
+      });
+
+      setError("");
+      setSuccess("");
+
+      setEditingMedicalProfile(false);
+    };
   const fetchDependents = async () => {
     try {
       const response = await fetch(
@@ -290,7 +945,7 @@ function PatientDetails() {
       ) {
         throw new Error(
           result.message ||
-            "Failed to add dependent"
+          "Failed to add dependent"
         );
       }
 
@@ -367,7 +1022,7 @@ function PatientDetails() {
       ) {
         throw new Error(
           result.message ||
-            "Failed to delete document"
+          "Failed to delete document"
         );
       }
 
@@ -418,7 +1073,7 @@ function PatientDetails() {
 
         throw new Error(
           result.message ||
-            "Failed to download document"
+          "Failed to download document"
         );
       }
 
@@ -507,7 +1162,7 @@ function PatientDetails() {
       ) {
         throw new Error(
           result.message ||
-            "Failed to upload document"
+          "Failed to upload document"
         );
       }
 
@@ -576,7 +1231,7 @@ function PatientDetails() {
       ) {
         throw new Error(
           result.message ||
-            "Failed to remove dependent"
+          "Failed to remove dependent"
         );
       }
 
@@ -619,9 +1274,9 @@ function PatientDetails() {
       dateOfBirth:
         data.dateOfBirth
           ? data.dateOfBirth.substring(
-              0,
-              10
-            )
+            0,
+            10
+          )
           : "",
       gender:
         data.gender || "MALE",
@@ -728,7 +1383,7 @@ function PatientDetails() {
       ) {
         throw new Error(
           result.message ||
-            "Failed to update patient"
+          "Failed to update patient"
         );
       }
 
@@ -797,7 +1452,7 @@ function PatientDetails() {
       ) {
         throw new Error(
           result.message ||
-            "Failed to deactivate patient"
+          "Failed to deactivate patient"
         );
       }
 
@@ -854,6 +1509,60 @@ function PatientDetails() {
       (1024 * 1024)
     ).toFixed(1)} MB`;
   };
+  const formatAppointmentDate = (
+    value: string
+  ) => {
+    return new Date(
+      value
+    ).toLocaleDateString(
+      "en-IN",
+      {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }
+    );
+  };
+
+
+  const formatAppointmentTime = (
+    value: string
+  ) => {
+    return new Date(
+      value
+    ).toLocaleTimeString(
+      "en-IN",
+      {
+        hour: "2-digit",
+        minute: "2-digit",
+      }
+    );
+  };
+
+
+  const getAppointmentStatusClass = (
+    status: string
+  ) => {
+    switch (
+    status.toUpperCase()
+    ) {
+      case "COMPLETED":
+        return "status-badge status-completed";
+
+      case "CONFIRMED":
+        return "status-badge status-confirmed";
+
+      case "CANCELLED":
+        return "status-badge status-cancelled";
+
+      case "NO_SHOW":
+        return "status-badge status-no-show";
+
+      default:
+        return "status-badge status-scheduled";
+    }
+  };
+
 
   if (loading) {
     return (
@@ -1418,6 +2127,260 @@ function PatientDetails() {
               </section>
 
               {/* =========================
+    Medical Profile
+========================= */}
+
+              <section className="patient-details-section">
+
+                <div className="section-heading-row">
+
+                  <div>
+
+                    <h3>
+                      Medical Profile
+                    </h3>
+
+                    <p className="section-description">
+                      Manage medical conditions,
+                      allergies, medications and
+                      clinical notes.
+                    </p>
+
+                  </div>
+
+                  {!editingMedicalProfile && (
+                    <button
+                      type="button"
+                      className="primary-button"
+                      onClick={
+                        handleEditMedicalProfile
+                      }
+                    >
+                      {medicalProfile
+                        ? "Edit Medical Profile"
+                        : "+ Add Medical Profile"}
+                    </button>
+                  )}
+
+                </div>
+
+                {medicalProfileLoading ? (
+
+                  <div className="loading">
+                    Loading medical profile...
+                  </div>
+
+                ) : editingMedicalProfile ? (
+
+                  <form
+                    className="dependent-form"
+                    onSubmit={
+                      handleSaveMedicalProfile
+                    }
+                  >
+
+                    <div className="patient-edit-grid">
+
+                      <div className="form-group">
+
+                        <label>
+                          Medical Conditions
+                        </label>
+
+                        <textarea
+                          value={
+                            medicalProfileForm
+                              .medicalConditions
+                          }
+                          onChange={(e) =>
+                            handleMedicalProfileChange(
+                              "medicalConditions",
+                              e.target.value
+                            )
+                          }
+                          placeholder="e.g. Diabetes, Hypertension"
+                          rows={3}
+                        />
+
+                      </div>
+
+
+                      <div className="form-group">
+
+                        <label>
+                          Allergies
+                        </label>
+
+                        <textarea
+                          value={
+                            medicalProfileForm
+                              .allergies
+                          }
+                          onChange={(e) =>
+                            handleMedicalProfileChange(
+                              "allergies",
+                              e.target.value
+                            )
+                          }
+                          placeholder="e.g. Penicillin, Peanuts"
+                          rows={3}
+                        />
+
+                      </div>
+
+
+                      <div className="form-group">
+
+                        <label>
+                          Current Medications
+                        </label>
+
+                        <textarea
+                          value={
+                            medicalProfileForm
+                              .currentMedications
+                          }
+                          onChange={(e) =>
+                            handleMedicalProfileChange(
+                              "currentMedications",
+                              e.target.value
+                            )
+                          }
+                          placeholder="List current medications"
+                          rows={3}
+                        />
+
+                      </div>
+
+
+                      <div className="form-group">
+
+                        <label>
+                          Medical Notes
+                        </label>
+
+                        <textarea
+                          value={
+                            medicalProfileForm
+                              .medicalNotes
+                          }
+                          onChange={(e) =>
+                            handleMedicalProfileChange(
+                              "medicalNotes",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Additional medical information"
+                          rows={3}
+                        />
+
+                      </div>
+
+                    </div>
+
+
+                    <div className="patient-details-actions">
+
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={
+                          handleCancelMedicalProfileEdit
+                        }
+                        disabled={
+                          savingMedicalProfile
+                        }
+                      >
+                        Cancel
+                      </button>
+
+
+                      <button
+                        type="submit"
+                        className="primary-button"
+                        disabled={
+                          savingMedicalProfile
+                        }
+                      >
+                        {savingMedicalProfile
+                          ? "Saving..."
+                          : "Save Medical Profile"}
+                      </button>
+
+                    </div>
+
+                  </form>
+
+                ) : (
+
+                  <div className="patient-details-grid">
+
+                    <div className="patient-detail-item">
+
+                      <span>
+                        Medical Conditions
+                      </span>
+
+                      <strong>
+                        {medicalProfile
+                          ?.medicalConditions ||
+                          "-"}
+                      </strong>
+
+                    </div>
+
+
+                    <div className="patient-detail-item">
+
+                      <span>
+                        Allergies
+                      </span>
+
+                      <strong>
+                        {medicalProfile
+                          ?.allergies ||
+                          "-"}
+                      </strong>
+
+                    </div>
+
+
+                    <div className="patient-detail-item">
+
+                      <span>
+                        Current Medications
+                      </span>
+
+                      <strong>
+                        {medicalProfile
+                          ?.currentMedications ||
+                          "-"}
+                      </strong>
+
+                    </div>
+
+
+                    <div className="patient-detail-item">
+
+                      <span>
+                        Medical Notes
+                      </span>
+
+                      <strong>
+                        {medicalProfile
+                          ?.medicalNotes ||
+                          "-"}
+                      </strong>
+
+                    </div>
+
+                  </div>
+
+                )}
+
+              </section>
+
+              {/* =========================
                   Contact
               ========================= */}
 
@@ -1455,6 +2418,380 @@ function PatientDetails() {
                   </div>
 
                 </div>
+
+              </section>
+
+              {/* =========================
+                  Emergency Contact
+              ========================= */}
+
+              <section className="patient-details-section">
+
+                <div className="section-heading-row">
+
+                  <div>
+                    <h3>
+                      Emergency Contact
+                    </h3>
+
+                    <p className="section-description">
+                      Contact person to reach in case of an emergency.
+                    </p>
+                  </div>
+
+                  {!editingEmergencyContact && (
+                    <button
+                      type="button"
+                      className="primary-button"
+                      onClick={
+                        emergencyContact
+                          ? handleEditEmergencyContact
+                          : () => {
+                            setError("");
+                            setSuccess("");
+                            setEditingEmergencyContact(true);
+                          }
+                      }
+                    >
+                      {emergencyContact
+                        ? "Edit Contact"
+                        : "+ Add Contact"}
+                    </button>
+                  )}
+
+                </div>
+
+                {emergencyContactLoading ? (
+
+                  <div className="loading">
+                    Loading emergency contact...
+                  </div>
+
+                ) : editingEmergencyContact ? (
+
+                  <form
+                    className="dependent-form"
+                    onSubmit={
+                      handleSaveEmergencyContact
+                    }
+                  >
+
+                    <div className="patient-edit-grid">
+
+                      <div className="form-group">
+
+                        <label>
+                          Full Name
+                        </label>
+
+                        <input
+                          type="text"
+                          value={
+                            emergencyContactForm.name
+                          }
+                          onChange={(e) =>
+                            handleEmergencyContactChange(
+                              "name",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Enter full name"
+                          required
+                        />
+
+                      </div>
+
+                      <div className="form-group">
+
+                        <label>
+                          Relationship
+                        </label>
+
+                        <select
+                          value={
+                            emergencyContactForm.relationship
+                          }
+                          onChange={(e) =>
+                            handleEmergencyContactChange(
+                              "relationship",
+                              e.target.value
+                            )
+                          }
+                          required
+                        >
+
+                          <option value="">
+                            Select relationship
+                          </option>
+
+                          <option value="SPOUSE">
+                            Spouse
+                          </option>
+
+                          <option value="PARENT">
+                            Parent
+                          </option>
+
+                          <option value="CHILD">
+                            Child
+                          </option>
+
+                          <option value="SIBLING">
+                            Sibling
+                          </option>
+
+                          <option value="FRIEND">
+                            Friend
+                          </option>
+
+                          <option value="OTHER">
+                            Other
+                          </option>
+
+                        </select>
+
+                      </div>
+
+                      <div className="form-group">
+
+                        <label>
+                          Phone
+                        </label>
+
+                        <input
+                          type="tel"
+                          value={
+                            emergencyContactForm.phone
+                          }
+                          onChange={(e) =>
+                            handleEmergencyContactChange(
+                              "phone",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Enter phone number"
+                          required
+                        />
+
+                      </div>
+
+                      <div className="form-group">
+
+                        <label>
+                          Alternate Phone
+                        </label>
+
+                        <input
+                          type="tel"
+                          value={
+                            emergencyContactForm.alternatePhone
+                          }
+                          onChange={(e) =>
+                            handleEmergencyContactChange(
+                              "alternatePhone",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Optional"
+                        />
+
+                      </div>
+
+                      <div className="form-group">
+
+                        <label>
+                          Email
+                        </label>
+
+                        <input
+                          type="email"
+                          value={
+                            emergencyContactForm.email
+                          }
+                          onChange={(e) =>
+                            handleEmergencyContactChange(
+                              "email",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Optional"
+                        />
+
+                      </div>
+
+                      <div className="form-group patient-address-field">
+
+                        <label>
+                          Address
+                        </label>
+
+                        <textarea
+                          value={
+                            emergencyContactForm.address
+                          }
+                          onChange={(e) =>
+                            handleEmergencyContactChange(
+                              "address",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Enter address"
+                          rows={3}
+                        />
+
+                      </div>
+
+                    </div>
+
+                    <div className="form-actions">
+
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={
+                          handleCancelEmergencyContactEdit
+                        }
+                        disabled={
+                          savingEmergencyContact
+                        }
+                      >
+                        Cancel
+                      </button>
+
+                      <button
+                        type="submit"
+                        className="primary-button"
+                        disabled={
+                          savingEmergencyContact
+                        }
+                      >
+                        {savingEmergencyContact
+                          ? "Saving..."
+                          : "Save Contact"}
+                      </button>
+
+                    </div>
+
+                  </form>
+
+                ) : emergencyContact ? (
+
+                  <div className="patient-details-grid">
+
+                    <div className="patient-detail-item">
+
+                      <span>
+                        Full Name
+                      </span>
+
+                      <strong>
+                        {getEmergencyContactName(emergencyContact)}
+                      </strong>
+
+                    </div>
+
+                    <div className="patient-detail-item">
+
+                      <span>
+                        Relationship
+                      </span>
+
+                      <strong>
+                        {emergencyContact.relationship}
+                      </strong>
+
+                    </div>
+
+                    <div className="patient-detail-item">
+
+                      <span>
+                        Phone
+                      </span>
+
+                      <strong>
+                        {emergencyContact.phone}
+                      </strong>
+
+                    </div>
+
+                    <div className="patient-detail-item">
+
+                      <span>
+                        Alternate Phone
+                      </span>
+
+                      <strong>
+                        {emergencyContact.alternatePhone ||
+                          "-"}
+                      </strong>
+
+                    </div>
+
+                    <div className="patient-detail-item">
+
+                      <span>
+                        Email
+                      </span>
+
+                      <strong>
+                        {emergencyContact.email ||
+                          "-"}
+                      </strong>
+
+                    </div>
+
+                    <div className="patient-detail-item">
+
+                      <span>
+                        Address
+                      </span>
+
+                      <strong>
+                        {emergencyContact.address ||
+                          "-"}
+                      </strong>
+
+                    </div>
+
+                    <div
+                      className="patient-details-actions"
+                      style={{
+                        gridColumn: "1 / -1",
+                        justifyContent: "flex-start",
+                      }}
+                    >
+
+                      <button
+                        type="button"
+                        className="primary-button"
+                        onClick={
+                          handleEditEmergencyContact
+                        }
+                      >
+                        Edit Contact
+                      </button>
+
+                      <button
+                        type="button"
+                        className="danger-button"
+                        onClick={
+                          handleDeleteEmergencyContact
+                        }
+                      >
+                        Remove Contact
+                      </button>
+
+                    </div>
+
+                  </div>
+
+                ) : (
+
+                  <div className="empty-state">
+                    No emergency contact added.
+                  </div>
+
+                )}
 
               </section>
 
@@ -1877,69 +3214,302 @@ function PatientDetails() {
                   Patient History
                 </h3>
 
-                <div className="patient-history-grid">
+                <div
+                  className="patient-history-card"
+                  onClick={() => {
+                    document
+                      .getElementById(
+                        "patient-appointments"
+                      )
+                      ?.scrollIntoView({
+                        behavior: "smooth",
+                      });
+                  }}
+                  style={{
+                    cursor: "pointer",
+                  }}
+                >
+                  <span className="history-icon">
+                    📅
+                  </span>
 
-                  <div className="patient-history-card">
+                  <div>
+                    <strong>
+                      Appointments
+                    </strong>
 
-                    <span className="history-icon">
-                      📅
-                    </span>
-
-                    <div>
-
-                      <strong>
-                        Appointments
-                      </strong>
-
-                      <p>
-                        View appointment history
-                      </p>
-
-                    </div>
-
-                  </div>
-
-                  <div className="patient-history-card">
-
-                    <span className="history-icon">
-                      💊
-                    </span>
-
-                    <div>
-
-                      <strong>
-                        Prescriptions
-                      </strong>
-
-                      <p>
-                        View prescription history
-                      </p>
-
-                    </div>
-
-                  </div>
-
-                  <div className="patient-history-card">
-
-                    <span className="history-icon">
-                      📦
-                    </span>
-
-                    <div>
-
-                      <strong>
-                        Orders
-                      </strong>
-
-                      <p>
-                        View order history
-                      </p>
-
-                    </div>
-
+                    <p>
+                      {appointments.length} appointment
+                      {appointments.length === 1
+                        ? ""
+                        : "s"} in history
+                    </p>
                   </div>
 
                 </div>
+
+
+                <div
+                  className="patient-history-card"
+                  onClick={() =>
+                    navigate(
+                      `/patients/${id}/prescriptions`
+                    )
+                  }
+                  style={{
+                    cursor: "pointer",
+                  }}
+                >
+                  <span className="history-icon">
+                    💊
+                  </span>
+
+                  <div>
+                    <strong>
+                      Prescriptions
+                    </strong>
+
+                    <p>
+                      View prescription history
+                    </p>
+                  </div>
+                </div>
+              
+                <div
+                  className="patient-history-card"
+                  onClick={() =>
+                    navigate(
+                      `/patients/${id}/orders`
+                    )
+                  }
+                  style={{
+                    cursor: "pointer",
+                  }}
+                >
+                  <span className="history-icon">
+                    📦
+                  </span>
+
+                  <div>
+                    <strong>
+                      Orders
+                    </strong>
+
+                    <p>
+                      View order history
+                    </p>
+                  </div>
+                </div>
+</section>
+
+              {/* =========================
+    Appointment History
+========================= */}
+
+              <section
+                id="patient-appointments"
+                className="patient-details-section"
+              >
+
+                <div className="section-heading-row">
+
+                  <div>
+
+                    <h3>
+                      Appointment History
+                    </h3>
+
+                    <p className="section-description">
+                      View all appointments associated
+                      with this patient.
+                    </p>
+
+                  </div>
+
+                  <button
+                    type="button"
+                    className="primary-button"
+                    onClick={() =>
+                      navigate(
+                        `/appointments/new?patientId=${id}`
+                      )
+                    }
+                  >
+                    + New Appointment
+                  </button>
+
+                </div>
+
+
+                {appointmentLoading ? (
+
+                  <div className="loading">
+                    Loading appointment history...
+                  </div>
+
+                ) : appointments.length === 0 ? (
+
+                  <div className="empty-state">
+
+                    <div
+                      style={{
+                        fontSize: "32px",
+                        marginBottom: "10px",
+                      }}
+                    >
+                      📅
+                    </div>
+
+                    <strong>
+                      No appointments found
+                    </strong>
+
+                    <p>
+                      This patient does not have any
+                      appointments yet.
+                    </p>
+
+                  </div>
+
+                ) : (
+
+                  <div className="appointment-history-list">
+
+                    {appointments.map(
+                      (appointment) => (
+
+                        <div
+                          key={appointment.id}
+                          className="appointment-history-card"
+                        >
+
+                          <div className="appointment-history-main">
+
+                            <div className="appointment-history-date">
+
+                              <strong>
+                                {formatAppointmentDate(
+                                  appointment.appointmentAt
+                                )}
+                              </strong>
+
+                              <span>
+                                {formatAppointmentTime(
+                                  appointment.appointmentAt
+                                )}
+                              </span>
+
+                            </div>
+
+
+                            <div className="appointment-history-info">
+
+                              <div className="appointment-history-title">
+
+                                <strong>
+                                  {appointment.appointmentNo}
+                                </strong>
+
+                                <span
+                                  className={getAppointmentStatusClass(
+                                    appointment.status
+                                  )}
+                                >
+                                  {appointment.status.replace(
+                                    "_",
+                                    " "
+                                  )}
+                                </span>
+
+                              </div>
+
+
+                              <p>
+                                Dr.{" "}
+                                {
+                                  appointment.doctor
+                                    .firstName
+                                }{" "}
+                                {
+                                  appointment.doctor
+                                    .lastName
+                                }
+                              </p>
+
+
+                              <small>
+                                {
+                                  appointment.doctor
+                                    .specialization
+                                }
+                              </small>
+
+                            </div>
+
+
+                            <div className="appointment-history-meta">
+
+                              <span>
+                                Type
+                              </span>
+
+                              <strong>
+                                {appointment.type.replace(
+                                  "_",
+                                  " "
+                                )}
+                              </strong>
+
+                            </div>
+
+
+                            <div className="appointment-history-meta">
+
+                              <span>
+                                Duration
+                              </span>
+
+                              <strong>
+                                {appointment.duration} min
+                              </strong>
+
+                            </div>
+
+                          </div>
+
+
+                          <div className="appointment-history-reason">
+
+                            <span>
+                              Reason
+                            </span>
+
+                            <p>
+                              {appointment.reason}
+                            </p>
+
+                            {appointment.notes && (
+                              <>
+                                <span>
+                                  Notes
+                                </span>
+
+                                <p>
+                                  {appointment.notes}
+                                </p>
+                              </>
+                            )}
+
+                          </div>
+
+                        </div>
+
+                      )
+                    )}
+
+                  </div>
+
+                )}
 
               </section>
 

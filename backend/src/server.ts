@@ -6,6 +6,9 @@ import patientRoutes from "./routes/patient.routes";
 import doctorRoutes from "./routes/doctor.routes";
 import appointmentRoutes from "./routes/appointment.routes";
 import cors from "cors";
+import prescriptionRoutes from "./routes/prescription.routes";
+import orderRoutes
+  from "./routes/order.routes";
 
 
 const app = express();
@@ -22,6 +25,14 @@ app.use("/api/users", userRoutes);
 app.use("/api/patients", patientRoutes);
 app.use("/api/doctors", doctorRoutes);
 app.use("/api/appointments", appointmentRoutes);
+app.use(
+  "/api/prescriptions",
+  prescriptionRoutes
+);
+app.use(
+  "/api/orders",
+  orderRoutes
+);
 
 // Health check
 app.get("/api/health", async (_req, res) => {

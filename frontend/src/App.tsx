@@ -1,4 +1,9 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -15,12 +20,15 @@ import ChangePassword from "./pages/ChangePassword";
 
 import ProtectedRoute from "./pages/ProtectedRoute";
 import PatientDetails from "./pages/PatientDetails";
+import PatientPrescriptions from "./pages/PatientPrescriptions";
 
+import PatientOrders from "./pages/PatientOrders";
 import "./App.css";
 
 function App() {
   return (
     <BrowserRouter>
+
       <Routes>
 
         {/* =========================
@@ -62,7 +70,9 @@ function App() {
             PROTECTED ROUTES
            ========================= */}
 
-        <Route element={<ProtectedRoute />}>
+        <Route
+          element={<ProtectedRoute />}
+        >
 
           <Route
             path="/dashboard"
@@ -101,14 +111,30 @@ function App() {
 
         </Route>
 
+
+        {/* =========================
+            PATIENT DETAILS
+           ========================= */}
+
         <Route
           path="/patients/:id"
-          element={
-            <PatientDetails />
-
-          }
+          element={<PatientDetails />}
         />
 
+
+        {/* =========================
+            PATIENT PRESCRIPTIONS
+           ========================= */}
+
+        <Route
+          path="/patients/:id/prescriptions"
+          element={<PatientPrescriptions />}
+        />
+
+        <Route
+          path="/patients/:id/orders"
+          element={<PatientOrders />}
+        />
 
 
         {/* =========================
@@ -126,6 +152,7 @@ function App() {
         />
 
       </Routes>
+
     </BrowserRouter>
   );
 }
