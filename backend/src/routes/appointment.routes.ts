@@ -1,24 +1,62 @@
 import { Router } from "express";
-import { authenticate, authorize } from "../middleware/auth";
+import {
+  authenticate,
+  authorize,
+} from "../middleware/auth";
 
 import {
   getAppointments,
   getAppointmentById,
   createAppointment,
   updateAppointment,
-  cancelAppointment
+  cancelAppointment,
 } from "../controllers/appointment.controller";
 
 const router = Router();
 
-router.get("/", authenticate, authorize("ADMIN", "DOCTOR"), getAppointments);
+// View appointments
+// ADMIN and DOCTOR can view appointments.
+router.get(
+  "/",
+  authenticate,
+  authorize("ADMIN", "DOCTOR"),
+  getAppointments
+);
 
-router.get("/:id", authenticate, authorize("ADMIN", "DOCTOR"), getAppointmentById);
+// View appointment details
+// ADMIN and DOCTOR can view appointment details.
+router.get(
+  "/:id",
+  authenticate,
+  authorize("ADMIN", "DOCTOR"),
+  getAppointmentById
+);
 
-router.post("/", authenticate, authorize("ADMIN", "DOCTOR"), createAppointment);
+// Create appointment
+// ONLY ADMIN can create appointments.
+router.post(
+  "/",
+  authenticate,
+  authorize("ADMIN"),
+  createAppointment
+);
 
-router.put("/:id", authenticate, authorize("ADMIN", "DOCTOR"), updateAppointment);
+// Update appointment
+// ONLY ADMIN can update appointments.
+router.put(
+  "/:id",
+  authenticate,
+  authorize("ADMIN"),
+  updateAppointment
+);
 
-router.delete("/:id", authenticate, authorize("ADMIN", "DOCTOR"), cancelAppointment);
+// Cancel appointment
+// ONLY ADMIN can cancel appointments.
+router.delete(
+  "/:id",
+  authenticate,
+  authorize("ADMIN"),
+  cancelAppointment
+);
 
 export default router;

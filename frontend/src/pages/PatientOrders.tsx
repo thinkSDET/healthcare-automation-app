@@ -42,7 +42,10 @@ interface Patient {
 function PatientOrders() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+
+  const role = user?.role?.toUpperCase();
+  const isPharmacist = role === "PHARMACIST";
 
   const [patient, setPatient] =
     useState<Patient | null>(null);
@@ -949,26 +952,28 @@ function PatientOrders() {
                 </p>
               </div>
 
-              <button
-                type="button"
-                className="primary-button"
-                onClick={() => {
-                  setError("");
-                  setSuccess("");
-                  setShowCreateOrder(
-                    (previous) => !previous
-                  );
-                }}
-              >
-                {showCreateOrder
-                  ? "Close"
-                  : "+ Create Order"}
-              </button>
+              {!isPharmacist && (
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={() => {
+                    setError("");
+                    setSuccess("");
+                    setShowCreateOrder(
+                      (previous) => !previous
+                    );
+                  }}
+                >
+                  {showCreateOrder
+                    ? "Close"
+                    : "+ Create Order"}
+                </button>
+              )}
 
             </div>
 
 
-            {showCreateOrder && (
+            {!isPharmacist && showCreateOrder && (
               <div className="create-order-panel">
 
                 <div className="create-order-panel-header">
@@ -1437,7 +1442,7 @@ function PatientOrders() {
                         </button>
 
 
-                        {order.status ===
+                        {!isPharmacist && order.status ===
                           "PENDING" && (
                           <button
                             type="button"
@@ -1955,21 +1960,23 @@ function PatientOrders() {
               </div>
 
 
-              <div className="patient-details-actions">
+              {!isPharmacist && (
+                <div className="patient-details-actions">
 
-                <button
-                  type="button"
-                  className="danger-button"
-                  onClick={() =>
-                    handleDeleteOrder(
-                      selectedOrder.id
-                    )
-                  }
-                >
-                  Delete Order
-                </button>
+                  <button
+                    type="button"
+                    className="danger-button"
+                    onClick={() =>
+                      handleDeleteOrder(
+                        selectedOrder.id
+                      )
+                    }
+                  >
+                    Delete Order
+                  </button>
 
-              </div>
+                </div>
+              )}
 
             </section>
 

@@ -46,7 +46,10 @@ interface Patient {
 function PatientPrescriptions() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+
+  const role = user?.role?.toUpperCase();
+  const isPharmacist = role === "PHARMACIST";
 
   const [patient, setPatient] =
     useState<Patient | null>(null);
@@ -742,28 +745,30 @@ function PatientPrescriptions() {
 
               </div>
 
-              <button
-                type="button"
-                className="primary-button"
-                onClick={() => {
-                  setError("");
-                  setSuccess("");
-                  setShowForm(
-                    !showForm
-                  );
-                }}
-              >
-                {showForm
-                  ? "Cancel"
-                  : "+ New Prescription"}
-              </button>
+              {!isPharmacist && (
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={() => {
+                    setError("");
+                    setSuccess("");
+                    setShowForm(
+                      !showForm
+                    );
+                  }}
+                >
+                  {showForm
+                    ? "Cancel"
+                    : "+ New Prescription"}
+                </button>
+              )}
 
             </div>
 
 
             {/* Create Form */}
 
-            {showForm && (
+            {!isPharmacist && showForm && (
               <form
                 className="dependent-form prescription-form"
                 onSubmit={
@@ -1364,9 +1369,11 @@ function PatientPrescriptions() {
                         </button>
 
 
-                        {prescription.status ===
-                          "ACTIVE" && (
-                          <button
+                        {!isPharmacist && (
+                          <>
+                            {prescription.status ===
+                              "ACTIVE" && (
+                              <button
                             type="button"
                             className="secondary-button"
                             onClick={() =>
@@ -1377,13 +1384,13 @@ function PatientPrescriptions() {
                             }
                           >
                             Mark Completed
-                          </button>
-                        )}
+                              </button>
+                            )}
 
 
-                        {prescription.status !==
-                          "CANCELLED" && (
-                          <button
+                            {prescription.status !==
+                              "CANCELLED" && (
+                              <button
                             type="button"
                             className="danger-button"
                             onClick={() =>
@@ -1394,7 +1401,9 @@ function PatientPrescriptions() {
                             }
                           >
                             Cancel
-                          </button>
+                              </button>
+                            )}
+                          </>
                         )}
 
                       </div>
@@ -1619,21 +1628,23 @@ function PatientPrescriptions() {
               )}
 
 
-              <div className="patient-details-actions">
+              {!isPharmacist && (
+                <div className="patient-details-actions">
 
-                <button
-                  type="button"
-                  className="danger-button"
-                  onClick={() =>
-                    handleDeletePrescription(
-                      selectedPrescription.id
-                    )
-                  }
-                >
-                  Delete Prescription
-                </button>
+                  <button
+                    type="button"
+                    className="danger-button"
+                    onClick={() =>
+                      handleDeletePrescription(
+                        selectedPrescription.id
+                      )
+                    }
+                  >
+                    Delete Prescription
+                  </button>
 
-              </div>
+                </div>
+              )}
 
             </section>
 

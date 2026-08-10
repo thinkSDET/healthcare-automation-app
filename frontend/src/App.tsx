@@ -21,14 +21,13 @@ import ChangePassword from "./pages/ChangePassword";
 import ProtectedRoute from "./pages/ProtectedRoute";
 import PatientDetails from "./pages/PatientDetails";
 import PatientPrescriptions from "./pages/PatientPrescriptions";
-
 import PatientOrders from "./pages/PatientOrders";
+
 import "./App.css";
 
 function App() {
   return (
     <BrowserRouter>
-
       <Routes>
 
         {/* =========================
@@ -65,13 +64,13 @@ function App() {
           element={<ResetPassword />}
         />
 
-
         {/* =========================
-            PROTECTED ROUTES
+            AUTHENTICATED ROUTES
            ========================= */}
 
         {/* Everyone who is authenticated */}
         <Route element={<ProtectedRoute />}>
+
           <Route
             path="/dashboard"
             element={<Dashboard />}
@@ -81,9 +80,14 @@ function App() {
             path="/change-password"
             element={<ChangePassword />}
           />
+
         </Route>
 
-        {/* ADMIN + DOCTOR */}
+
+        {/* =========================
+            ADMIN + DOCTOR
+           ========================= */}
+
         <Route
           element={
             <ProtectedRoute
@@ -94,6 +98,7 @@ function App() {
             />
           }
         >
+
           <Route
             path="/patients"
             element={<Patients />}
@@ -103,28 +108,10 @@ function App() {
             path="/doctors"
             element={<Doctors />}
           />
-        </Route>
 
-        {/* ADMIN + DOCTOR + PATIENT */}
-        <Route
-          element={
-            <ProtectedRoute
-              allowedRoles={[
-                "ADMIN",
-                "DOCTOR",
-                "PATIENT",
-              ]}
-            />
-          }
-        >
           <Route
             path="/appointments"
             element={<Appointments />}
-          />
-
-          <Route
-            path="/appointments/new"
-            element={<NewAppointment />}
           />
 
           <Route
@@ -146,6 +133,30 @@ function App() {
             path="/patients/:id/orders"
             element={<PatientOrders />}
           />
+
+        </Route>
+
+
+        {/* =========================
+            ADMIN ONLY
+           ========================= */}
+
+        {/* Only ADMIN can create appointments */}
+        <Route
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "ADMIN",
+              ]}
+            />
+          }
+        >
+
+          <Route
+            path="/appointments/new"
+            element={<NewAppointment />}
+          />
+
         </Route>
 
 
@@ -164,7 +175,6 @@ function App() {
         />
 
       </Routes>
-
     </BrowserRouter>
   );
 }
