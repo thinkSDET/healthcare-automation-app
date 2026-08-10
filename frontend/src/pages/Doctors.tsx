@@ -14,6 +14,13 @@ interface Doctor {
   status: string;
 }
 
+interface DoctorAvailabilitySlot {
+  id: string;
+  day: number;
+  startTime: string;
+  endTime: string;
+}
+
 function Doctors() {
   const { user, token } = useAuth();
 
@@ -94,6 +101,28 @@ function Doctors() {
 
   const [deletingDoctor, setDeletingDoctor] =
     useState<Doctor | null>(null);
+
+  const [availabilityDoctor, setAvailabilityDoctor] =
+    useState<Doctor | null>(null);
+
+  const [availabilitySlots, setAvailabilitySlots] =
+    useState<DoctorAvailabilitySlot[]>([]);
+
+  const [availabilityError, setAvailabilityError] =
+    useState("");
+
+  const [availabilitySaving, setAvailabilitySaving] =
+    useState(false);
+
+  const availabilityDays = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
 
   const [deleteDoctorLoading, setDeleteDoctorLoading] =
     useState(false);
@@ -995,6 +1024,244 @@ function Doctors() {
     doctor: Doctor
   ) => {
     setSelectedDoctor(doctor);
+  };
+
+
+  const getDefaultAvailability = (
+    doctorId: number
+  ): DoctorAvailabilitySlot[] => {
+    return [1, 2, 3, 4, 5].map(
+      (day) => ({
+        id: `${doctorId}-${day}-default`,
+        day,
+        startTime: "09:00",
+        endTime: "17:00",
+      })
+    );
+  };
+
+  const loadDoctorAvailability = (
+    doctorId: number
+  ) => {
+    const raw =
+      localStorage.getItem(
+        "doctorAvailability"
+      );
+
+    if (!raw) {
+      return getDefaultAvailability(
+        doctorId
+      );
+    }
+
+    try {
+      const saved =
+        JSON.parse(raw) as Record<
+          string,
+          DoctorAvailabilitySlot[]
+        >;
+
+      return (
+        saved[String(doctorId)] ||
+        getDefaultAvailability(
+          doctorId
+        )
+      );
+    } catch {
+      return getDefaultAvailability(
+        doctorId
+      );
+    }
+  };
+
+  const openAvailability = (
+    doctor: Doctor
+  ) => {
+    setAvailabilityDoctor(doctor);
+    setAvailabilityError("");
+    setAvailabilitySlots(
+      loadDoctorAvailability(
+        doctor.id
+      )
+    );
+  };
+
+  const closeAvailability = () => {
+    if (availabilitySaving) {
+      return;
+    }
+
+    setAvailabilityDoctor(null);
+    setAvailabilitySlots([]);
+    setAvailabilityError("");
+  };
+
+  const addAvailabilitySlot = (
+    day: number
+  ) => {
+    setAvailabilitySlots(
+      (previous) => [
+        ...previous,
+        {
+          id:
+            `${Date.now()}-${Math.random()}`,
+          day,
+          startTime: "09:00",
+          endTime: "17:00",
+        },
+      ]
+    );
+  };
+
+  const updateAvailabilitySlot = (
+    slotId: string,
+    field:
+      | "startTime"
+      | "endTime",
+    value: string
+  ) => {
+    setAvailabilitySlots(
+      (previous) =>
+        previous.map((slot) =>
+          slot.id === slotId
+            ? {
+                ...slot,
+                [field]: value,
+              }
+            : slot
+        )
+    );
+
+    setAvailabilityError("");
+  };
+
+  const removeAvailabilitySlot = (
+    slotId: string
+  ) => {
+    setAvailabilitySlots(
+      (previous) =>
+        previous.filter(
+          (slot) =>
+            slot.id !== slotId
+        )
+    );
+  };
+
+  const saveDoctorAvailability = () => {
+    if (!availabilityDoctor) {
+      return;
+    }
+
+    setAvailabilityError("");
+
+    for (const slot of availabilitySlots) {
+      if (
+        !slot.startTime ||
+        !slot.endTime
+      ) {
+        setAvailabilityError(
+          "Start and end time are required for every availability slot."
+        );
+        return;
+      }
+
+      if (
+        slot.startTime >=
+        slot.endTime
+      ) {
+        setAvailabilityError(
+          "End time must be later than start time."
+        );
+        return;
+      }
+    }
+
+    const grouped =
+      availabilitySlots.reduce(
+        (
+          result,
+          slot
+        ) => {
+          if (!result[slot.day]) {
+            result[slot.day] = [];
+          }
+
+          result[slot.day].push(slot);
+
+          return result;
+        },
+        {} as Record<
+          number,
+          DoctorAvailabilitySlot[]
+        >
+      );
+
+    for (const day of Object.keys(grouped)) {
+      const slots = [
+        ...grouped[Number(day)],
+      ].sort((a, b) =>
+        a.startTime.localeCompare(
+          b.startTime
+        )
+      );
+
+      for (
+        let index = 1;
+        index < slots.length;
+        index++
+      ) {
+        if (
+          slots[index].startTime <
+          slots[index - 1].endTime
+        ) {
+          setAvailabilityError(
+            `Overlapping availability slots found on ${availabilityDays[Number(day)]}.`
+          );
+          return;
+        }
+      }
+    }
+
+    try {
+      setAvailabilitySaving(true);
+
+      const raw =
+        localStorage.getItem(
+          "doctorAvailability"
+        );
+
+      const saved = raw
+        ? JSON.parse(raw)
+        : {};
+
+      saved[
+        String(availabilityDoctor.id)
+      ] = availabilitySlots;
+
+      localStorage.setItem(
+        "doctorAvailability",
+        JSON.stringify(saved)
+      );
+
+      setFormSuccess(
+        "Doctor availability saved successfully."
+      );
+
+      setAvailabilityDoctor(null);
+      setAvailabilitySlots([]);
+
+    } catch (error) {
+      console.error(
+        "Failed to save availability:",
+        error
+      );
+
+      setAvailabilityError(
+        "Failed to save doctor availability."
+      );
+    } finally {
+      setAvailabilitySaving(false);
+    }
   };
 
   return (
@@ -1932,6 +2199,179 @@ function Doctors() {
         </div>
       )}
 
+
+      {availabilityDoctor && (
+        <div
+          className="doctor-availability-overlay"
+          onClick={closeAvailability}
+        >
+          <div
+            className="doctor-availability-modal"
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+          >
+
+            <div className="doctor-form-header">
+              <div>
+                <h2>
+                  Doctor Availability
+                </h2>
+
+                <p>
+                  Dr.{" "}
+                  {availabilityDoctor.firstName}{" "}
+                  {availabilityDoctor.lastName}
+                  {" • "}
+                  {availabilityDoctor.specialization}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={closeAvailability}
+                disabled={availabilitySaving}
+              >
+                Close
+              </button>
+            </div>
+
+            {availabilityError && (
+              <div className="doctor-form-error">
+                {availabilityError}
+              </div>
+            )}
+
+            <div className="doctor-availability-help">
+              Add one or more slots per day. Same-day slots cannot overlap.
+            </div>
+
+            <div className="doctor-availability-list">
+              {availabilityDays.map(
+                (dayName, dayIndex) => {
+                  const daySlots =
+                    availabilitySlots.filter(
+                      (slot) =>
+                        slot.day ===
+                        dayIndex
+                    );
+
+                  return (
+                    <div
+                      className="doctor-availability-day"
+                      key={dayName}
+                    >
+                      <div className="doctor-availability-day-header">
+                        <strong>
+                          {dayName}
+                        </strong>
+
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          onClick={() =>
+                            addAvailabilitySlot(
+                              dayIndex
+                            )
+                          }
+                        >
+                          + Add Slot
+                        </button>
+                      </div>
+
+                      {daySlots.length === 0 ? (
+                        <span className="doctor-availability-off">
+                          OFF
+                        </span>
+                      ) : (
+                        daySlots.map(
+                          (slot) => (
+                            <div
+                              className="doctor-availability-slot"
+                              key={slot.id}
+                            >
+                              <input
+                                type="time"
+                                value={
+                                  slot.startTime
+                                }
+                                onChange={(e) =>
+                                  updateAvailabilitySlot(
+                                    slot.id,
+                                    "startTime",
+                                    e.target.value
+                                  )
+                                }
+                              />
+
+                              <span>
+                                to
+                              </span>
+
+                              <input
+                                type="time"
+                                value={
+                                  slot.endTime
+                                }
+                                onChange={(e) =>
+                                  updateAvailabilitySlot(
+                                    slot.id,
+                                    "endTime",
+                                    e.target.value
+                                  )
+                                }
+                              />
+
+                              <button
+                                type="button"
+                                className="danger-button"
+                                onClick={() =>
+                                  removeAvailabilitySlot(
+                                    slot.id
+                                  )
+                                }
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          )
+                        )
+                      )}
+                    </div>
+                  );
+                }
+              )}
+            </div>
+
+            <div className="doctor-form-actions">
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={closeAvailability}
+                disabled={availabilitySaving}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className="primary-button"
+                onClick={
+                  saveDoctorAvailability
+                }
+                disabled={availabilitySaving}
+              >
+                {availabilitySaving
+                  ? "Saving..."
+                  : "Save Availability"}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
       <main className="patients-content">
 
         <div className="patients-card">
@@ -2360,6 +2800,18 @@ function Doctors() {
                               "ACTIVE"
                                 ? "Deactivate"
                                 : "Activate"}
+                            </button>
+
+                            <button
+                              type="button"
+                              className="secondary-button doctor-view-button"
+                              onClick={() =>
+                                openAvailability(
+                                  doctor
+                                )
+                              }
+                            >
+                              Availability
                             </button>
 
                           </td>
