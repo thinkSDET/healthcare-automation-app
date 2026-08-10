@@ -86,6 +86,15 @@ function PatientOrders() {
   const [orderPaymentStatus, setOrderPaymentStatus] =
     useState("PENDING");
 
+  const [orderSearch, setOrderSearch] =
+    useState("");
+
+  const [orderStatusFilter, setOrderStatusFilter] =
+    useState("ALL");
+
+  const [paymentStatusFilter, setPaymentStatusFilter] =
+    useState("ALL");
+
 
   const getToken = () => {
     return (
@@ -594,6 +603,74 @@ function PatientOrders() {
     }
   };
 
+  const filteredOrders =
+    orders.filter((order) => {
+      const search =
+        orderSearch
+          .trim()
+          .toLowerCase();
+
+      const matchesSearch =
+        !search ||
+        order.orderNo
+          .toLowerCase()
+          .includes(search) ||
+        order.status
+          .toLowerCase()
+          .includes(search) ||
+        order.paymentStatus
+          .toLowerCase()
+          .includes(search) ||
+        order.items.some((item) =>
+          item.productName
+            .toLowerCase()
+            .includes(search)
+        );
+
+      const matchesOrderStatus =
+        orderStatusFilter === "ALL" ||
+        order.status ===
+          orderStatusFilter;
+
+      const matchesPaymentStatus =
+        paymentStatusFilter === "ALL" ||
+        order.paymentStatus ===
+          paymentStatusFilter;
+
+      return (
+        matchesSearch &&
+        matchesOrderStatus &&
+        matchesPaymentStatus
+      );
+    });
+
+  const orderSummary = {
+    total: filteredOrders.length,
+
+    pending: filteredOrders.filter(
+      (order) =>
+        order.status === "PENDING"
+    ).length,
+
+    delivered: filteredOrders.filter(
+      (order) =>
+        order.status === "DELIVERED"
+    ).length,
+
+    cancelled: filteredOrders.filter(
+      (order) =>
+        order.status === "CANCELLED"
+    ).length,
+
+    totalValue:
+      filteredOrders.reduce(
+        (total, order) =>
+          total +
+          Number(order.totalAmount),
+        0
+      ),
+  };
+
   const formatDate = (
     value: string
   ) => {
@@ -764,6 +841,97 @@ function PatientOrders() {
               {success}
             </div>
           )}
+
+
+          <section className="orders-summary-section">
+
+            <div className="orders-summary-grid">
+
+              <div className="order-summary-card">
+                <span className="order-summary-icon">
+                  📦
+                </span>
+
+                <div>
+                  <span>
+                    Total Orders
+                  </span>
+
+                  <strong>
+                    {orderSummary.total}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="order-summary-card">
+                <span className="order-summary-icon">
+                  ⏳
+                </span>
+
+                <div>
+                  <span>
+                    Pending
+                  </span>
+
+                  <strong>
+                    {orderSummary.pending}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="order-summary-card">
+                <span className="order-summary-icon">
+                  ✓
+                </span>
+
+                <div>
+                  <span>
+                    Delivered
+                  </span>
+
+                  <strong>
+                    {orderSummary.delivered}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="order-summary-card">
+                <span className="order-summary-icon">
+                  ✕
+                </span>
+
+                <div>
+                  <span>
+                    Cancelled
+                  </span>
+
+                  <strong>
+                    {orderSummary.cancelled}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="order-summary-card order-summary-total">
+                <span className="order-summary-icon">
+                  ₹
+                </span>
+
+                <div>
+                  <span>
+                    Total Value
+                  </span>
+
+                  <strong>
+                    {formatCurrency(
+                      orderSummary.totalValue
+                    )}
+                  </strong>
+                </div>
+              </div>
+
+            </div>
+
+          </section>
 
 
           <section className="patient-details-section">
@@ -1023,6 +1191,116 @@ function PatientOrders() {
               </div>
             )}
 
+            {orders.length > 0 && (
+              <div className="orders-filter-panel">
+
+                <div className="orders-filter-search">
+                  <label>
+                    Search Orders
+                  </label>
+
+                  <input
+                    type="text"
+                    value={orderSearch}
+                    placeholder="Search by order number or product..."
+                    onChange={(e) =>
+                      setOrderSearch(
+                        e.target.value
+                      )
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label>
+                    Order Status
+                  </label>
+
+                  <select
+                    value={orderStatusFilter}
+                    onChange={(e) =>
+                      setOrderStatusFilter(
+                        e.target.value
+                      )
+                    }
+                  >
+                    <option value="ALL">
+                      All Statuses
+                    </option>
+                    <option value="PENDING">
+                      Pending
+                    </option>
+                    <option value="CONFIRMED">
+                      Confirmed
+                    </option>
+                    <option value="PROCESSING">
+                      Processing
+                    </option>
+                    <option value="SHIPPED">
+                      Shipped
+                    </option>
+                    <option value="DELIVERED">
+                      Delivered
+                    </option>
+                    <option value="CANCELLED">
+                      Cancelled
+                    </option>
+                  </select>
+                </div>
+
+                <div>
+                  <label>
+                    Payment Status
+                  </label>
+
+                  <select
+                    value={paymentStatusFilter}
+                    onChange={(e) =>
+                      setPaymentStatusFilter(
+                        e.target.value
+                      )
+                    }
+                  >
+                    <option value="ALL">
+                      All Payments
+                    </option>
+                    <option value="PENDING">
+                      Pending
+                    </option>
+                    <option value="PAID">
+                      Paid
+                    </option>
+                    <option value="FAILED">
+                      Failed
+                    </option>
+                    <option value="REFUNDED">
+                      Refunded
+                    </option>
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => {
+                    setOrderSearch("");
+                    setOrderStatusFilter("ALL");
+                    setPaymentStatusFilter("ALL");
+                  }}
+                >
+                  Clear Filters
+                </button>
+
+              </div>
+            )}
+
+            {orders.length > 0 &&
+              filteredOrders.length === 0 && (
+                <div className="empty-state">
+                  No orders match the selected filters.
+                </div>
+              )}
+
             {orders.length === 0 ? (
 
               <div className="empty-state">
@@ -1051,7 +1329,7 @@ function PatientOrders() {
 
               <div className="order-list">
 
-                {orders.map(
+                {filteredOrders.map(
                   (order) => (
 
                     <div

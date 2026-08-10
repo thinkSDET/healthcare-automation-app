@@ -2234,3 +2234,140 @@ input {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* =========================================================
+   Order Filters
+========================================================= */
+
+.orders-filter-panel {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 14px;
+  align-items: end;
+  margin: 20px 0;
+  padding: 16px;
+  border: 1px solid #dfe7ef;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.orders-filter-panel > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.orders-filter-panel label {
+  color: #243b53;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.orders-filter-panel input,
+.orders-filter-panel select {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.orders-filter-panel button {
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .orders-filter-panel {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .orders-filter-search {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 600px) {
+  .orders-filter-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .orders-filter-search {
+    grid-column: auto;
+  }
+
+  .orders-filter-panel button {
+    width: 100%;
+  }
+}
+/* =========================================================
+   Order Summary
+========================================================= */
+
+.orders-summary-section {
+  margin-bottom: 20px;
+}
+
+.orders-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+}
+
+.order-summary-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px;
+  background: #ffffff;
+  border: 1px solid #dfe7ef;
+  border-radius: 12px;
+}
+
+.order-summary-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: #f0f4f8;
+  font-size: 18px;
+}
+
+.order-summary-card > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.order-summary-card > div > span {
+  color: #829ab1;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.order-summary-card strong {
+  color: #102a43;
+  font-size: 20px;
+}
+
+.order-summary-total strong {
+  font-size: 17px;
+}
+
+@media (max-width: 1100px) {
+  .orders-summary-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 700px) {
+  .orders-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 500px) {
+  .orders-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
