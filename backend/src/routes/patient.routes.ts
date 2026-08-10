@@ -15,13 +15,17 @@ import {
   deletePatientEmergencyContact,
   getPatientMedicalProfile,
   savePatientMedicalProfile,
-   getPatientAppointments,
+  getPatientAppointments,
 } from "../controllers/patient.controller";
 
 import {
   authenticate,
   authorize,
 } from "../middleware/auth";
+
+import {
+  requirePatientAccess,
+} from "../middleware/patient-access";
 
 import {
   validate,
@@ -51,6 +55,8 @@ const router = Router();
 |--------------------------------------------------------------------------
 */
 
+// Patient list
+// Only ADMIN and DOCTOR can view all patients.
 router.get(
   "/",
   authenticate,
@@ -58,13 +64,18 @@ router.get(
   getPatients
 );
 
+// Patient details
+// ADMIN/DOCTOR -> any patient
+// PATIENT       -> only their own patient record
 router.get(
   "/:id",
   authenticate,
-  authorize("ADMIN", "DOCTOR"),
+  requirePatientAccess,
   getPatientById
 );
 
+// Create patient
+// Only ADMIN and DOCTOR can create a patient.
 router.post(
   "/",
   authenticate,
@@ -73,14 +84,19 @@ router.post(
   createPatient
 );
 
+// Update patient
+// ADMIN/DOCTOR -> any patient
+// PATIENT       -> only their own patient record
 router.put(
   "/:id",
   authenticate,
-  authorize("ADMIN", "DOCTOR"),
+  requirePatientAccess,
   validate(updatePatientSchema),
   updatePatient
 );
 
+// Delete patient
+// Only ADMIN can permanently delete.
 router.delete(
   "/:id",
   authenticate,
@@ -88,6 +104,8 @@ router.delete(
   deletePatient
 );
 
+// Deactivate patient
+// Only ADMIN and DOCTOR.
 router.patch(
   "/:id/deactivate",
   authenticate,
@@ -101,24 +119,27 @@ router.patch(
 |--------------------------------------------------------------------------
 */
 
+// View dependents
 router.get(
   "/:id/dependents",
   authenticate,
-  authorize("ADMIN", "DOCTOR"),
+  requirePatientAccess,
   getPatientDependents
 );
 
+// Add dependent
 router.post(
   "/:id/dependents",
   authenticate,
-  authorize("ADMIN", "DOCTOR"),
+  requirePatientAccess,
   createPatientDependent
 );
 
+// Delete dependent
 router.delete(
   "/:id/dependents/:dependentId",
   authenticate,
-  authorize("ADMIN", "DOCTOR"),
+  requirePatientAccess,
   deletePatientDependent
 );
 
@@ -128,24 +149,27 @@ router.delete(
 |--------------------------------------------------------------------------
 */
 
+// View emergency contact
 router.get(
   "/:id/emergency-contact",
   authenticate,
-  authorize("ADMIN", "DOCTOR"),
+  requirePatientAccess,
   getPatientEmergencyContact
 );
 
+// Add/update emergency contact
 router.put(
   "/:id/emergency-contact",
   authenticate,
-  authorize("ADMIN", "DOCTOR"),
+  requirePatientAccess,
   savePatientEmergencyContact
 );
 
+// Delete emergency contact
 router.delete(
   "/:id/emergency-contact",
   authenticate,
-  authorize("ADMIN", "DOCTOR"),
+  requirePatientAccess,
   deletePatientEmergencyContact
 );
 
@@ -155,13 +179,18 @@ router.delete(
 |--------------------------------------------------------------------------
 */
 
+// View documents
+// ADMIN/DOCTOR -> any patient
+// PATIENT       -> only their own documents
 router.get(
   "/:id/documents",
   authenticate,
-  authorize("ADMIN", "DOCTOR"),
+  requirePatientAccess,
   getPatientDocuments
 );
 
+// Upload document
+// Keep this restricted to ADMIN/DOCTOR.
 router.post(
   "/:id/documents",
   authenticate,
@@ -170,13 +199,18 @@ router.post(
   uploadPatientDocument
 );
 
+// Download document
+// ADMIN/DOCTOR -> any patient
+// PATIENT       -> only their own documents
 router.get(
   "/:id/documents/:documentId/download",
   authenticate,
-  authorize("ADMIN", "DOCTOR"),
+  requirePatientAccess,
   downloadPatientDocument
 );
 
+// Delete document
+// Keep this restricted to ADMIN/DOCTOR.
 router.delete(
   "/:id/documents/:documentId",
   authenticate,
@@ -184,53 +218,25 @@ router.delete(
   deletePatientDocument
 );
 
-
-
-// /*
-// |--------------------------------------------------------------------------
-// | Emergency Contact
-// |--------------------------------------------------------------------------
-// */
-
-// router.get(
-//   "/:id/emergency-contact",
-//   authenticate,
-//   authorize("ADMIN", "DOCTOR"),
-//   getPatientEmergencyContact
-// );
-
-// router.put(
-//   "/:id/emergency-contact",
-//   authenticate,
-//   authorize("ADMIN", "DOCTOR"),
-//   savePatientEmergencyContact
-// );
-
-// router.delete(
-//   "/:id/emergency-contact",
-//   authenticate,
-//   authorize("ADMIN", "DOCTOR"),
-//   deletePatientEmergencyContact
-// );
-
-
 /*
 |--------------------------------------------------------------------------
 | Medical Profile
 |--------------------------------------------------------------------------
 */
 
+// View medical profile
 router.get(
   "/:id/medical-profile",
   authenticate,
-  authorize("ADMIN", "DOCTOR"),
+  requirePatientAccess,
   getPatientMedicalProfile
 );
 
+// Create/update medical profile
 router.put(
   "/:id/medical-profile",
   authenticate,
-  authorize("ADMIN", "DOCTOR"),
+  requirePatientAccess,
   savePatientMedicalProfile
 );
 
@@ -240,10 +246,11 @@ router.put(
 |--------------------------------------------------------------------------
 */
 
+// View patient's appointment history
 router.get(
   "/:id/appointments",
   authenticate,
-  authorize("ADMIN", "DOCTOR"),
+  requirePatientAccess,
   getPatientAppointments
 );
 
