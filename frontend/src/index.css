@@ -1771,3 +1771,253 @@ input {
   }
 
 }
+
+/* =========================================================
+   Prescription Management
+========================================================= */
+
+.prescription-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.prescription-card {
+  border: 1px solid #e1e8ef;
+  border-radius: 12px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.prescription-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  border-bottom: 1px solid #edf1f5;
+}
+
+.prescription-card-header > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.prescription-card-header strong {
+  color: #102a43;
+  font-size: 16px;
+}
+
+.prescription-card-header span {
+  color: #829ab1;
+  font-size: 13px;
+}
+
+.prescription-doctor {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 20px;
+}
+
+.prescription-doctor span,
+.prescription-diagnosis span,
+.prescription-items-summary span,
+.prescription-detail-header span,
+.prescription-notes span {
+  color: #829ab1;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.prescription-doctor strong {
+  color: #243b53;
+  font-size: 14px;
+}
+
+.prescription-doctor small {
+  color: #6b7c93;
+  font-size: 13px;
+}
+
+.prescription-diagnosis,
+.prescription-items-summary {
+  padding: 12px 20px;
+  border-top: 1px solid #edf1f5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.prescription-diagnosis strong {
+  color: #243b53;
+  font-size: 14px;
+}
+
+.prescription-items-summary strong {
+  color: #243b53;
+  font-size: 14px;
+}
+
+.prescription-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid #edf1f5;
+  background: #f8fafc;
+}
+
+.prescription-form {
+  margin-top: 20px;
+}
+
+.prescription-medicines {
+  margin-top: 28px;
+}
+
+.prescription-medicines h4 {
+  margin: 0;
+  color: #102a43;
+  font-size: 16px;
+}
+
+.prescription-medicine-card {
+  margin-top: 16px;
+  padding: 18px;
+  border: 1px solid #e1e8ef;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.prescription-medicine-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.prescription-medicine-header strong {
+  color: #243b53;
+}
+
+.prescription-detail-header {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 20px;
+  padding: 20px;
+  margin-bottom: 20px;
+  background: #f8fafc;
+  border-radius: 10px;
+}
+
+.prescription-detail-header > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.prescription-detail-header strong {
+  color: #243b53;
+  font-size: 14px;
+}
+
+.prescription-detail-header small {
+  color: #6b7c93;
+  font-size: 13px;
+}
+
+.prescription-medicine-table {
+  border: 1px solid #e1e8ef;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.prescription-table-header,
+.prescription-table-row {
+  display: grid;
+  grid-template-columns:
+    2fr
+    1fr
+    1.3fr
+    1fr
+    1fr;
+  gap: 15px;
+  padding: 14px 16px;
+  align-items: center;
+}
+
+.prescription-table-header {
+  background: #f8fafc;
+  color: #6b7c93;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.prescription-table-row {
+  border-top: 1px solid #edf1f5;
+  color: #243b53;
+  font-size: 13px;
+}
+
+.prescription-table-row strong {
+  color: #102a43;
+}
+
+.prescription-table-row small {
+  grid-column: 1 / -1;
+  color: #6b7c93;
+  font-style: italic;
+}
+
+.prescription-notes {
+  margin-top: 20px;
+  padding: 16px;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.prescription-notes p {
+  margin: 8px 0 0;
+  color: #243b53;
+  font-size: 14px;
+}
+
+.status-active {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.status-completed {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.status-cancelled {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+@media (max-width: 900px) {
+  .prescription-detail-header {
+    grid-template-columns: 1fr;
+  }
+
+  .prescription-table-header,
+  .prescription-table-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .prescription-card-actions {
+    flex-direction: column;
+  }
+
+  .prescription-card-actions button {
+    width: 100%;
+  }
+}

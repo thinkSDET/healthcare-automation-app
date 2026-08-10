@@ -3248,6 +3248,32 @@ function PatientDetails() {
 
                 </div>
 
+
+                <div
+                  className="patient-history-card"
+                  onClick={() =>
+                    navigate(
+                      `/patients/${id}/prescriptions`
+                    )
+                  }
+                  style={{
+                    cursor: "pointer",
+                  }}
+                >
+                  <span className="history-icon">
+                    💊
+                  </span>
+
+                  <div>
+                    <strong>
+                      Prescriptions
+                    </strong>
+
+                    <p>
+                      View prescription history
+                    </p>
+                  </div>
+                </div>
               </section>
 
               {/* =========================

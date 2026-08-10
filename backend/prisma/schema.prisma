@@ -68,6 +68,7 @@ model Patient {
   documents         PatientDocument[]
   emergencyContact  PatientEmergencyContact?
   medicalProfile   PatientMedicalProfile?
+  prescriptions Prescription[]
 }
 
 enum DoctorStatus {
@@ -91,6 +92,7 @@ model Doctor {
   updatedAt      DateTime     @updatedAt
 
   appointments Appointment[]
+  prescriptions Prescription[]
 }
 
 enum AppointmentStatus {
@@ -216,4 +218,48 @@ model PatientMedicalProfile {
   updatedAt           DateTime @updatedAt
 
 patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+}
+
+enum PrescriptionStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+model Prescription {
+  id             Int                @id @default(autoincrement())
+  prescriptionNo String             @unique
+  patientId      Int
+  doctorId       Int
+  prescribedAt   DateTime           @default(now())
+  diagnosis      String?
+  notes          String?
+  status         PrescriptionStatus @default(ACTIVE)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  patient Patient             @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor  Doctor              @relation(fields: [doctorId], references: [id])
+  items   PrescriptionItem[]
+
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([prescribedAt])
+}
+
+model PrescriptionItem {
+  id             Int      @id @default(autoincrement())
+  prescriptionId Int
+  medicineName   String
+  dosage         String
+  frequency      String
+  duration       String
+  route          String?
+  instructions   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  prescription Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+
+  @@index([prescriptionId])
 }
