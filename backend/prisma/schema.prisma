@@ -63,9 +63,10 @@ model Patient {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
-  appointments Appointment[]
-  dependents   PatientDependent[]
-  documents    PatientDocument[]
+  appointments      Appointment[]
+  dependents        PatientDependent[]
+  documents         PatientDocument[]
+  emergencyContact  PatientEmergencyContact?
 }
 
 enum DoctorStatus {
@@ -113,7 +114,7 @@ model Appointment {
   appointmentAt DateTime
   duration      Int               @default(30)
   type          AppointmentType   @default(IN_PERSON)
-  status        AppointmentStatus @default(SCHEDULED)
+  status        AppointmentStatus  @default(SCHEDULED)
   reason        String
   notes         String?
   createdAt     DateTime          @default(now())
@@ -186,4 +187,20 @@ model PatientDocument {
   patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
   @@index([patientId])
+}
+
+model PatientEmergencyContact {
+  id             Int      @id @default(autoincrement())
+  patientId      Int      @unique
+  firstName      String
+  lastName       String
+  relationship   String
+  phone          String
+  alternatePhone String?
+  email          String?
+  address        String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
 }

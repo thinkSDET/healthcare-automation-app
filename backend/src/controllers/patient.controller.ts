@@ -1,19 +1,31 @@
 import { Request, Response } from "express";
+
 import * as patientService from "../services/patient.service";
+
 import * as patientDependentService from "../services/patient-dependent.service";
 
-export const getPatients = async (_req: Request, res: Response) => {
+/*
+|--------------------------------------------------------------------------
+| Patients
+|--------------------------------------------------------------------------
+*/
+
+export const getPatients = async (
+  _req: Request,
+  res: Response
+) => {
   try {
-    const patients = await patientService.getPatients();
+    const patients =
+      await patientService.getPatients();
 
     res.status(200).json({
       success: true,
-      data: patients
+      data: patients,
     });
   } catch {
     res.status(500).json({
       success: false,
-      message: "Failed to fetch patients"
+      message: "Failed to fetch patients",
     });
   }
 };
@@ -28,27 +40,28 @@ export const getPatientById = async (
     if (Number.isNaN(id)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid patient ID"
+        message: "Invalid patient ID",
       });
     }
 
-    const patient = await patientService.getPatientById(id);
+    const patient =
+      await patientService.getPatientById(id);
 
     if (!patient) {
       return res.status(404).json({
         success: false,
-        message: "Patient not found"
+        message: "Patient not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      data: patient
+      data: patient,
     });
   } catch {
     res.status(500).json({
       success: false,
-      message: "Failed to fetch patient"
+      message: "Failed to fetch patient",
     });
   }
 };
@@ -58,19 +71,22 @@ export const createPatient = async (
   res: Response
 ) => {
   try {
-    const patient = await patientService.createPatient({
-      ...req.body,
-      dateOfBirth: new Date(req.body.dateOfBirth)
-    });
+    const patient =
+      await patientService.createPatient({
+        ...req.body,
+        dateOfBirth: new Date(
+          req.body.dateOfBirth
+        ),
+      });
 
     res.status(201).json({
       success: true,
-      data: patient
+      data: patient,
     });
   } catch {
     res.status(500).json({
       success: false,
-      message: "Failed to create patient"
+      message: "Failed to create patient",
     });
   }
 };
@@ -82,19 +98,20 @@ export const updatePatient = async (
   try {
     const id = Number(req.params.id);
 
-    const patient = await patientService.updatePatient(
-      id,
-      req.body
-    );
+    const patient =
+      await patientService.updatePatient(
+        id,
+        req.body
+      );
 
     res.status(200).json({
       success: true,
-      data: patient
+      data: patient,
     });
   } catch {
     res.status(500).json({
       success: false,
-      message: "Failed to update patient"
+      message: "Failed to update patient",
     });
   }
 };
@@ -112,7 +129,7 @@ export const deletePatient = async (
   } catch {
     res.status(500).json({
       success: false,
-      message: "Failed to delete patient"
+      message: "Failed to delete patient",
     });
   }
 };
@@ -122,7 +139,9 @@ export const deactivatePatient = async (
   res: any
 ) => {
   try {
-    const patientId = Number(req.params.id);
+    const patientId = Number(
+      req.params.id
+    );
 
     if (Number.isNaN(patientId)) {
       return res.status(400).json({
@@ -179,12 +198,20 @@ export const deactivatePatient = async (
   }
 };
 
+/*
+|--------------------------------------------------------------------------
+| Dependents
+|--------------------------------------------------------------------------
+*/
+
 export const getPatientDependents = async (
   req: any,
   res: any
 ) => {
   try {
-    const patientId = Number(req.params.id);
+    const patientId = Number(
+      req.params.id
+    );
 
     if (Number.isNaN(patientId)) {
       return res.status(400).json({
@@ -220,7 +247,9 @@ export const createPatientDependent = async (
   res: any
 ) => {
   try {
-    const patientId = Number(req.params.id);
+    const patientId = Number(
+      req.params.id
+    );
 
     if (Number.isNaN(patientId)) {
       return res.status(400).json({
@@ -344,3 +373,209 @@ export const deletePatientDependent = async (
     });
   }
 };
+
+/*
+|--------------------------------------------------------------------------
+| Emergency Contact
+|--------------------------------------------------------------------------
+*/
+
+export const getPatientEmergencyContact =
+  async (
+    req: Request,
+    res: Response
+  ) => {
+    try {
+      const patientId = Number(
+        req.params.id
+      );
+
+      if (Number.isNaN(patientId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid patient ID",
+        });
+      }
+
+      const contact =
+        await patientService.getPatientEmergencyContact(
+          patientId
+        );
+
+      return res.status(200).json({
+        success: true,
+        data: contact,
+      });
+    } catch (error) {
+      console.error(
+        "GET EMERGENCY CONTACT ERROR:",
+        error
+      );
+
+      if (
+        error instanceof Error &&
+        error.message ===
+          "PATIENT_NOT_FOUND"
+      ) {
+        return res.status(404).json({
+          success: false,
+          message: "Patient not found",
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "Failed to fetch emergency contact",
+      });
+    }
+  };
+
+export const savePatientEmergencyContact =
+  async (
+    req: Request,
+    res: Response
+  ) => {
+    try {
+      const patientId = Number(
+        req.params.id
+      );
+
+      if (Number.isNaN(patientId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid patient ID",
+        });
+      }
+
+      const {
+        firstName: requestFirstName,
+        lastName: requestLastName,
+        name,
+        relationship,
+        phone,
+        alternatePhone,
+        email,
+        address,
+      } = req.body;
+
+      // The UI uses a single Full Name field, while the service expects
+      // firstName and lastName. Accept both payload formats here.
+      let firstName = requestFirstName?.trim();
+      let lastName = requestLastName?.trim();
+
+      if ((!firstName || !lastName) && name?.trim()) {
+        const nameParts = name.trim().split(/\s+/).filter(Boolean);
+        firstName = nameParts[0] || "";
+        lastName = nameParts.slice(1).join(" ");
+      }
+
+      if (
+        !firstName ||
+        !lastName ||
+        !relationship ||
+        !phone
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "First name, last name, relationship and phone are required",
+        });
+      }
+
+      const contact =
+        await patientService.upsertPatientEmergencyContact(
+          patientId,
+          {
+            firstName,
+            lastName,
+            relationship,
+            phone,
+            alternatePhone,
+            email,
+            address,
+          }
+        );
+
+      return res.status(200).json({
+        success: true,
+        message:
+          "Emergency contact saved successfully",
+        data: contact,
+      });
+    } catch (error) {
+      console.error(
+        "SAVE EMERGENCY CONTACT ERROR:",
+        error
+      );
+
+      if (
+        error instanceof Error &&
+        error.message ===
+          "PATIENT_NOT_FOUND"
+      ) {
+        return res.status(404).json({
+          success: false,
+          message: "Patient not found",
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "Failed to save emergency contact",
+      });
+    }
+  };
+
+export const deletePatientEmergencyContact =
+  async (
+    req: Request,
+    res: Response
+  ) => {
+    try {
+      const patientId = Number(
+        req.params.id
+      );
+
+      if (Number.isNaN(patientId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid patient ID",
+        });
+      }
+
+      const result =
+        await patientService.deletePatientEmergencyContact(
+          patientId
+        );
+
+      return res.status(200).json({
+        success: true,
+        ...result,
+      });
+    } catch (error) {
+      console.error(
+        "DELETE EMERGENCY CONTACT ERROR:",
+        error
+      );
+
+      if (
+        error instanceof Error &&
+        error.message ===
+          "EMERGENCY_CONTACT_NOT_FOUND"
+      ) {
+        return res.status(404).json({
+          success: false,
+          message:
+            "Emergency contact not found",
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "Failed to delete emergency contact",
+      });
+    }
+  };

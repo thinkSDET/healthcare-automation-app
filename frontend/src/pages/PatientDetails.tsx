@@ -41,6 +41,23 @@ interface PatientDocument {
   createdAt: string;
 }
 
+interface EmergencyContact {
+  id: number;
+  patientId: number;
+  firstName?: string;
+  lastName?: string;
+  // Kept optional for backward compatibility if an older API response returns name.
+  name?: string;
+  relationship: string;
+  phone: string;
+  alternatePhone?: string;
+  email?: string;
+  address?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+
 function PatientDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -99,6 +116,29 @@ function PatientDetails() {
   const [documentType, setDocumentType] =
     useState("MEDICAL_RECORD");
 
+
+  const [emergencyContact, setEmergencyContact] =
+    useState<EmergencyContact | null>(null);
+
+  const [emergencyContactLoading, setEmergencyContactLoading] =
+    useState(false);
+
+  const [savingEmergencyContact, setSavingEmergencyContact] =
+    useState(false);
+
+  const [editingEmergencyContact, setEditingEmergencyContact] =
+    useState(false);
+
+  const [emergencyContactForm, setEmergencyContactForm] =
+    useState({
+      name: "",
+      relationship: "",
+      phone: "",
+      alternatePhone: "",
+      email: "",
+      address: "",
+    });
+
   const [formData, setFormData] =
     useState({
       medicalId: "",
@@ -117,6 +157,7 @@ function PatientDetails() {
     fetchPatient();
     fetchDependents();
     fetchDocuments();
+    fetchEmergencyContact();
   }, [id]);
 
   const getToken = () => {
@@ -212,6 +253,291 @@ function PatientDetails() {
       );
     } finally {
       setDocumentLoading(false);
+    }
+  };
+
+  const getEmergencyContactName = (contact: EmergencyContact) => {
+    return (
+      contact.name?.trim() ||
+      [contact.firstName, contact.lastName]
+        .filter(Boolean)
+        .join(" ")
+        .trim()
+    );
+  };
+
+  const fetchEmergencyContact = async () => {
+    try {
+      setEmergencyContactLoading(true);
+
+      const response = await fetch(
+        `http://localhost:4000/api/patients/${id}/emergency-contact`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (response.status === 404) {
+        setEmergencyContact(null);
+        setEmergencyContactForm({
+          name: "",
+          relationship: "",
+          phone: "",
+          alternatePhone: "",
+          email: "",
+          address: "",
+        });
+        return;
+      }
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message || "Failed to fetch emergency contact"
+        );
+      }
+
+      const contact = result.data
+        ? {
+            ...result.data,
+            name: getEmergencyContactName(result.data),
+          }
+        : null;
+
+      setEmergencyContact(contact);
+
+      if (contact) {
+        setEmergencyContactForm({
+          name: getEmergencyContactName(contact),
+          relationship: contact.relationship || "",
+          phone: contact.phone || "",
+          alternatePhone: contact.alternatePhone || "",
+          email: contact.email || "",
+          address: contact.address || "",
+        });
+      }
+    } catch (error) {
+      console.error(
+        "Failed to fetch emergency contact:",
+        error
+      );
+    } finally {
+      setEmergencyContactLoading(false);
+    }
+  };
+
+  const handleEmergencyContactChange = (
+    field: keyof typeof emergencyContactForm,
+    value: string
+  ) => {
+    setEmergencyContactForm((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
+  };
+
+  const handleSaveEmergencyContact = async (
+    e: React.FormEvent
+  ) => {
+    e.preventDefault();
+
+    const nameParts = emergencyContactForm.name
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
+    if (nameParts.length < 2) {
+      setError(
+        "Please enter both first name and last name for the emergency contact."
+      );
+      setSuccess("");
+      return;
+    }
+
+    const firstName = nameParts[0];
+    const lastName = nameParts.slice(1).join(" ");
+
+    try {
+      setSavingEmergencyContact(true);
+      setError("");
+      setSuccess("");
+
+      const response = await fetch(
+        `http://localhost:4000/api/patients/${id}/emergency-contact`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            firstName,
+            lastName,
+            relationship: emergencyContactForm.relationship,
+            phone: emergencyContactForm.phone,
+            alternatePhone: emergencyContactForm.alternatePhone,
+            email: emergencyContactForm.email,
+            address: emergencyContactForm.address,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message ||
+            "Failed to save emergency contact"
+        );
+      }
+
+      const savedContact = result.data
+        ? {
+            ...result.data,
+            name: getEmergencyContactName(result.data),
+          }
+        : null;
+
+      setEmergencyContact(savedContact);
+      setEditingEmergencyContact(false);
+
+      setSuccess(
+        "Emergency contact saved successfully."
+      );
+    } catch (error) {
+      console.error(
+        "Emergency contact save error:",
+        error
+      );
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to save emergency contact"
+      );
+    } finally {
+      setSavingEmergencyContact(false);
+    }
+  };
+
+  const handleEditEmergencyContact = () => {
+    if (emergencyContact) {
+      setEmergencyContactForm({
+        name: getEmergencyContactName(emergencyContact),
+        relationship:
+          emergencyContact.relationship || "",
+        phone: emergencyContact.phone || "",
+        alternatePhone:
+          emergencyContact.alternatePhone || "",
+        email: emergencyContact.email || "",
+        address: emergencyContact.address || "",
+      });
+    }
+
+    setError("");
+    setSuccess("");
+    setEditingEmergencyContact(true);
+  };
+
+  const handleCancelEmergencyContactEdit = () => {
+    if (emergencyContact) {
+      setEmergencyContactForm({
+        name: getEmergencyContactName(emergencyContact),
+        relationship:
+          emergencyContact.relationship || "",
+        phone: emergencyContact.phone || "",
+        alternatePhone:
+          emergencyContact.alternatePhone || "",
+        email: emergencyContact.email || "",
+        address: emergencyContact.address || "",
+      });
+    } else {
+      setEmergencyContactForm({
+        name: "",
+        relationship: "",
+        phone: "",
+        alternatePhone: "",
+        email: "",
+        address: "",
+      });
+    }
+
+    setError("");
+    setSuccess("");
+    setEditingEmergencyContact(false);
+  };
+
+  const handleDeleteEmergencyContact = async () => {
+    if (!emergencyContact) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Are you sure you want to remove this emergency contact?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setEmergencyContactLoading(true);
+      setError("");
+      setSuccess("");
+
+      const response = await fetch(
+        `http://localhost:4000/api/patients/${id}/emergency-contact`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message ||
+            "Failed to remove emergency contact"
+        );
+      }
+
+      setEmergencyContact(null);
+      setEmergencyContactForm({
+        name: "",
+        relationship: "",
+        phone: "",
+        alternatePhone: "",
+        email: "",
+        address: "",
+      });
+
+      setEditingEmergencyContact(false);
+
+      setSuccess(
+        "Emergency contact removed successfully."
+      );
+    } catch (error) {
+      console.error(
+        "Emergency contact delete error:",
+        error
+      );
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to remove emergency contact"
+      );
+    } finally {
+      setEmergencyContactLoading(false);
     }
   };
 
@@ -1455,6 +1781,380 @@ function PatientDetails() {
                   </div>
 
                 </div>
+
+              </section>
+
+              {/* =========================
+                  Emergency Contact
+              ========================= */}
+
+              <section className="patient-details-section">
+
+                <div className="section-heading-row">
+
+                  <div>
+                    <h3>
+                      Emergency Contact
+                    </h3>
+
+                    <p className="section-description">
+                      Contact person to reach in case of an emergency.
+                    </p>
+                  </div>
+
+                  {!editingEmergencyContact && (
+                    <button
+                      type="button"
+                      className="primary-button"
+                      onClick={
+                        emergencyContact
+                          ? handleEditEmergencyContact
+                          : () => {
+                              setError("");
+                              setSuccess("");
+                              setEditingEmergencyContact(true);
+                            }
+                      }
+                    >
+                      {emergencyContact
+                        ? "Edit Contact"
+                        : "+ Add Contact"}
+                    </button>
+                  )}
+
+                </div>
+
+                {emergencyContactLoading ? (
+
+                  <div className="loading">
+                    Loading emergency contact...
+                  </div>
+
+                ) : editingEmergencyContact ? (
+
+                  <form
+                    className="dependent-form"
+                    onSubmit={
+                      handleSaveEmergencyContact
+                    }
+                  >
+
+                    <div className="patient-edit-grid">
+
+                      <div className="form-group">
+
+                        <label>
+                          Full Name
+                        </label>
+
+                        <input
+                          type="text"
+                          value={
+                            emergencyContactForm.name
+                          }
+                          onChange={(e) =>
+                            handleEmergencyContactChange(
+                              "name",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Enter full name"
+                          required
+                        />
+
+                      </div>
+
+                      <div className="form-group">
+
+                        <label>
+                          Relationship
+                        </label>
+
+                        <select
+                          value={
+                            emergencyContactForm.relationship
+                          }
+                          onChange={(e) =>
+                            handleEmergencyContactChange(
+                              "relationship",
+                              e.target.value
+                            )
+                          }
+                          required
+                        >
+
+                          <option value="">
+                            Select relationship
+                          </option>
+
+                          <option value="SPOUSE">
+                            Spouse
+                          </option>
+
+                          <option value="PARENT">
+                            Parent
+                          </option>
+
+                          <option value="CHILD">
+                            Child
+                          </option>
+
+                          <option value="SIBLING">
+                            Sibling
+                          </option>
+
+                          <option value="FRIEND">
+                            Friend
+                          </option>
+
+                          <option value="OTHER">
+                            Other
+                          </option>
+
+                        </select>
+
+                      </div>
+
+                      <div className="form-group">
+
+                        <label>
+                          Phone
+                        </label>
+
+                        <input
+                          type="tel"
+                          value={
+                            emergencyContactForm.phone
+                          }
+                          onChange={(e) =>
+                            handleEmergencyContactChange(
+                              "phone",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Enter phone number"
+                          required
+                        />
+
+                      </div>
+
+                      <div className="form-group">
+
+                        <label>
+                          Alternate Phone
+                        </label>
+
+                        <input
+                          type="tel"
+                          value={
+                            emergencyContactForm.alternatePhone
+                          }
+                          onChange={(e) =>
+                            handleEmergencyContactChange(
+                              "alternatePhone",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Optional"
+                        />
+
+                      </div>
+
+                      <div className="form-group">
+
+                        <label>
+                          Email
+                        </label>
+
+                        <input
+                          type="email"
+                          value={
+                            emergencyContactForm.email
+                          }
+                          onChange={(e) =>
+                            handleEmergencyContactChange(
+                              "email",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Optional"
+                        />
+
+                      </div>
+
+                      <div className="form-group patient-address-field">
+
+                        <label>
+                          Address
+                        </label>
+
+                        <textarea
+                          value={
+                            emergencyContactForm.address
+                          }
+                          onChange={(e) =>
+                            handleEmergencyContactChange(
+                              "address",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Enter address"
+                          rows={3}
+                        />
+
+                      </div>
+
+                    </div>
+
+                    <div className="form-actions">
+
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={
+                          handleCancelEmergencyContactEdit
+                        }
+                        disabled={
+                          savingEmergencyContact
+                        }
+                      >
+                        Cancel
+                      </button>
+
+                      <button
+                        type="submit"
+                        className="primary-button"
+                        disabled={
+                          savingEmergencyContact
+                        }
+                      >
+                        {savingEmergencyContact
+                          ? "Saving..."
+                          : "Save Contact"}
+                      </button>
+
+                    </div>
+
+                  </form>
+
+                ) : emergencyContact ? (
+
+                  <div className="patient-details-grid">
+
+                    <div className="patient-detail-item">
+
+                      <span>
+                        Full Name
+                      </span>
+
+                      <strong>
+                        {getEmergencyContactName(emergencyContact)}
+                      </strong>
+
+                    </div>
+
+                    <div className="patient-detail-item">
+
+                      <span>
+                        Relationship
+                      </span>
+
+                      <strong>
+                        {emergencyContact.relationship}
+                      </strong>
+
+                    </div>
+
+                    <div className="patient-detail-item">
+
+                      <span>
+                        Phone
+                      </span>
+
+                      <strong>
+                        {emergencyContact.phone}
+                      </strong>
+
+                    </div>
+
+                    <div className="patient-detail-item">
+
+                      <span>
+                        Alternate Phone
+                      </span>
+
+                      <strong>
+                        {emergencyContact.alternatePhone ||
+                          "-"}
+                      </strong>
+
+                    </div>
+
+                    <div className="patient-detail-item">
+
+                      <span>
+                        Email
+                      </span>
+
+                      <strong>
+                        {emergencyContact.email ||
+                          "-"}
+                      </strong>
+
+                    </div>
+
+                    <div className="patient-detail-item">
+
+                      <span>
+                        Address
+                      </span>
+
+                      <strong>
+                        {emergencyContact.address ||
+                          "-"}
+                      </strong>
+
+                    </div>
+
+                    <div
+                      className="patient-details-actions"
+                      style={{
+                        gridColumn: "1 / -1",
+                        justifyContent: "flex-start",
+                      }}
+                    >
+
+                      <button
+                        type="button"
+                        className="primary-button"
+                        onClick={
+                          handleEditEmergencyContact
+                        }
+                      >
+                        Edit Contact
+                      </button>
+
+                      <button
+                        type="button"
+                        className="danger-button"
+                        onClick={
+                          handleDeleteEmergencyContact
+                        }
+                      >
+                        Remove Contact
+                      </button>
+
+                    </div>
+
+                  </div>
+
+                ) : (
+
+                  <div className="empty-state">
+                    No emergency contact added.
+                  </div>
+
+                )}
 
               </section>
 
