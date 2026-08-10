@@ -579,3 +579,134 @@ export const deletePatientEmergencyContact =
       });
     }
   };
+
+  /*
+|--------------------------------------------------------------------------
+| Medical Profile
+|--------------------------------------------------------------------------
+*/
+
+export const getPatientMedicalProfile =
+  async (
+    req: Request,
+    res: Response
+  ) => {
+    try {
+      const patientId =
+        Number(req.params.id);
+
+      if (Number.isNaN(patientId)) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Invalid patient ID",
+        });
+      }
+
+      const profile =
+        await patientService.getPatientMedicalProfile(
+          patientId
+        );
+
+      return res.status(200).json({
+        success: true,
+        data: profile,
+      });
+
+    } catch (error) {
+
+      console.error(
+        "GET MEDICAL PROFILE ERROR:",
+        error
+      );
+
+      if (
+        error instanceof Error &&
+        error.message ===
+          "PATIENT_NOT_FOUND"
+      ) {
+        return res.status(404).json({
+          success: false,
+          message:
+            "Patient not found",
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "Failed to fetch medical profile",
+      });
+    }
+  };
+
+
+export const savePatientMedicalProfile =
+  async (
+    req: Request,
+    res: Response
+  ) => {
+    try {
+      const patientId =
+        Number(req.params.id);
+
+      if (Number.isNaN(patientId)) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Invalid patient ID",
+        });
+      }
+
+      const {
+        medicalConditions,
+        allergies,
+        currentMedications,
+        medicalNotes,
+      } = req.body;
+
+      const profile =
+        await patientService
+          .upsertPatientMedicalProfile(
+            patientId,
+            {
+              medicalConditions,
+              allergies,
+              currentMedications,
+              medicalNotes,
+            }
+          );
+
+      return res.status(200).json({
+        success: true,
+        message:
+          "Medical profile saved successfully",
+        data: profile,
+      });
+
+    } catch (error) {
+
+      console.error(
+        "SAVE MEDICAL PROFILE ERROR:",
+        error
+      );
+
+      if (
+        error instanceof Error &&
+        error.message ===
+          "PATIENT_NOT_FOUND"
+      ) {
+        return res.status(404).json({
+          success: false,
+          message:
+            "Patient not found",
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "Failed to save medical profile",
+      });
+    }
+  };

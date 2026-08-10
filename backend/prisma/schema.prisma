@@ -67,6 +67,7 @@ model Patient {
   dependents        PatientDependent[]
   documents         PatientDocument[]
   emergencyContact  PatientEmergencyContact?
+  medicalProfile   PatientMedicalProfile?
 }
 
 enum DoctorStatus {
@@ -203,4 +204,16 @@ model PatientEmergencyContact {
   updatedAt      DateTime @updatedAt
 
   patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+}
+model PatientMedicalProfile {
+  id                  Int      @id @default(autoincrement())
+  patientId           Int      @unique
+  medicalConditions   String?
+  allergies           String?
+  currentMedications  String?
+  medicalNotes        String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
 }

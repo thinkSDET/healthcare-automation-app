@@ -188,3 +188,100 @@ export const deletePatientEmergencyContact =
         "Emergency contact deleted successfully",
     };
   };
+
+  /*
+|--------------------------------------------------------------------------
+| Medical Profile
+|--------------------------------------------------------------------------
+*/
+
+export const getPatientMedicalProfile = async (
+  patientId: number
+) => {
+  const patient =
+    await prisma.patient.findUnique({
+      where: {
+        id: patientId,
+      },
+    });
+
+  if (!patient) {
+    throw new Error(
+      "PATIENT_NOT_FOUND"
+    );
+  }
+
+  return prisma.patientMedicalProfile.findUnique({
+    where: {
+      patientId,
+    },
+  });
+};
+
+export const upsertPatientMedicalProfile =
+  async (
+    patientId: number,
+    data: {
+      medicalConditions?: string;
+      allergies?: string;
+      currentMedications?: string;
+      medicalNotes?: string;
+    }
+  ) => {
+    const patient =
+      await prisma.patient.findUnique({
+        where: {
+          id: patientId,
+        },
+      });
+
+    if (!patient) {
+      throw new Error(
+        "PATIENT_NOT_FOUND"
+      );
+    }
+
+    return prisma.patientMedicalProfile.upsert({
+      where: {
+        patientId,
+      },
+
+      update: {
+        medicalConditions:
+          data.medicalConditions?.trim() ||
+          null,
+
+        allergies:
+          data.allergies?.trim() ||
+          null,
+
+        currentMedications:
+          data.currentMedications?.trim() ||
+          null,
+
+        medicalNotes:
+          data.medicalNotes?.trim() ||
+          null,
+      },
+
+      create: {
+        patientId,
+
+        medicalConditions:
+          data.medicalConditions?.trim() ||
+          null,
+
+        allergies:
+          data.allergies?.trim() ||
+          null,
+
+        currentMedications:
+          data.currentMedications?.trim() ||
+          null,
+
+        medicalNotes:
+          data.medicalNotes?.trim() ||
+          null,
+      },
+    });
+  };

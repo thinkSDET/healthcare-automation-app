@@ -41,6 +41,17 @@ interface PatientDocument {
   createdAt: string;
 }
 
+interface MedicalProfile {
+  id?: number;
+  patientId: number;
+  medicalConditions?: string;
+  allergies?: string;
+  currentMedications?: string;
+  medicalNotes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 interface EmergencyContact {
   id: number;
   patientId: number;
@@ -129,6 +140,8 @@ function PatientDetails() {
   const [editingEmergencyContact, setEditingEmergencyContact] =
     useState(false);
 
+
+
   const [emergencyContactForm, setEmergencyContactForm] =
     useState({
       name: "",
@@ -138,6 +151,7 @@ function PatientDetails() {
       email: "",
       address: "",
     });
+
 
   const [formData, setFormData] =
     useState({
@@ -153,11 +167,32 @@ function PatientDetails() {
       status: "ACTIVE",
     });
 
+  const [medicalProfile, setMedicalProfile] =
+    useState<MedicalProfile | null>(null);
+
+  const [medicalProfileLoading, setMedicalProfileLoading] =
+    useState(false);
+
+  const [savingMedicalProfile, setSavingMedicalProfile] =
+    useState(false);
+
+  const [editingMedicalProfile, setEditingMedicalProfile] =
+    useState(false);
+
+  const [medicalProfileForm, setMedicalProfileForm] =
+    useState({
+      medicalConditions: "",
+      allergies: "",
+      currentMedications: "",
+      medicalNotes: "",
+    });
+
   useEffect(() => {
     fetchPatient();
     fetchDependents();
     fetchDocuments();
     fetchEmergencyContact();
+    fetchMedicalProfile();
   }, [id]);
 
   const getToken = () => {
@@ -193,7 +228,7 @@ function PatientDetails() {
       ) {
         throw new Error(
           result.message ||
-            "Failed to fetch patient"
+          "Failed to fetch patient"
         );
       }
 
@@ -241,7 +276,7 @@ function PatientDetails() {
       ) {
         throw new Error(
           result.message ||
-            "Failed to fetch documents"
+          "Failed to fetch documents"
         );
       }
 
@@ -304,9 +339,9 @@ function PatientDetails() {
 
       const contact = result.data
         ? {
-            ...result.data,
-            name: getEmergencyContactName(result.data),
-          }
+          ...result.data,
+          name: getEmergencyContactName(result.data),
+        }
         : null;
 
       setEmergencyContact(contact);
@@ -392,15 +427,15 @@ function PatientDetails() {
       if (!response.ok || !result.success) {
         throw new Error(
           result.message ||
-            "Failed to save emergency contact"
+          "Failed to save emergency contact"
         );
       }
 
       const savedContact = result.data
         ? {
-            ...result.data,
-            name: getEmergencyContactName(result.data),
-          }
+          ...result.data,
+          name: getEmergencyContactName(result.data),
+        }
         : null;
 
       setEmergencyContact(savedContact);
@@ -506,7 +541,7 @@ function PatientDetails() {
       if (!response.ok || !result.success) {
         throw new Error(
           result.message ||
-            "Failed to remove emergency contact"
+          "Failed to remove emergency contact"
         );
       }
 
@@ -540,7 +575,228 @@ function PatientDetails() {
       setEmergencyContactLoading(false);
     }
   };
+  const fetchMedicalProfile = async () => {
+    try {
+      setMedicalProfileLoading(true);
 
+      const response = await fetch(
+        `http://localhost:4000/api/patients/${id}/medical-profile`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+            "Content-Type":
+              "application/json",
+          },
+        }
+      );
+
+      const result =
+        await response.json();
+
+      if (
+        !response.ok ||
+        !result.success
+      ) {
+        throw new Error(
+          result.message ||
+          "Failed to fetch medical profile"
+        );
+      }
+
+      const profile =
+        result.data || null;
+
+      setMedicalProfile(profile);
+
+      setMedicalProfileForm({
+        medicalConditions:
+          profile?.medicalConditions || "",
+
+        allergies:
+          profile?.allergies || "",
+
+        currentMedications:
+          profile?.currentMedications || "",
+
+        medicalNotes:
+          profile?.medicalNotes || "",
+      });
+
+    } catch (error) {
+
+      console.error(
+        "Failed to fetch medical profile:",
+        error
+      );
+
+    } finally {
+      setMedicalProfileLoading(false);
+    }
+  };
+
+
+  const handleMedicalProfileChange = (
+    field:
+      keyof typeof medicalProfileForm,
+    value: string
+  ) => {
+
+    setMedicalProfileForm(
+      (previous) => ({
+        ...previous,
+        [field]: value,
+      })
+    );
+  };
+
+
+  const handleSaveMedicalProfile = async (
+    e: React.FormEvent
+  ) => {
+
+    e.preventDefault();
+
+    try {
+
+      setSavingMedicalProfile(true);
+      setError("");
+      setSuccess("");
+
+      const response =
+        await fetch(
+          `http://localhost:4000/api/patients/${id}/medical-profile`,
+          {
+            method: "PUT",
+
+            headers: {
+              Authorization:
+                `Bearer ${getToken()}`,
+
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify(
+              medicalProfileForm
+            ),
+          }
+        );
+
+      const result =
+        await response.json();
+
+      if (
+        !response.ok ||
+        !result.success
+      ) {
+        throw new Error(
+          result.message ||
+          "Failed to save medical profile"
+        );
+      }
+
+      setMedicalProfile(
+        result.data
+      );
+
+      setMedicalProfileForm({
+        medicalConditions:
+          result.data?.medicalConditions ||
+          "",
+
+        allergies:
+          result.data?.allergies ||
+          "",
+
+        currentMedications:
+          result.data?.currentMedications ||
+          "",
+
+        medicalNotes:
+          result.data?.medicalNotes ||
+          "",
+      });
+
+      setEditingMedicalProfile(false);
+
+      setSuccess(
+        "Medical profile saved successfully."
+      );
+
+    } catch (error) {
+
+      console.error(
+        "Medical profile save error:",
+        error
+      );
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to save medical profile"
+      );
+
+    } finally {
+
+      setSavingMedicalProfile(false);
+    }
+  };
+
+
+  const handleEditMedicalProfile = () => {
+
+    setMedicalProfileForm({
+      medicalConditions:
+        medicalProfile?.medicalConditions ||
+        "",
+
+      allergies:
+        medicalProfile?.allergies ||
+        "",
+
+      currentMedications:
+        medicalProfile?.currentMedications ||
+        "",
+
+      medicalNotes:
+        medicalProfile?.medicalNotes ||
+        "",
+    });
+
+    setError("");
+    setSuccess("");
+
+    setEditingMedicalProfile(true);
+  };
+
+
+  const handleCancelMedicalProfileEdit =
+    () => {
+
+      setMedicalProfileForm({
+        medicalConditions:
+          medicalProfile?.medicalConditions ||
+          "",
+
+        allergies:
+          medicalProfile?.allergies ||
+          "",
+
+        currentMedications:
+          medicalProfile?.currentMedications ||
+          "",
+
+        medicalNotes:
+          medicalProfile?.medicalNotes ||
+          "",
+      });
+
+      setError("");
+      setSuccess("");
+
+      setEditingMedicalProfile(false);
+    };
   const fetchDependents = async () => {
     try {
       const response = await fetch(
@@ -616,7 +872,7 @@ function PatientDetails() {
       ) {
         throw new Error(
           result.message ||
-            "Failed to add dependent"
+          "Failed to add dependent"
         );
       }
 
@@ -693,7 +949,7 @@ function PatientDetails() {
       ) {
         throw new Error(
           result.message ||
-            "Failed to delete document"
+          "Failed to delete document"
         );
       }
 
@@ -744,7 +1000,7 @@ function PatientDetails() {
 
         throw new Error(
           result.message ||
-            "Failed to download document"
+          "Failed to download document"
         );
       }
 
@@ -833,7 +1089,7 @@ function PatientDetails() {
       ) {
         throw new Error(
           result.message ||
-            "Failed to upload document"
+          "Failed to upload document"
         );
       }
 
@@ -902,7 +1158,7 @@ function PatientDetails() {
       ) {
         throw new Error(
           result.message ||
-            "Failed to remove dependent"
+          "Failed to remove dependent"
         );
       }
 
@@ -945,9 +1201,9 @@ function PatientDetails() {
       dateOfBirth:
         data.dateOfBirth
           ? data.dateOfBirth.substring(
-              0,
-              10
-            )
+            0,
+            10
+          )
           : "",
       gender:
         data.gender || "MALE",
@@ -1054,7 +1310,7 @@ function PatientDetails() {
       ) {
         throw new Error(
           result.message ||
-            "Failed to update patient"
+          "Failed to update patient"
         );
       }
 
@@ -1123,7 +1379,7 @@ function PatientDetails() {
       ) {
         throw new Error(
           result.message ||
-            "Failed to deactivate patient"
+          "Failed to deactivate patient"
         );
       }
 
@@ -1744,6 +2000,260 @@ function PatientDetails() {
               </section>
 
               {/* =========================
+    Medical Profile
+========================= */}
+
+              <section className="patient-details-section">
+
+                <div className="section-heading-row">
+
+                  <div>
+
+                    <h3>
+                      Medical Profile
+                    </h3>
+
+                    <p className="section-description">
+                      Manage medical conditions,
+                      allergies, medications and
+                      clinical notes.
+                    </p>
+
+                  </div>
+
+                  {!editingMedicalProfile && (
+                    <button
+                      type="button"
+                      className="primary-button"
+                      onClick={
+                        handleEditMedicalProfile
+                      }
+                    >
+                      {medicalProfile
+                        ? "Edit Medical Profile"
+                        : "+ Add Medical Profile"}
+                    </button>
+                  )}
+
+                </div>
+
+                {medicalProfileLoading ? (
+
+                  <div className="loading">
+                    Loading medical profile...
+                  </div>
+
+                ) : editingMedicalProfile ? (
+
+                  <form
+                    className="dependent-form"
+                    onSubmit={
+                      handleSaveMedicalProfile
+                    }
+                  >
+
+                    <div className="patient-edit-grid">
+
+                      <div className="form-group">
+
+                        <label>
+                          Medical Conditions
+                        </label>
+
+                        <textarea
+                          value={
+                            medicalProfileForm
+                              .medicalConditions
+                          }
+                          onChange={(e) =>
+                            handleMedicalProfileChange(
+                              "medicalConditions",
+                              e.target.value
+                            )
+                          }
+                          placeholder="e.g. Diabetes, Hypertension"
+                          rows={3}
+                        />
+
+                      </div>
+
+
+                      <div className="form-group">
+
+                        <label>
+                          Allergies
+                        </label>
+
+                        <textarea
+                          value={
+                            medicalProfileForm
+                              .allergies
+                          }
+                          onChange={(e) =>
+                            handleMedicalProfileChange(
+                              "allergies",
+                              e.target.value
+                            )
+                          }
+                          placeholder="e.g. Penicillin, Peanuts"
+                          rows={3}
+                        />
+
+                      </div>
+
+
+                      <div className="form-group">
+
+                        <label>
+                          Current Medications
+                        </label>
+
+                        <textarea
+                          value={
+                            medicalProfileForm
+                              .currentMedications
+                          }
+                          onChange={(e) =>
+                            handleMedicalProfileChange(
+                              "currentMedications",
+                              e.target.value
+                            )
+                          }
+                          placeholder="List current medications"
+                          rows={3}
+                        />
+
+                      </div>
+
+
+                      <div className="form-group">
+
+                        <label>
+                          Medical Notes
+                        </label>
+
+                        <textarea
+                          value={
+                            medicalProfileForm
+                              .medicalNotes
+                          }
+                          onChange={(e) =>
+                            handleMedicalProfileChange(
+                              "medicalNotes",
+                              e.target.value
+                            )
+                          }
+                          placeholder="Additional medical information"
+                          rows={3}
+                        />
+
+                      </div>
+
+                    </div>
+
+
+                    <div className="patient-details-actions">
+
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={
+                          handleCancelMedicalProfileEdit
+                        }
+                        disabled={
+                          savingMedicalProfile
+                        }
+                      >
+                        Cancel
+                      </button>
+
+
+                      <button
+                        type="submit"
+                        className="primary-button"
+                        disabled={
+                          savingMedicalProfile
+                        }
+                      >
+                        {savingMedicalProfile
+                          ? "Saving..."
+                          : "Save Medical Profile"}
+                      </button>
+
+                    </div>
+
+                  </form>
+
+                ) : (
+
+                  <div className="patient-details-grid">
+
+                    <div className="patient-detail-item">
+
+                      <span>
+                        Medical Conditions
+                      </span>
+
+                      <strong>
+                        {medicalProfile
+                          ?.medicalConditions ||
+                          "-"}
+                      </strong>
+
+                    </div>
+
+
+                    <div className="patient-detail-item">
+
+                      <span>
+                        Allergies
+                      </span>
+
+                      <strong>
+                        {medicalProfile
+                          ?.allergies ||
+                          "-"}
+                      </strong>
+
+                    </div>
+
+
+                    <div className="patient-detail-item">
+
+                      <span>
+                        Current Medications
+                      </span>
+
+                      <strong>
+                        {medicalProfile
+                          ?.currentMedications ||
+                          "-"}
+                      </strong>
+
+                    </div>
+
+
+                    <div className="patient-detail-item">
+
+                      <span>
+                        Medical Notes
+                      </span>
+
+                      <strong>
+                        {medicalProfile
+                          ?.medicalNotes ||
+                          "-"}
+                      </strong>
+
+                    </div>
+
+                  </div>
+
+                )}
+
+              </section>
+
+              {/* =========================
                   Contact
               ========================= */}
 
@@ -1810,10 +2320,10 @@ function PatientDetails() {
                         emergencyContact
                           ? handleEditEmergencyContact
                           : () => {
-                              setError("");
-                              setSuccess("");
-                              setEditingEmergencyContact(true);
-                            }
+                            setError("");
+                            setSuccess("");
+                            setEditingEmergencyContact(true);
+                          }
                       }
                     >
                       {emergencyContact

@@ -13,6 +13,8 @@ import {
   getPatientEmergencyContact,
   savePatientEmergencyContact,
   deletePatientEmergencyContact,
+  getPatientMedicalProfile,
+  savePatientMedicalProfile
 } from "../controllers/patient.controller";
 
 import {
@@ -168,6 +170,51 @@ router.delete(
   authenticate,
   authorize("ADMIN", "DOCTOR"),
   deletePatientDocument
+);
+
+
+
+/*
+|--------------------------------------------------------------------------
+| Emergency Contact
+|--------------------------------------------------------------------------
+*/
+
+router.get(
+  "/:id/emergency-contact",
+  authenticate,
+  getPatientEmergencyContact
+);
+
+router.put(
+  "/:id/emergency-contact",
+  authenticate,
+  savePatientEmergencyContact
+);
+
+router.delete(
+  "/:id/emergency-contact",
+  authenticate,
+  deletePatientEmergencyContact
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| Medical Profile
+|--------------------------------------------------------------------------
+*/
+
+router.get(
+  "/:id/medical-profile",
+  authenticate,
+  getPatientMedicalProfile
+);
+
+router.put(
+  "/:id/medical-profile",
+  authenticate,
+  savePatientMedicalProfile
 );
 
 export default router;
