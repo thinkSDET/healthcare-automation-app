@@ -22,12 +22,22 @@ interface LoginInput {
    REGISTER
 ========================================================= */
 
+/* =========================================================
+   REGISTER
+========================================================= */
+
 export const register = async (data: {
   firstName: string;
   lastName: string;
   email: string;
   password: string;
   role?: string;
+
+  // Patient-specific fields
+  dateOfBirth?: string;
+  gender?: "MALE" | "FEMALE" | "OTHER";
+  phone?: string;
+  address?: string;
 }) => {
   const {
     firstName,
@@ -35,31 +45,60 @@ export const register = async (data: {
     email,
     password,
     role,
+    dateOfBirth,
+    gender,
+    phone,
+    address,
   } = data;
 
-  const normalizedRole =
-    String(role || "PATIENT")
-      .trim()
-      .toUpperCase();
+  const normalizedEmail =
+    email.toLowerCase().trim();
 
+  const normalizedRole =
+    (role || "PATIENT").toUpperCase();
+
+  /*
+   * Public registration is allowed only for
+   * these roles.
+   *
+   * ADMIN must never be created through
+   * the public registration endpoint.
+   */
   const allowedRoles = [
     "PATIENT",
     "DOCTOR",
     "PHARMACIST",
   ];
 
-  if (
-    !allowedRoles.includes(
-      normalizedRole
-    )
-  ) {
-    throw new Error(
-      "INVALID_PUBLIC_ROLE"
-    );
+  if (!allowedRoles.includes(normalizedRole)) {
+    throw new Error("INVALID_PUBLIC_ROLE");
   }
 
-  const normalizedEmail =
-    email.toLowerCase().trim();
+  /*
+   * Patient accounts require the minimum
+   * information needed to create the Patient
+   * domain record.
+   */
+  if (normalizedRole === "PATIENT") {
+    if (!dateOfBirth || !gender || !phone) {
+      throw new Error(
+        "PATIENT_PROFILE_REQUIRED"
+      );
+    }
+
+    const parsedDateOfBirth =
+      new Date(dateOfBirth);
+
+    if (
+      Number.isNaN(
+        parsedDateOfBirth.getTime()
+      )
+    ) {
+      throw new Error(
+        "INVALID_DATE_OF_BIRTH"
+      );
+    }
+  }
 
   const existingUser =
     await prisma.user.findUnique({
@@ -77,20 +116,71 @@ export const register = async (data: {
   const passwordHash =
     await bcrypt.hash(password, 10);
 
-  const user =
-    await prisma.user.create({
-      data: {
-        firstName,
-        lastName,
-        email: normalizedEmail,
+  /*
+   * User + Patient must be created together.
+   */
+  const user = await prisma.$transaction(
+    async (tx) => {
+      const createdUser =
+        await tx.user.create({
+          data: {
+            firstName,
+            lastName,
+            email: normalizedEmail,
+            passwordHash,
+            role: normalizedRole as any,
+          },
+        });
 
-        // IMPORTANT:
-        // Prisma field is passwordHash
-        passwordHash,
+      /*
+       * Only PATIENT accounts receive a
+       * Patient domain record automatically.
+       */
+      if (normalizedRole === "PATIENT") {
+        /*
+         * The User ID gives us a guaranteed
+         * unique Medical ID for this account.
+         *
+         * Example:
+         * User ID 25 -> PAT-00025
+         */
+        const medicalId =
+          `PAT-${String(
+            createdUser.id
+          ).padStart(5, "0")}`;
 
-        role: normalizedRole as any,
-      },
-    });
+        await tx.patient.create({
+          data: {
+            userId: createdUser.id,
+            medicalId,
+
+            firstName:
+              createdUser.firstName,
+
+            lastName:
+              createdUser.lastName,
+
+            dateOfBirth:
+              new Date(dateOfBirth!),
+
+            gender:
+              gender!,
+
+            email:
+              createdUser.email,
+
+            phone:
+              phone!,
+
+            address:
+              address || undefined,
+          },
+        });
+      }
+
+      return createdUser;
+    }
+  );
 
   return {
     id: user.id,
@@ -100,7 +190,6 @@ export const register = async (data: {
     role: user.role,
   };
 };
-
 /* =========================================================
    LOGIN
 ========================================================= */
