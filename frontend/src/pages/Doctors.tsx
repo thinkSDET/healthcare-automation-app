@@ -92,6 +92,15 @@ function Doctors() {
   const [statusChangeError, setStatusChangeError] =
     useState("");
 
+  const [deletingDoctor, setDeletingDoctor] =
+    useState<Doctor | null>(null);
+
+  const [deleteDoctorLoading, setDeleteDoctorLoading] =
+    useState(false);
+
+  const [deleteDoctorError, setDeleteDoctorError] =
+    useState("");
+
   useEffect(() => {
     fetchDoctors();
   }, []);
@@ -627,6 +636,64 @@ function Doctors() {
       );
     } finally {
       setSavingDoctor(false);
+    }
+  };
+
+  const handleDeleteDoctor = async () => {
+    if (!deletingDoctor) {
+      return;
+    }
+
+    try {
+      setDeleteDoctorLoading(true);
+      setDeleteDoctorError("");
+
+      const response = await fetch(
+        `http://localhost:4000/api/doctors/${deletingDoctor.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message || "Failed to delete doctor."
+        );
+      }
+
+      setDoctors((previous) =>
+        previous.filter(
+          (doctor) =>
+            doctor.id !== deletingDoctor.id
+        )
+      );
+
+      setFormSuccess(
+        "Doctor deleted successfully."
+      );
+
+      setDeletingDoctor(null);
+      setCurrentPage(1);
+
+    } catch (error) {
+      console.error(
+        "Failed to delete doctor:",
+        error
+      );
+
+      setDeleteDoctorError(
+        error instanceof Error
+          ? error.message
+          : "Failed to delete doctor."
+      );
+    } finally {
+      setDeleteDoctorLoading(false);
     }
   };
 
@@ -1746,6 +1813,117 @@ function Doctors() {
                 {statusChangeLoading
                   ? "Updating..."
                   : "Confirm Status Change"}
+              </button>
+
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {deletingDoctor && (
+        <div
+          className="doctor-delete-overlay"
+          onClick={() => {
+            if (!deleteDoctorLoading) {
+              setDeletingDoctor(null);
+              setDeleteDoctorError("");
+            }
+          }}
+        >
+          <div
+            className="doctor-delete-modal"
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+          >
+
+            <div className="doctor-delete-header">
+              <div>
+                <h2>Delete Doctor</h2>
+
+                <p>
+                  This action will remove the doctor record.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="secondary-button"
+                disabled={deleteDoctorLoading}
+                onClick={() => {
+                  setDeletingDoctor(null);
+                  setDeleteDoctorError("");
+                }}
+              >
+                Close
+              </button>
+            </div>
+
+            {deleteDoctorError && (
+              <div className="doctor-form-error">
+                {deleteDoctorError}
+              </div>
+            )}
+
+            <div className="doctor-delete-confirmation">
+
+              <div className="doctor-delete-icon">
+                ⚠️
+              </div>
+
+              <div>
+                <strong>
+                  Dr.{" "}
+                  {deletingDoctor.firstName}{" "}
+                  {deletingDoctor.lastName}
+                </strong>
+
+                <p>
+                  Doctor Code:{" "}
+                  <strong>
+                    {deletingDoctor.doctorCode}
+                  </strong>
+                </p>
+
+                <p>
+                  Specialization:{" "}
+                  <strong>
+                    {deletingDoctor.specialization}
+                  </strong>
+                </p>
+              </div>
+
+            </div>
+
+            <div className="doctor-delete-warning">
+              Are you sure you want to permanently delete this doctor?
+              This operation cannot be undone.
+            </div>
+
+            <div className="doctor-form-actions">
+
+              <button
+                type="button"
+                className="secondary-button"
+                disabled={deleteDoctorLoading}
+                onClick={() => {
+                  setDeletingDoctor(null);
+                  setDeleteDoctorError("");
+                }}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className="danger-button"
+                disabled={deleteDoctorLoading}
+                onClick={handleDeleteDoctor}
+              >
+                {deleteDoctorLoading
+                  ? "Deleting..."
+                  : "Delete Doctor"}
               </button>
 
             </div>

@@ -1428,3 +1428,99 @@
     padding: 18px;
   }
 }
+/* =========================================================
+   Doctor Delete
+========================================================= */
+
+.doctor-delete-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(16, 42, 67, 0.6);
+}
+
+.doctor-delete-modal {
+  width: min(560px, 95vw);
+  padding: 24px;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+
+.doctor-delete-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #dfe7ef;
+}
+
+.doctor-delete-header h2 {
+  margin: 0 0 6px;
+  color: #102a43;
+}
+
+.doctor-delete-header p {
+  margin: 0;
+  color: #627d98;
+  font-size: 13px;
+}
+
+.doctor-delete-confirmation {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid #dfe7ef;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.doctor-delete-icon {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #fff1f2;
+  font-size: 20px;
+}
+
+.doctor-delete-confirmation p {
+  margin: 6px 0 0;
+  color: #627d98;
+  font-size: 13px;
+}
+
+.doctor-delete-warning {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #fff1f2;
+  color: #b42318;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.doctor-delete-button {
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .doctor-delete-overlay {
+    padding: 10px;
+  }
+
+  .doctor-delete-modal {
+    width: 100%;
+    padding: 18px;
+  }
+}
