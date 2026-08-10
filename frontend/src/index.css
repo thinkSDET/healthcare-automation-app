@@ -2234,3 +2234,353 @@ input {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* =========================================================
+   Order Filters
+========================================================= */
+
+.orders-filter-panel {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 14px;
+  align-items: end;
+  margin: 20px 0;
+  padding: 16px;
+  border: 1px solid #dfe7ef;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.orders-filter-panel > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.orders-filter-panel label {
+  color: #243b53;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.orders-filter-panel input,
+.orders-filter-panel select {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.orders-filter-panel button {
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .orders-filter-panel {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .orders-filter-search {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 600px) {
+  .orders-filter-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .orders-filter-search {
+    grid-column: auto;
+  }
+
+  .orders-filter-panel button {
+    width: 100%;
+  }
+}
+/* =========================================================
+   Order Summary
+========================================================= */
+
+.orders-summary-section {
+  margin-bottom: 20px;
+}
+
+.orders-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+}
+
+.order-summary-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px;
+  background: #ffffff;
+  border: 1px solid #dfe7ef;
+  border-radius: 12px;
+}
+
+.order-summary-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: #f0f4f8;
+  font-size: 18px;
+}
+
+.order-summary-card > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.order-summary-card > div > span {
+  color: #829ab1;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.order-summary-card strong {
+  color: #102a43;
+  font-size: 20px;
+}
+
+.order-summary-total strong {
+  font-size: 17px;
+}
+
+@media (max-width: 1100px) {
+  .orders-summary-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 700px) {
+  .orders-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 500px) {
+  .orders-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+/* =========================================================
+   Enhanced Order Details
+========================================================= */
+
+.order-patient-info-card {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 18px;
+  border: 1px solid #dfe7ef;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.order-patient-info-card > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.order-patient-info-card span,
+.order-delivery-content span {
+  color: #829ab1;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.order-patient-info-card strong {
+  color: #243b53;
+  font-size: 14px;
+}
+
+.order-price-breakdown {
+  display: flex;
+  justify-content: flex-end;
+  gap: 32px;
+  margin-top: 16px;
+  padding: 18px;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.order-price-breakdown > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 110px;
+}
+
+.order-price-breakdown span {
+  color: #829ab1;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.order-price-breakdown strong {
+  color: #243b53;
+  font-size: 15px;
+}
+
+.order-price-breakdown .order-grand-total {
+  padding-left: 24px;
+  border-left: 1px solid #dfe7ef;
+}
+
+.order-grand-total strong {
+  color: #102a43;
+  font-size: 20px;
+}
+
+.order-status-timeline {
+  margin-top: 24px;
+  padding: 20px;
+  border: 1px solid #dfe7ef;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.order-status-timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 22px;
+}
+
+.order-status-timeline-header h4 {
+  margin: 0 0 5px;
+  color: #102a43;
+}
+
+.order-status-timeline-header p {
+  margin: 0;
+  color: #829ab1;
+  font-size: 12px;
+}
+
+.order-status-steps {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+
+.order-status-step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #9fb3c8;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.order-status-dot {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #e5e7eb;
+  font-size: 12px;
+}
+
+.order-status-step.completed {
+  color: #243b53;
+}
+
+.order-status-step.completed .order-status-dot {
+  background: #d9f2e6;
+  color: #176b3a;
+}
+
+.order-cancelled-note {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #fff1f2;
+  color: #b42318;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.order-delivery-card {
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid #dfe7ef;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.order-delivery-header h4 {
+  margin: 0 0 16px;
+  color: #102a43;
+}
+
+.order-delivery-content {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+}
+
+.order-delivery-content > div {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.order-delivery-content p {
+  margin: 0;
+  color: #243b53;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.order-delivery-content strong {
+  color: #243b53;
+  font-size: 14px;
+}
+
+@media (max-width: 800px) {
+  .order-patient-info-card {
+    grid-template-columns: 1fr;
+  }
+
+  .order-price-breakdown {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .order-price-breakdown .order-grand-total {
+    padding-left: 0;
+    border-left: none;
+  }
+
+  .order-status-steps {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .order-status-step {
+    flex-direction: row;
+    justify-content: flex-start;
+  }
+
+  .order-delivery-content {
+    grid-template-columns: 1fr;
+  }
+}
