@@ -1498,6 +1498,42 @@ function PatientOrders() {
               </div>
 
 
+              <div className="order-patient-info-card">
+
+                <div>
+                  <span>
+                    Patient
+                  </span>
+
+                  <strong>
+                    {patient.firstName}{" "}
+                    {patient.lastName}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>
+                    Medical ID
+                  </span>
+
+                  <strong>
+                    {patient.medicalId}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>
+                    Order Number
+                  </span>
+
+                  <strong>
+                    {selectedOrder.orderNo}
+                  </strong>
+                </div>
+
+              </div>
+
+
               <div className="order-detail-header">
 
                 <div>
@@ -1617,6 +1653,54 @@ function PatientOrders() {
               </div>
 
 
+              <div className="order-price-breakdown">
+
+                <div>
+                  <span>
+                    Items
+                  </span>
+
+                  <strong>
+                    {
+                      selectedOrder.items.length
+                    }
+                  </strong>
+                </div>
+
+                <div>
+                  <span>
+                    Subtotal
+                  </span>
+
+                  <strong>
+                    {formatCurrency(
+                      selectedOrder.items.reduce(
+                        (total, item) =>
+                          total +
+                          Number(
+                            item.totalPrice
+                          ),
+                        0
+                      )
+                    )}
+                  </strong>
+                </div>
+
+                <div className="order-grand-total">
+                  <span>
+                    Order Total
+                  </span>
+
+                  <strong>
+                    {formatCurrency(
+                      selectedOrder.totalAmount
+                    )}
+                  </strong>
+                </div>
+
+              </div>
+
+
               {selectedOrder.deliveryAddress && (
                 <div className="order-notes">
 
@@ -1647,6 +1731,138 @@ function PatientOrders() {
 
                 </div>
               )}
+
+
+              <div className="order-status-timeline">
+
+                <div className="order-status-timeline-header">
+                  <div>
+                    <h4>
+                      Order Progress
+                    </h4>
+
+                    <p>
+                      Current order status
+                    </p>
+                  </div>
+
+                  <span
+                    className={getOrderStatusClass(
+                      selectedOrder.status
+                    )}
+                  >
+                    {selectedOrder.status}
+                  </span>
+                </div>
+
+                <div className="order-status-steps">
+
+                  {[
+                    "PENDING",
+                    "CONFIRMED",
+                    "PROCESSING",
+                    "SHIPPED",
+                    "DELIVERED",
+                  ].map(
+                    (status, index) => {
+
+                      const statusOrder = [
+                        "PENDING",
+                        "CONFIRMED",
+                        "PROCESSING",
+                        "SHIPPED",
+                        "DELIVERED",
+                      ];
+
+                      const currentIndex =
+                        statusOrder.indexOf(
+                          selectedOrder.status
+                        );
+
+                      const stepIndex =
+                        statusOrder.indexOf(
+                          status
+                        );
+
+                      const completed =
+                        selectedOrder.status !==
+                          "CANCELLED" &&
+                        currentIndex >=
+                          stepIndex;
+
+                      return (
+                        <div
+                          className={
+                            completed
+                              ? "order-status-step completed"
+                              : "order-status-step"
+                          }
+                          key={status}
+                        >
+
+                          <div className="order-status-dot">
+                            {completed
+                              ? "✓"
+                              : index + 1}
+                          </div>
+
+                          <span>
+                            {status}
+                          </span>
+
+                        </div>
+                      );
+                    }
+                  )}
+
+                </div>
+
+                {selectedOrder.status ===
+                  "CANCELLED" && (
+                  <div className="order-cancelled-note">
+                    This order has been cancelled.
+                  </div>
+                )}
+
+              </div>
+
+
+              <div className="order-delivery-card">
+
+                <div className="order-delivery-header">
+                  <h4>
+                    Delivery Information
+                  </h4>
+                </div>
+
+                <div className="order-delivery-content">
+
+                  <div>
+                    <span>
+                      Delivery Address
+                    </span>
+
+                    <p>
+                      {selectedOrder.deliveryAddress ||
+                        "No delivery address provided."}
+                    </p>
+                  </div>
+
+                  <div>
+                    <span>
+                      Payment Status
+                    </span>
+
+                    <strong>
+                      {
+                        selectedOrder.paymentStatus
+                      }
+                    </strong>
+                  </div>
+
+                </div>
+
+              </div>
 
 
               <div className="order-management-actions">
