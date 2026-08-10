@@ -37,6 +37,27 @@ export const register = async (data: {
     role,
   } = data;
 
+  const normalizedRole =
+    String(role || "PATIENT")
+      .trim()
+      .toUpperCase();
+
+  const allowedRoles = [
+    "PATIENT",
+    "DOCTOR",
+    "PHARMACIST",
+  ];
+
+  if (
+    !allowedRoles.includes(
+      normalizedRole
+    )
+  ) {
+    throw new Error(
+      "INVALID_PUBLIC_ROLE"
+    );
+  }
+
   const normalizedEmail =
     email.toLowerCase().trim();
 
@@ -67,7 +88,7 @@ export const register = async (data: {
         // Prisma field is passwordHash
         passwordHash,
 
-        role: role as any,
+        role: normalizedRole as any,
       },
     });
 

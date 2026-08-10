@@ -54,12 +54,14 @@ const router = Router();
 router.get(
   "/",
   authenticate,
+  authorize("ADMIN", "DOCTOR"),
   getPatients
 );
 
 router.get(
   "/:id",
   authenticate,
+  authorize("ADMIN", "DOCTOR"),
   getPatientById
 );
 
@@ -89,6 +91,7 @@ router.delete(
 router.patch(
   "/:id/deactivate",
   authenticate,
+  authorize("ADMIN", "DOCTOR"),
   deactivatePatient
 );
 
@@ -101,18 +104,21 @@ router.patch(
 router.get(
   "/:id/dependents",
   authenticate,
+  authorize("ADMIN", "DOCTOR"),
   getPatientDependents
 );
 
 router.post(
   "/:id/dependents",
   authenticate,
+  authorize("ADMIN", "DOCTOR"),
   createPatientDependent
 );
 
 router.delete(
   "/:id/dependents/:dependentId",
   authenticate,
+  authorize("ADMIN", "DOCTOR"),
   deletePatientDependent
 );
 
@@ -125,18 +131,21 @@ router.delete(
 router.get(
   "/:id/emergency-contact",
   authenticate,
+  authorize("ADMIN", "DOCTOR"),
   getPatientEmergencyContact
 );
 
 router.put(
   "/:id/emergency-contact",
   authenticate,
+  authorize("ADMIN", "DOCTOR"),
   savePatientEmergencyContact
 );
 
 router.delete(
   "/:id/emergency-contact",
   authenticate,
+  authorize("ADMIN", "DOCTOR"),
   deletePatientEmergencyContact
 );
 
@@ -149,6 +158,7 @@ router.delete(
 router.get(
   "/:id/documents",
   authenticate,
+  authorize("ADMIN", "DOCTOR"),
   getPatientDocuments
 );
 
@@ -163,6 +173,7 @@ router.post(
 router.get(
   "/:id/documents/:documentId/download",
   authenticate,
+  authorize("ADMIN", "DOCTOR"),
   downloadPatientDocument
 );
 
@@ -175,29 +186,32 @@ router.delete(
 
 
 
-/*
-|--------------------------------------------------------------------------
-| Emergency Contact
-|--------------------------------------------------------------------------
-*/
+// /*
+// |--------------------------------------------------------------------------
+// | Emergency Contact
+// |--------------------------------------------------------------------------
+// */
 
-router.get(
-  "/:id/emergency-contact",
-  authenticate,
-  getPatientEmergencyContact
-);
+// router.get(
+//   "/:id/emergency-contact",
+//   authenticate,
+//   authorize("ADMIN", "DOCTOR"),
+//   getPatientEmergencyContact
+// );
 
-router.put(
-  "/:id/emergency-contact",
-  authenticate,
-  savePatientEmergencyContact
-);
+// router.put(
+//   "/:id/emergency-contact",
+//   authenticate,
+//   authorize("ADMIN", "DOCTOR"),
+//   savePatientEmergencyContact
+// );
 
-router.delete(
-  "/:id/emergency-contact",
-  authenticate,
-  deletePatientEmergencyContact
-);
+// router.delete(
+//   "/:id/emergency-contact",
+//   authenticate,
+//   authorize("ADMIN", "DOCTOR"),
+//   deletePatientEmergencyContact
+// );
 
 
 /*
@@ -209,12 +223,14 @@ router.delete(
 router.get(
   "/:id/medical-profile",
   authenticate,
+  authorize("ADMIN", "DOCTOR"),
   getPatientMedicalProfile
 );
 
 router.put(
   "/:id/medical-profile",
   authenticate,
+  authorize("ADMIN", "DOCTOR"),
   savePatientMedicalProfile
 );
 
@@ -227,20 +243,8 @@ router.put(
 router.get(
   "/:id/appointments",
   authenticate,
+  authorize("ADMIN", "DOCTOR"),
   getPatientAppointments
-);
-
-
-/*
-|--------------------------------------------------------------------------
-| Documents
-|--------------------------------------------------------------------------
-*/
-
-router.get(
-  "/:id/documents",
-  authenticate,
-  getPatientDocuments
 );
 
 export default router;

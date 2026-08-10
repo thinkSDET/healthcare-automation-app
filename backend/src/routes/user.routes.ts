@@ -16,13 +16,11 @@ import {
   updateUserSchema
 } from "../validators/user.validator";
 
-import { authenticate } from "../middleware/auth";
-
 const router = Router();
 
-router.get("/", authenticate, getUsers);
+router.get("/", authenticate, authorize("ADMIN"), getUsers);
 
-router.get("/:id", authenticate, getUserById);
+router.get("/:id", authenticate, authorize("ADMIN"), getUserById);
 
 router.post(
   "/",

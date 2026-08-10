@@ -22,12 +22,14 @@ const router = Router();
 router.get(
   "/",
   authenticate,
+  authorize("ADMIN", "DOCTOR"),
   getDoctors
 );
 
 router.get(
   "/:id",
   authenticate,
+  authorize("ADMIN", "DOCTOR"),
   getDoctorById
 );
 

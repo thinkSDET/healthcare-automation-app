@@ -70,15 +70,30 @@ function App() {
             PROTECTED ROUTES
            ========================= */}
 
-        <Route
-          element={<ProtectedRoute />}
-        >
-
+        {/* Everyone who is authenticated */}
+        <Route element={<ProtectedRoute />}>
           <Route
             path="/dashboard"
             element={<Dashboard />}
           />
 
+          <Route
+            path="/change-password"
+            element={<ChangePassword />}
+          />
+        </Route>
+
+        {/* ADMIN + DOCTOR */}
+        <Route
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "ADMIN",
+                "DOCTOR",
+              ]}
+            />
+          }
+        >
           <Route
             path="/patients"
             element={<Patients />}
@@ -88,7 +103,20 @@ function App() {
             path="/doctors"
             element={<Doctors />}
           />
+        </Route>
 
+        {/* ADMIN + DOCTOR + PATIENT */}
+        <Route
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "ADMIN",
+                "DOCTOR",
+                "PATIENT",
+              ]}
+            />
+          }
+        >
           <Route
             path="/appointments"
             element={<Appointments />}
@@ -105,36 +133,20 @@ function App() {
           />
 
           <Route
-            path="/change-password"
-            element={<ChangePassword />}
+            path="/patients/:id"
+            element={<PatientDetails />}
           />
 
+          <Route
+            path="/patients/:id/prescriptions"
+            element={<PatientPrescriptions />}
+          />
+
+          <Route
+            path="/patients/:id/orders"
+            element={<PatientOrders />}
+          />
         </Route>
-
-
-        {/* =========================
-            PATIENT DETAILS
-           ========================= */}
-
-        <Route
-          path="/patients/:id"
-          element={<PatientDetails />}
-        />
-
-
-        {/* =========================
-            PATIENT PRESCRIPTIONS
-           ========================= */}
-
-        <Route
-          path="/patients/:id/prescriptions"
-          element={<PatientPrescriptions />}
-        />
-
-        <Route
-          path="/patients/:id/orders"
-          element={<PatientOrders />}
-        />
 
 
         {/* =========================

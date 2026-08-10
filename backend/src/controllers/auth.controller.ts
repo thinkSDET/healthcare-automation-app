@@ -3,7 +3,45 @@ import * as authService from "../services/auth.service";
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const user = await authService.register(req.body);
+    const {
+      firstName,
+      lastName,
+      email,
+      password,
+      role,
+    } = req.body;
+
+    const allowedPublicRoles = [
+      "PATIENT",
+      "DOCTOR",
+      "PHARMACIST",
+    ];
+
+    const normalizedRole =
+      String(role || "PATIENT")
+        .trim()
+        .toUpperCase();
+
+    if (
+      !allowedPublicRoles.includes(
+        normalizedRole
+      )
+    ) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "This account type cannot be created through public registration.",
+      });
+    }
+
+    const user =
+      await authService.register({
+        firstName,
+        lastName,
+        email,
+        password,
+        role: normalizedRole,
+      });
 
     return res.status(201).json({
       success: true,

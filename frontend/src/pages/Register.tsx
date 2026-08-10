@@ -255,6 +255,12 @@ function Register() {
                   Pharmacist
                 </option>
               </select>
+
+              <small className="register-role-help">
+                Administrator accounts are created
+                separately and cannot be created
+                through public registration.
+              </small>
             </div>
 
             <button
