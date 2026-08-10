@@ -1,6 +1,7 @@
 import {
   Navigate,
   Outlet,
+  useLocation,
 } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
@@ -12,33 +13,46 @@ interface ProtectedRouteProps {
 function ProtectedRoute({
   allowedRoles,
 }: ProtectedRouteProps) {
-  const {
-    user,
-    token,
-    isAuthenticated,
-  } = useAuth();
+  const { user, isAuthenticated } =
+    useAuth();
 
-  if (!isAuthenticated || !user || !token) {
+  const location = useLocation();
+
+  if (!isAuthenticated) {
     return (
       <Navigate
         to="/login"
         replace
+        state={{
+          from: location.pathname,
+        }}
       />
     );
   }
 
   if (
     allowedRoles &&
-    !allowedRoles.includes(
-      user.role.toUpperCase()
-    )
+    allowedRoles.length > 0
   ) {
-    return (
-      <Navigate
-        to="/dashboard"
-        replace
-      />
-    );
+    const currentRole =
+      user?.role?.toUpperCase();
+
+    const isAllowed =
+      !!currentRole &&
+      allowedRoles
+        .map((role) =>
+          role.toUpperCase()
+        )
+        .includes(currentRole);
+
+    if (!isAllowed) {
+      return (
+        <Navigate
+          to="/dashboard"
+          replace
+        />
+      );
+    }
   }
 
   return <Outlet />;

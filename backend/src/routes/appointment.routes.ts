@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticate } from "../middleware/auth";
+import { authenticate, authorize } from "../middleware/auth";
 
 import {
   getAppointments,
@@ -11,14 +11,14 @@ import {
 
 const router = Router();
 
-router.get("/", authenticate, getAppointments);
+router.get("/", authenticate, authorize("ADMIN", "DOCTOR"), getAppointments);
 
-router.get("/:id", authenticate, getAppointmentById);
+router.get("/:id", authenticate, authorize("ADMIN", "DOCTOR"), getAppointmentById);
 
-router.post("/", authenticate, createAppointment);
+router.post("/", authenticate, authorize("ADMIN", "DOCTOR"), createAppointment);
 
-router.put("/:id", authenticate, updateAppointment);
+router.put("/:id", authenticate, authorize("ADMIN", "DOCTOR"), updateAppointment);
 
-router.delete("/:id", authenticate, cancelAppointment);
+router.delete("/:id", authenticate, authorize("ADMIN", "DOCTOR"), cancelAppointment);
 
 export default router;

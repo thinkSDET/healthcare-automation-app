@@ -12,6 +12,7 @@ import {
 
 import {
   authenticate,
+  authorize,
 } from "../middleware/auth";
 
 const router =
@@ -26,6 +27,7 @@ const router =
 router.get(
   "/patient/:patientId",
   authenticate,
+  authorize("ADMIN", "DOCTOR", "PHARMACIST"),
   getPatientPrescriptions
 );
 
@@ -39,6 +41,7 @@ router.get(
 router.get(
   "/:id",
   authenticate,
+  authorize("ADMIN", "DOCTOR", "PHARMACIST"),
   getPrescriptionById
 );
 
@@ -52,6 +55,7 @@ router.get(
 router.post(
   "/",
   authenticate,
+  authorize("ADMIN", "DOCTOR"),
   createPrescription
 );
 
@@ -65,6 +69,7 @@ router.post(
 router.patch(
   "/:id/status",
   authenticate,
+  authorize("ADMIN", "DOCTOR", "PHARMACIST"),
   updatePrescriptionStatus
 );
 
@@ -78,6 +83,7 @@ router.patch(
 router.delete(
   "/:id",
   authenticate,
+  authorize("ADMIN", "DOCTOR"),
   deletePrescription
 );
 
