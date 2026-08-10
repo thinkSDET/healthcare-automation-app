@@ -17,6 +17,9 @@ function Dashboard() {
   const isPatient =
     role === "PATIENT";
 
+  const isPharmacist =
+    role === "PHARMACIST";
+
   const handleLogout = () => {
     logout();
 
@@ -55,7 +58,7 @@ function Dashboard() {
 
         <div className="dashboard-grid">
 
-          {(isAdmin || isDoctor) && (
+          {(isAdmin || isDoctor || isPharmacist) && (
             <div
               className="dashboard-card"
               onClick={() =>
@@ -72,7 +75,7 @@ function Dashboard() {
                 </h3>
 
                 <p>
-                  Manage patient records
+                  {isPharmacist ? "View patient records" : "Manage patient records"}
                 </p>
               </div>
             </div>
@@ -144,8 +147,9 @@ function Dashboard() {
             {isPatient &&
               "View your healthcare appointments and available services."}
 
-            {role === "PHARMACIST" &&
-              "Access your available pharmacy workflows."}
+            {isPharmacist &&
+              "Review patient records, prescriptions and pharmacy orders from one centralized platform."}
+
           </p>
 
         </section>

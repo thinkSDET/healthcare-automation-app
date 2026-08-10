@@ -31,7 +31,9 @@ interface Appointment {
 }
 
 function Appointments() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+
+  const isAdmin = user?.role?.toUpperCase() === "ADMIN";
 
   const [appointments, setAppointments] =
     useState<Appointment[]>([]);
@@ -161,16 +163,18 @@ function Appointments() {
 
         </div>
 
-        <button
-          className="primary-button"
-          onClick={() =>
-            navigate(
-              "/appointments/new"
-            )
-          }
-        >
-          + New Appointment
-        </button>
+        {isAdmin && (
+          <button
+            className="primary-button"
+            onClick={() =>
+              navigate(
+                "/appointments/new"
+              )
+            }
+          >
+            + New Appointment
+          </button>
+        )}
 
       </header>
 

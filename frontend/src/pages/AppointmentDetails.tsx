@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  useNavigate,
-  useParams,
-} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 interface Appointment {
@@ -22,8 +19,6 @@ interface Appointment {
     medicalId: string;
     firstName: string;
     lastName: string;
-    email: string;
-    phone: string;
   };
 
   doctor?: {
@@ -32,38 +27,32 @@ interface Appointment {
     firstName: string;
     lastName: string;
     specialization: string;
-    email: string;
-    phone: string;
   };
 }
 
-function AppointmentDetails() {
-  const { id } = useParams();
-  const navigate = useNavigate();
+function Appointments() {
+  const { token, user } = useAuth();
 
-  const { token } = useAuth();
+  const role = user?.role?.toUpperCase();
+  const isAdmin = role === "ADMIN";
 
-  const [appointment, setAppointment] =
-    useState<Appointment | null>(null);
+  const [appointments, setAppointments] =
+    useState<Appointment[]>([]);
 
   const [loading, setLoading] =
     useState(true);
 
-  const [cancelling, setCancelling] =
-    useState(false);
-
-  const [error, setError] =
+  const [search, setSearch] =
     useState("");
 
+  const navigate = useNavigate();
+
   useEffect(() => {
-    fetchAppointment();
-  }, [id]);
+    fetchAppointments();
+  }, []);
 
-  const fetchAppointment = async () => {
+  const fetchAppointments = async () => {
     try {
-      setLoading(true);
-      setError("");
-
       /*
        * Token is provided by AuthContext.
        *
@@ -73,8 +62,10 @@ function AppointmentDetails() {
       const currentToken = token;
 
       const response = await fetch(
-        `http://localhost:4000/api/appointments/${id}`,
+        "http://localhost:4000/api/appointments",
         {
+          method: "GET",
+
           headers: {
             Authorization: `Bearer ${currentToken}`,
             "Content-Type": "application/json",
@@ -85,25 +76,24 @@ function AppointmentDetails() {
       const result =
         await response.json();
 
+      console.log(
+        "Appointments API response:",
+        result
+      );
+
       if (
-        !response.ok ||
-        !result.success
+        response.ok &&
+        result.success
       ) {
-        throw new Error(
-          result.message ||
-            "Failed to fetch appointment"
+        setAppointments(
+          result.data
         );
       }
 
-      setAppointment(result.data);
-
     } catch (error) {
-      console.error(error);
-
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Failed to fetch appointment"
+      console.error(
+        "Failed to fetch appointments:",
+        error
       );
 
     } finally {
@@ -111,67 +101,42 @@ function AppointmentDetails() {
     }
   };
 
-  const cancelAppointment = async () => {
-    const confirmed =
-      window.confirm(
-        "Are you sure you want to cancel this appointment?"
-      );
+  const filteredAppointments =
+    appointments.filter(
+      (appointment) => {
 
-    if (!confirmed) {
-      return;
-    }
+        const searchText =
+          search.toLowerCase();
 
-    try {
-      setCancelling(true);
-      setError("");
+        const patientName =
+          `${appointment.patient?.firstName ?? ""} ${
+            appointment.patient?.lastName ?? ""
+          }`.toLowerCase();
 
-      /*
-       * Use token from AuthContext.
-       */
-      const currentToken = token;
+        const doctorName =
+          `${appointment.doctor?.firstName ?? ""} ${
+            appointment.doctor?.lastName ?? ""
+          }`.toLowerCase();
 
-      const response = await fetch(
-        `http://localhost:4000/api/appointments/${id}/cancel`,
-        {
-          method: "PATCH",
+        return (
+          appointment.appointmentNo
+            .toLowerCase()
+            .includes(searchText) ||
 
-          headers: {
-            Authorization: `Bearer ${currentToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+          patientName.includes(
+            searchText
+          ) ||
 
-      const result =
-        await response.json();
+          doctorName.includes(
+            searchText
+          ) ||
 
-      if (
-        !response.ok ||
-        !result.success
-      ) {
-        throw new Error(
-          result.message ||
-            "Failed to cancel appointment"
+          appointment.status
+            .toLowerCase()
+            .includes(searchText)
         );
       }
-
-      setAppointment(
-        result.data
-      );
-
-    } catch (error) {
-      console.error(error);
-
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Failed to cancel appointment"
-      );
-
-    } finally {
-      setCancelling(false);
-    }
-  };
+    );
 
   const formatDateTime = (
     date: string
@@ -181,396 +146,221 @@ function AppointmentDetails() {
     ).toLocaleString();
   };
 
-  if (loading) {
-    return (
-      <div className="page">
-
-        <main className="patients-content">
-
-          <div className="patients-card">
-
-            <div className="loading">
-              Loading appointment...
-            </div>
-
-          </div>
-
-        </main>
-
-      </div>
-    );
-  }
-
-  if (error && !appointment) {
-    return (
-      <div className="page">
-
-        <main className="patients-content">
-
-          <div className="patients-card">
-
-            <div className="error-message">
-              {error}
-            </div>
-
-            <div className="details-actions">
-
-              <button
-                className="secondary-button"
-                onClick={() =>
-                  navigate(
-                    "/appointments"
-                  )
-                }
-              >
-                ← Back to Appointments
-              </button>
-
-            </div>
-
-          </div>
-
-        </main>
-
-      </div>
-    );
-  }
-
-  if (!appointment) {
-    return null;
-  }
-
   return (
     <div className="page">
-
-      {/* Page Header */}
 
       <header className="patients-header">
 
         <div>
 
           <h1>
-            Appointment Details
+            Appointments
           </h1>
 
           <p>
-            View appointment information
-            and manage appointment status.
+            Schedule and manage
+            patient appointments.
           </p>
 
         </div>
 
-        <button
-          className="secondary-button"
-          onClick={() =>
-            navigate(
-              "/appointments"
-            )
-          }
-        >
-          ← Back
-        </button>
+        {isAdmin && (
+          <button
+            className="primary-button"
+            onClick={() =>
+              navigate(
+                "/appointments/new"
+              )
+            }
+          >
+            + New Appointment
+          </button>
+        )}
 
       </header>
 
-      {/* Main Content */}
-
       <main className="patients-content">
 
-        <div className="appointment-details-card">
-
-          {/* Appointment Header */}
-
-          <div className="details-header">
-
-            <div>
-
-              <span className="details-label">
-                Appointment
-              </span>
-
-              <h2>
-                {
-                  appointment.appointmentNo
-                }
-              </h2>
-
-            </div>
-
-            <span className="status-badge">
-              {appointment.status}
-            </span>
-
-          </div>
-
-          {/* Error */}
-
-          {error && (
-            <div className="error-message">
-              {error}
-            </div>
-          )}
-
-          {/* Appointment Information */}
-
-          <section className="details-section">
-
-            <h3>
-              Appointment Information
-            </h3>
-
-            <div className="details-grid">
-
-              <div className="detail-item">
-
-                <span>
-                  Date & Time
-                </span>
-
-                <strong>
-                  {formatDateTime(
-                    appointment.appointmentAt
-                  )}
-                </strong>
-
-              </div>
-
-              <div className="detail-item">
-
-                <span>
-                  Duration
-                </span>
-
-                <strong>
-                  {
-                    appointment.duration
-                  }{" "}
-                  minutes
-                </strong>
-
-              </div>
-
-              <div className="detail-item">
-
-                <span>
-                  Type
-                </span>
-
-                <strong>
-                  {appointment.type}
-                </strong>
-
-              </div>
-
-              <div className="detail-item">
-
-                <span>
-                  Reason
-                </span>
-
-                <strong>
-                  {appointment.reason}
-                </strong>
-
-              </div>
-
-            </div>
-
-          </section>
-
-          {/* Patient Information */}
-
-          <section className="details-section">
-
-            <h3>
-              Patient Information
-            </h3>
-
-            {appointment.patient ? (
-
-              <div className="person-card">
-
-                <div className="person-icon">
-                  👤
-                </div>
-
-                <div>
-
-                  <strong>
-                    {
-                      appointment.patient
-                        .firstName
-                    }{" "}
-                    {
-                      appointment.patient
-                        .lastName
-                    }
-                  </strong>
-
-                  <span>
-                    Medical ID:{" "}
-                    {
-                      appointment.patient
-                        .medicalId
-                    }
-                  </span>
-
-                  <span>
-                    {
-                      appointment.patient
-                        .email
-                    }
-                  </span>
-
-                  <span>
-                    {
-                      appointment.patient
-                        .phone
-                    }
-                  </span>
-
-                </div>
-
-              </div>
-
-            ) : (
-
-              <div className="notes-box">
-                Patient #
-                {
-                  appointment.patientId
-                }
-              </div>
-
-            )}
-
-          </section>
-
-          {/* Doctor Information */}
-
-          <section className="details-section">
-
-            <h3>
-              Doctor Information
-            </h3>
-
-            {appointment.doctor ? (
-
-              <div className="person-card">
-
-                <div className="person-icon">
-                  🩺
-                </div>
-
-                <div>
-
-                  <strong>
-                    Dr.{" "}
-                    {
-                      appointment.doctor
-                        .firstName
-                    }{" "}
-                    {
-                      appointment.doctor
-                        .lastName
-                    }
-                  </strong>
-
-                  <span>
-                    Doctor Code:{" "}
-                    {
-                      appointment.doctor
-                        .doctorCode
-                    }
-                  </span>
-
-                  <span>
-                    {
-                      appointment.doctor
-                        .specialization
-                    }
-                  </span>
-
-                  <span>
-                    {
-                      appointment.doctor
-                        .email
-                    }
-                  </span>
-
-                  <span>
-                    {
-                      appointment.doctor
-                        .phone
-                    }
-                  </span>
-
-                </div>
-
-              </div>
-
-            ) : (
-
-              <div className="notes-box">
-                Doctor #
-                {
-                  appointment.doctorId
-                }
-              </div>
-
-            )}
-
-          </section>
-
-          {/* Notes */}
-
-          {appointment.notes && (
-            <section className="details-section">
-
-              <h3>
-                Notes
-              </h3>
-
-              <div className="notes-box">
-                {appointment.notes}
-              </div>
-
-            </section>
-          )}
-
-          {/* Actions */}
-
-          <div className="details-actions">
-
-            <button
-              className="secondary-button"
-              onClick={() =>
-                navigate(
-                  "/appointments"
+        <div className="patients-card">
+
+          <div className="table-header">
+
+            <h2>
+              Appointment Records
+            </h2>
+
+            <input
+              type="text"
+              placeholder="Search appointments..."
+              className="search-input"
+              value={search}
+              onChange={(e) =>
+                setSearch(
+                  e.target.value
                 )
               }
-            >
-              Back to Appointments
-            </button>
-
-            {appointment.status !==
-              "CANCELLED" && (
-
-              <button
-                className="danger-button"
-                onClick={
-                  cancelAppointment
-                }
-                disabled={cancelling}
-              >
-                {cancelling
-                  ? "Cancelling..."
-                  : "Cancel Appointment"}
-              </button>
-
-            )}
+            />
 
           </div>
+
+          {loading ? (
+
+            <div className="loading">
+              Loading appointments...
+            </div>
+
+          ) : filteredAppointments.length === 0 ? (
+
+            <div className="empty-state">
+              No appointments found.
+            </div>
+
+          ) : (
+
+            <div className="table-container">
+
+              <table>
+
+                <thead>
+
+                  <tr>
+                    <th>
+                      Appointment
+                    </th>
+
+                    <th>
+                      Patient
+                    </th>
+
+                    <th>
+                      Doctor
+                    </th>
+
+                    <th>
+                      Date & Time
+                    </th>
+
+                    <th>
+                      Type
+                    </th>
+
+                    <th>
+                      Duration
+                    </th>
+
+                    <th>
+                      Status
+                    </th>
+                  </tr>
+
+                </thead>
+
+                <tbody>
+
+                  {filteredAppointments.map(
+                    (appointment) => (
+
+                      <tr
+                        key={
+                          appointment.id
+                        }
+                        className="clickable-row"
+                        onClick={() =>
+                          navigate(
+                            `/appointments/${appointment.id}`
+                          )
+                        }
+                      >
+
+                        <td>
+
+                          <strong>
+                            {
+                              appointment.appointmentNo
+                            }
+                          </strong>
+
+                        </td>
+
+                        <td>
+
+                          <strong>
+                            {appointment.patient
+                              ? `${appointment.patient.firstName} ${appointment.patient.lastName}`
+                              : `Patient #${appointment.patientId}`}
+                          </strong>
+
+                          {appointment.patient && (
+                            <small>
+                              {
+                                appointment
+                                  .patient
+                                  .medicalId
+                              }
+                            </small>
+                          )}
+
+                        </td>
+
+                        <td>
+
+                          <strong>
+                            {appointment.doctor
+                              ? `Dr. ${appointment.doctor.firstName} ${appointment.doctor.lastName}`
+                              : `Doctor #${appointment.doctorId}`}
+                          </strong>
+
+                          {appointment.doctor && (
+                            <small>
+                              {
+                                appointment
+                                  .doctor
+                                  .specialization
+                              }
+                            </small>
+                          )}
+
+                        </td>
+
+                        <td>
+                          {formatDateTime(
+                            appointment.appointmentAt
+                          )}
+                        </td>
+
+                        <td>
+                          {appointment.type}
+                        </td>
+
+                        <td>
+                          {
+                            appointment.duration
+                          }{" "}
+                          mins
+                        </td>
+
+                        <td>
+
+                          <span className="status-badge">
+                            {
+                              appointment.status
+                            }
+                          </span>
+
+                        </td>
+
+                      </tr>
+
+                    )
+                  )}
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+          )}
 
         </div>
 
@@ -580,4 +370,4 @@ function AppointmentDetails() {
   );
 }
 
-export default AppointmentDetails;
+export default Appointments;
