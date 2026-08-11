@@ -16,6 +16,9 @@ function ForgotPassword() {
   const [error, setError] =
     useState("");
 
+  const [resetToken, setResetToken] =
+    useState("");
+
   const handleSubmit = async (
     e: React.FormEvent
   ) => {
@@ -24,6 +27,7 @@ function ForgotPassword() {
     setLoading(true);
     setError("");
     setMessage("");
+    setResetToken("");
 
     try {
       const response = await fetch(
@@ -53,6 +57,18 @@ function ForgotPassword() {
       setMessage(
         "If the email exists, password reset instructions have been generated."
       );
+
+      /*
+       * Local/dev only: backend may include
+       * resetToken so QA can complete the flow
+       * without an email service.
+       */
+      if (
+        typeof result.resetToken ===
+        "string"
+      ) {
+        setResetToken(result.resetToken);
+      }
     } catch (error) {
       setError(
         error instanceof Error
@@ -103,6 +119,28 @@ function ForgotPassword() {
           {message && (
             <div className="auth-success">
               {message}
+            </div>
+          )}
+
+          {resetToken && (
+            <div className="auth-success">
+              <p>
+                Development reset link
+                (use this to complete the
+                password reset):
+              </p>
+
+              <button
+                type="button"
+                className="link-button"
+                onClick={() =>
+                  navigate(
+                    `/reset-password?token=${encodeURIComponent(resetToken)}`
+                  )
+                }
+              >
+                Continue to Reset Password
+              </button>
             </div>
           )}
 

@@ -2774,33 +2774,37 @@ function Doctors() {
                               View Details
                             </button>
 
-                            <button
-                              type="button"
-                              className="secondary-button doctor-view-button"
-                              onClick={() =>
-                                handleEditDoctor(
-                                  doctor
-                                )
-                              }
-                            >
-                              Edit
-                            </button>
+                            {isAdmin && (
+                              <button
+                                type="button"
+                                className="secondary-button doctor-view-button"
+                                onClick={() =>
+                                  handleEditDoctor(
+                                    doctor
+                                  )
+                                }
+                              >
+                                Edit
+                              </button>
+                            )}
 
-                            <button
-                              type="button"
-                              className="secondary-button doctor-view-button"
-                              onClick={() => {
-                                setStatusChangeError("");
-                                setChangingStatusDoctor(
-                                  doctor
-                                );
-                              }}
-                            >
-                              {doctor.status.toUpperCase() ===
-                              "ACTIVE"
-                                ? "Deactivate"
-                                : "Activate"}
-                            </button>
+                            {isAdmin && (
+                              <button
+                                type="button"
+                                className="secondary-button doctor-view-button"
+                                onClick={() => {
+                                  setStatusChangeError("");
+                                  setChangingStatusDoctor(
+                                    doctor
+                                  );
+                                }}
+                              >
+                                {doctor.status.toUpperCase() ===
+                                "ACTIVE"
+                                  ? "Deactivate"
+                                  : "Activate"}
+                              </button>
+                            )}
 
                             <button
                               type="button"

@@ -4,7 +4,7 @@ import crypto from "crypto";
 import { prisma } from "../config/prisma";
 
 const JWT_SECRET =
-  process.env.JWT_SECRET || "development-secret";
+  process.env.JWT_SECRET || "local-development-secret";
 
 const NORMAL_TOKEN_EXPIRY = "1h";
 const REMEMBER_ME_EXPIRY = "30d";
@@ -379,6 +379,16 @@ export const loginUser = async ({
     }
   );
 
+  const linkedPatient =
+    await prisma.patient.findUnique({
+      where: {
+        userId: user.id,
+      },
+      select: {
+        id: true,
+      },
+    });
+
   return {
     token,
 
@@ -388,6 +398,7 @@ export const loginUser = async ({
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
+      patientId: linkedPatient?.id ?? null,
     },
 
     expiresIn: rememberMe

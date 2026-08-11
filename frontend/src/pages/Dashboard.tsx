@@ -58,7 +58,7 @@ function Dashboard() {
 
         <div className="dashboard-grid">
 
-          {(isAdmin || isDoctor || isPharmacist) && (
+          {(isAdmin || isDoctor) && (
             <div
               className="dashboard-card"
               onClick={() =>
@@ -75,7 +75,9 @@ function Dashboard() {
                 </h3>
 
                 <p>
-                  {isPharmacist ? "View patient records" : "Manage patient records"}
+                  {isAdmin
+                    ? "Manage patient records"
+                    : "View patient records"}
                 </p>
               </div>
             </div>
@@ -98,15 +100,15 @@ function Dashboard() {
                 </h3>
 
                 <p>
-                  Manage healthcare providers
+                  {isAdmin
+                    ? "Manage healthcare providers"
+                    : "View healthcare providers"}
                 </p>
               </div>
             </div>
           )}
 
-          {(isAdmin ||
-            isDoctor ||
-            isPatient) && (
+          {(isAdmin || isDoctor) && (
             <div
               className="dashboard-card"
               onClick={() =>
@@ -123,7 +125,101 @@ function Dashboard() {
                 </h3>
 
                 <p>
-                  Schedule and manage appointments
+                  {isAdmin
+                    ? "Schedule and manage appointments"
+                    : "View patient appointments"}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {isPatient && (
+            <div
+              className="dashboard-card"
+              onClick={() =>
+                navigate("/my/profile")
+              }
+            >
+              <div className="card-icon">
+                👤
+              </div>
+
+              <div>
+                <h3>
+                  My Profile
+                </h3>
+
+                <p>
+                  View your patient information
+                </p>
+              </div>
+            </div>
+          )}
+
+          {isPatient && (
+            <div
+              className="dashboard-card"
+              onClick={() =>
+                navigate("/my/appointments")
+              }
+            >
+              <div className="card-icon">
+                📅
+              </div>
+
+              <div>
+                <h3>
+                  My Appointments
+                </h3>
+
+                <p>
+                  View your appointment history
+                </p>
+              </div>
+            </div>
+          )}
+
+          {isPatient && (
+            <div
+              className="dashboard-card"
+              onClick={() =>
+                navigate("/my/orders")
+              }
+            >
+              <div className="card-icon">
+                📦
+              </div>
+
+              <div>
+                <h3>
+                  My Orders
+                </h3>
+
+                <p>
+                  View and create your orders
+                </p>
+              </div>
+            </div>
+          )}
+
+          {isPharmacist && (
+            <div
+              className="dashboard-card"
+              onClick={() =>
+                navigate("/pharmacy")
+              }
+            >
+              <div className="card-icon">
+                💊
+              </div>
+
+              <div>
+                <h3>
+                  Pharmacy Workspace
+                </h3>
+
+                <p>
+                  Manage prescriptions and orders
                 </p>
               </div>
             </div>
@@ -142,13 +238,13 @@ function Dashboard() {
               "Manage patients, doctors, appointments and healthcare workflows from one centralized platform."}
 
             {isDoctor &&
-              "Manage patients, doctors and appointments from one centralized platform."}
+              "View patients, provider directory and appointments. Clinical prescription tools are available from patient records."}
 
             {isPatient &&
-              "View your healthcare appointments and available services."}
+              "Access your profile, appointments and pharmacy orders from your patient portal."}
 
             {isPharmacist &&
-              "Review patient records, prescriptions and pharmacy orders from one centralized platform."}
+              "Look up prescriptions and orders by patient, order or prescription ID to update pharmacy status."}
 
           </p>
 
