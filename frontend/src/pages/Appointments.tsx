@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import {
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 interface Appointment {
@@ -34,6 +37,18 @@ function Appointments() {
   const { token, user } = useAuth();
 
   const isAdmin = user?.role?.toUpperCase() === "ADMIN";
+
+  const [searchParams] =
+    useSearchParams();
+
+  const patientIdParam =
+    searchParams.get("patientId");
+
+  const filteredPatientId =
+    patientIdParam &&
+    !Number.isNaN(Number(patientIdParam))
+      ? Number(patientIdParam)
+      : null;
 
   const [appointments, setAppointments] =
     useState<Appointment[]>([]);
@@ -103,6 +118,13 @@ function Appointments() {
   const filteredAppointments =
     appointments.filter(
       (appointment) => {
+        if (
+          filteredPatientId !== null &&
+          appointment.patientId !==
+            filteredPatientId
+        ) {
+          return false;
+        }
 
         const searchText =
           search.toLowerCase();
@@ -157,8 +179,9 @@ function Appointments() {
           </h1>
 
           <p>
-            Schedule and manage
-            patient appointments.
+            {filteredPatientId !== null
+              ? `Showing appointments for patient #${filteredPatientId}.`
+              : "Schedule and manage patient appointments."}
           </p>
 
         </div>

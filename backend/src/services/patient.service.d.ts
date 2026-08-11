@@ -1,0 +1,199 @@
+export declare const getPatients: () => Promise<{
+    id: number;
+    userId: number | null;
+    medicalId: string;
+    firstName: string;
+    lastName: string;
+    dateOfBirth: Date;
+    gender: import("../generated/prisma/enums").Gender;
+    email: string | null;
+    phone: string;
+    address: string | null;
+    bloodGroup: string | null;
+    status: import("../generated/prisma/enums").PatientStatus;
+    createdAt: Date;
+    updatedAt: Date;
+}[]>;
+export declare const getPatientById: (id: number) => Promise<{
+    id: number;
+    userId: number | null;
+    medicalId: string;
+    firstName: string;
+    lastName: string;
+    dateOfBirth: Date;
+    gender: import("../generated/prisma/enums").Gender;
+    email: string | null;
+    phone: string;
+    address: string | null;
+    bloodGroup: string | null;
+    status: import("../generated/prisma/enums").PatientStatus;
+    createdAt: Date;
+    updatedAt: Date;
+} | null>;
+export declare const createPatient: (data: {
+    medicalId: string;
+    firstName: string;
+    lastName: string;
+    dateOfBirth: Date;
+    gender: "MALE" | "FEMALE" | "OTHER";
+    email?: string;
+    phone: string;
+    address?: string;
+    bloodGroup?: string;
+}) => Promise<{
+    id: number;
+    userId: number | null;
+    medicalId: string;
+    firstName: string;
+    lastName: string;
+    dateOfBirth: Date;
+    gender: import("../generated/prisma/enums").Gender;
+    email: string | null;
+    phone: string;
+    address: string | null;
+    bloodGroup: string | null;
+    status: import("../generated/prisma/enums").PatientStatus;
+    createdAt: Date;
+    updatedAt: Date;
+}>;
+export declare const updatePatient: (id: number, data: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    bloodGroup?: string;
+    status?: "ACTIVE" | "INACTIVE" | "DECEASED";
+}) => Promise<{
+    id: number;
+    userId: number | null;
+    medicalId: string;
+    firstName: string;
+    lastName: string;
+    dateOfBirth: Date;
+    gender: import("../generated/prisma/enums").Gender;
+    email: string | null;
+    phone: string;
+    address: string | null;
+    bloodGroup: string | null;
+    status: import("../generated/prisma/enums").PatientStatus;
+    createdAt: Date;
+    updatedAt: Date;
+}>;
+export declare const deletePatient: (id: number) => Promise<{
+    id: number;
+    userId: number | null;
+    medicalId: string;
+    firstName: string;
+    lastName: string;
+    dateOfBirth: Date;
+    gender: import("../generated/prisma/enums").Gender;
+    email: string | null;
+    phone: string;
+    address: string | null;
+    bloodGroup: string | null;
+    status: import("../generated/prisma/enums").PatientStatus;
+    createdAt: Date;
+    updatedAt: Date;
+}>;
+export declare const deactivatePatient: (patientId: number) => Promise<{
+    id: number;
+    userId: number | null;
+    medicalId: string;
+    firstName: string;
+    lastName: string;
+    dateOfBirth: Date;
+    gender: import("../generated/prisma/enums").Gender;
+    email: string | null;
+    phone: string;
+    address: string | null;
+    bloodGroup: string | null;
+    status: import("../generated/prisma/enums").PatientStatus;
+    createdAt: Date;
+    updatedAt: Date;
+}>;
+export declare const getPatientEmergencyContact: (patientId: number) => Promise<{
+    id: number;
+    patientId: number;
+    firstName: string;
+    lastName: string;
+    relationship: string;
+    phone: string;
+    alternatePhone: string | null;
+    email: string | null;
+    address: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+} | null>;
+export declare const upsertPatientEmergencyContact: (patientId: number, data: {
+    firstName: string;
+    lastName: string;
+    relationship: string;
+    phone: string;
+    alternatePhone?: string;
+    email?: string;
+    address?: string;
+}) => Promise<{
+    id: number;
+    patientId: number;
+    firstName: string;
+    lastName: string;
+    relationship: string;
+    phone: string;
+    alternatePhone: string | null;
+    email: string | null;
+    address: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+}>;
+export declare const deletePatientEmergencyContact: (patientId: number) => Promise<{
+    message: string;
+}>;
+export declare const getPatientMedicalProfile: (patientId: number) => Promise<{
+    id: number;
+    patientId: number;
+    medicalConditions: string | null;
+    allergies: string | null;
+    currentMedications: string | null;
+    medicalNotes: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+} | null>;
+export declare const upsertPatientMedicalProfile: (patientId: number, data: {
+    medicalConditions?: string;
+    allergies?: string;
+    currentMedications?: string;
+    medicalNotes?: string;
+}) => Promise<{
+    id: number;
+    patientId: number;
+    medicalConditions: string | null;
+    allergies: string | null;
+    currentMedications: string | null;
+    medicalNotes: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+}>;
+export declare const getPatientAppointments: (patientId: number) => Promise<({
+    doctor: {
+        doctorCode: string;
+        firstName: string;
+        id: number;
+        lastName: string;
+        specialization: string;
+    };
+} & {
+    id: number;
+    appointmentNo: string;
+    patientId: number;
+    doctorId: number;
+    appointmentAt: Date;
+    duration: number;
+    type: import("../generated/prisma/enums").AppointmentType;
+    status: import("../generated/prisma/enums").AppointmentStatus;
+    reason: string;
+    notes: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+})[]>;
+//# sourceMappingURL=patient.service.d.ts.map

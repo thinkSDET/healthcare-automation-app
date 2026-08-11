@@ -3,7 +3,7 @@ import {
   useContext,
   useEffect,
   useState,
-  ReactNode,
+  type ReactNode,
 } from "react";
 
 interface User {
@@ -48,6 +48,11 @@ const getStoredValue = (key: string) => {
 const removeStoredValue = (key: string) => {
   localStorage.removeItem(key);
   sessionStorage.removeItem(key);
+};
+
+/** Read JWT from localStorage or sessionStorage (remember-me safe). */
+export const getAuthToken = () => {
+  return getStoredValue("token");
 };
 
 /* =========================================================

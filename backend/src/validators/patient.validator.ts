@@ -4,7 +4,11 @@ export const createPatientSchema = z.object({
   medicalId: z.string().min(3).max(30),
   firstName: z.string().min(2).max(50),
   lastName: z.string().min(2).max(50),
-  dateOfBirth: z.string().datetime(),
+  // Accept HTML date inputs (YYYY-MM-DD) and full ISO datetimes
+  dateOfBirth: z.union([
+    z.string().date(),
+    z.string().datetime(),
+  ]),
   gender: z.enum(["MALE", "FEMALE", "OTHER"]),
   email: z.string().email().optional(),
   phone: z.string().min(10).max(15),

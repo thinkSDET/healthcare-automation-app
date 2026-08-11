@@ -21,10 +21,7 @@ interface Patient {
 function PatientDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-   const { token, user } = useAuth();
-
-  const isAdmin =
-    user?.role?.toUpperCase() === "ADMIN";
+  const { token } = useAuth();
 
   const [patient, setPatient] =
     useState<Patient | null>(null);
@@ -953,7 +950,27 @@ function PatientDetails() {
 
                 <div className="patient-history-grid">
 
-                  <div className="patient-history-card">
+                  <div
+                    className="patient-history-card"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() =>
+                      navigate(
+                        `/appointments?patientId=${patient.id}`
+                      )
+                    }
+                    onKeyDown={(e) => {
+                      if (
+                        e.key ===
+                          "Enter" ||
+                        e.key === " "
+                      ) {
+                        navigate(
+                          `/appointments?patientId=${patient.id}`
+                        );
+                      }
+                    }}
+                  >
                     <span className="history-icon">
                       📅
                     </span>
@@ -970,7 +987,27 @@ function PatientDetails() {
                     </div>
                   </div>
 
-                  <div className="patient-history-card">
+                  <div
+                    className="patient-history-card"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() =>
+                      navigate(
+                        `/patients/${patient.id}/prescriptions`
+                      )
+                    }
+                    onKeyDown={(e) => {
+                      if (
+                        e.key ===
+                          "Enter" ||
+                        e.key === " "
+                      ) {
+                        navigate(
+                          `/patients/${patient.id}/prescriptions`
+                        );
+                      }
+                    }}
+                  >
                     <span className="history-icon">
                       💊
                     </span>
@@ -987,7 +1024,27 @@ function PatientDetails() {
                     </div>
                   </div>
 
-                  <div className="patient-history-card">
+                  <div
+                    className="patient-history-card"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() =>
+                      navigate(
+                        `/patients/${patient.id}/orders`
+                      )
+                    }
+                    onKeyDown={(e) => {
+                      if (
+                        e.key ===
+                          "Enter" ||
+                        e.key === " "
+                      ) {
+                        navigate(
+                          `/patients/${patient.id}/orders`
+                        );
+                      }
+                    }}
+                  >
                     <span className="history-icon">
                       📦
                     </span>

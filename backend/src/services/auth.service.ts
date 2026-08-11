@@ -4,7 +4,7 @@ import crypto from "crypto";
 import { prisma } from "../config/prisma";
 
 const JWT_SECRET =
-  process.env.JWT_SECRET || "development-secret";
+  process.env.JWT_SECRET || "local-development-secret";
 
 const NORMAL_TOKEN_EXPIRY = "1h";
 const REMEMBER_ME_EXPIRY = "30d";

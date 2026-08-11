@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { getAuthToken } from "../context/AuthContext";
 
 interface Patient {
   id: number;
@@ -14,6 +15,7 @@ interface Doctor {
   firstName: string;
   lastName: string;
   specialization: string;
+  status?: string;
 }
 
 interface ExistingAppointment {
@@ -101,7 +103,7 @@ function NewAppointment() {
         return;
       }
 
-      const token = localStorage.getItem("token");
+      const token = getAuthToken();
 
       const headers = {
         Authorization: `Bearer ${token}`,
@@ -222,7 +224,7 @@ function NewAppointment() {
     }
 
     if (
-      doctor.status.toUpperCase() !==
+      (doctor.status ?? "ACTIVE").toUpperCase() !==
       "ACTIVE"
     ) {
       return "This doctor is not active and cannot receive new appointments.";
@@ -361,7 +363,7 @@ function NewAppointment() {
     setLoading(true);
 
     try {
-      const token = localStorage.getItem("token");
+      const token = getAuthToken();
 
       const response = await fetch(
         "http://localhost:4000/api/appointments",
