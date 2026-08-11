@@ -153,14 +153,12 @@ export const getOrderById =
 
     try {
 
-      const orderId =
-        Number(
-          req.params.id
-        );
+      const identifier =
+        String(
+          req.params.id ?? ""
+        ).trim();
 
-      if (
-        Number.isNaN(orderId)
-      ) {
+      if (!identifier) {
         return res.status(400).json({
           success: false,
           message:
@@ -170,8 +168,8 @@ export const getOrderById =
 
       const order =
         await orderService
-          .getOrderById(
-            orderId
+          .getOrderByIdentifier(
+            identifier
           );
 
       const ownershipError =
