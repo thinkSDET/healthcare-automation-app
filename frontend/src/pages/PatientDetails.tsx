@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
@@ -77,6 +77,30 @@ const emptyMedicalProfileForm = {
   currentMedications: "",
   medicalNotes: "",
 };
+
+interface PatientDocument {
+  id: number;
+  originalName: string;
+  documentType: string;
+  mimeType: string;
+  size: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+const DOCUMENT_TYPE_OPTIONS = [
+  "ID Proof",
+  "Lab Report",
+  "Prescription Scan",
+  "Insurance",
+  "Consent Form",
+  "Other",
+];
+
+const DOCUMENT_ACCEPT =
+  ".pdf,.jpg,.jpeg,.png,.webp,.txt,.doc,.docx";
+
+const MAX_DOCUMENT_SIZE_BYTES = 10 * 1024 * 1024;
 
 function PatientDetails() {
   const { id } = useParams();
@@ -185,11 +209,42 @@ function PatientDetails() {
   const [medicalProfileSuccess, setMedicalProfileSuccess] =
     useState("");
 
+  const [documents, setDocuments] =
+    useState<PatientDocument[]>([]);
+
+  const [documentsLoading, setDocumentsLoading] =
+    useState(false);
+
+  const [documentUploading, setDocumentUploading] =
+    useState(false);
+
+  const [deletingDocumentId, setDeletingDocumentId] =
+    useState<number | null>(null);
+
+  const [downloadingDocumentId, setDownloadingDocumentId] =
+    useState<number | null>(null);
+
+  const [documentType, setDocumentType] =
+    useState("");
+
+  const [selectedDocumentFile, setSelectedDocumentFile] =
+    useState<File | null>(null);
+
+  const [documentsError, setDocumentsError] =
+    useState("");
+
+  const [documentsSuccess, setDocumentsSuccess] =
+    useState("");
+
+  const documentFileInputRef =
+    useRef<HTMLInputElement | null>(null);
+
   useEffect(() => {
     fetchPatient();
     fetchDependents();
     fetchEmergencyContact();
     fetchMedicalProfile();
+    fetchDocuments();
   }, [id]);
 
   const getToken = () => {
@@ -1128,6 +1183,340 @@ function PatientDetails() {
       );
     } finally {
       setMedicalProfileSaving(false);
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) {
+      return `${bytes} B`;
+    }
+
+    if (bytes < 1024 * 1024) {
+      return `${(bytes / 1024).toFixed(1)} KB`;
+    }
+
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const scrollToDocumentsSection = () => {
+    const section = document.getElementById(
+      "patient-documents"
+    );
+
+    if (section) {
+      section.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  };
+
+  const parseResponseMessage = async (
+    response: Response,
+    fallback: string
+  ) => {
+    try {
+      const contentType =
+        response.headers.get("content-type") || "";
+
+      if (contentType.includes("application/json")) {
+        const result = await response.json();
+
+        if (result?.message) {
+          return String(result.message);
+        }
+      }
+    } catch {
+      // Fall through to fallback message.
+    }
+
+    return fallback;
+  };
+
+  const fetchDocuments = async () => {
+    if (!id) {
+      return;
+    }
+
+    try {
+      setDocumentsLoading(true);
+      setDocumentsError("");
+
+      const response = await fetch(
+        `http://localhost:4000/api/patients/${id}/documents`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message ||
+            "Failed to fetch documents"
+        );
+      }
+
+      setDocuments(result.data || []);
+    } catch (error) {
+      console.error(
+        "Failed to fetch documents:",
+        error
+      );
+
+      setDocumentsError(
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch documents"
+      );
+    } finally {
+      setDocumentsLoading(false);
+    }
+  };
+
+  const resetDocumentUploadForm = () => {
+    setDocumentType("");
+    setSelectedDocumentFile(null);
+
+    if (documentFileInputRef.current) {
+      documentFileInputRef.current.value = "";
+    }
+  };
+
+  const handleUploadDocument = async (
+    e: React.FormEvent
+  ) => {
+    e.preventDefault();
+
+    if (!id) {
+      return;
+    }
+
+    if (!documentType.trim()) {
+      setDocumentsError(
+        "Document type is required"
+      );
+      setDocumentsSuccess("");
+      return;
+    }
+
+    if (!selectedDocumentFile) {
+      setDocumentsError(
+        "Document file is required"
+      );
+      setDocumentsSuccess("");
+      return;
+    }
+
+    if (
+      selectedDocumentFile.size >
+      MAX_DOCUMENT_SIZE_BYTES
+    ) {
+      setDocumentsError(
+        "File size must be 10MB or less"
+      );
+      setDocumentsSuccess("");
+      return;
+    }
+
+    try {
+      setDocumentUploading(true);
+      setDocumentsError("");
+      setDocumentsSuccess("");
+
+      const formDataPayload = new FormData();
+      formDataPayload.append(
+        "document",
+        selectedDocumentFile
+      );
+      formDataPayload.append(
+        "documentType",
+        documentType.trim()
+      );
+
+      const response = await fetch(
+        `http://localhost:4000/api/patients/${id}/documents`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+          },
+          body: formDataPayload,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          await parseResponseMessage(
+            response,
+            "Failed to upload document"
+          )
+        );
+      }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(
+          result.message ||
+            "Failed to upload document"
+        );
+      }
+
+      setDocumentsSuccess(
+        result.message ||
+          "Document uploaded successfully"
+      );
+      resetDocumentUploadForm();
+      await fetchDocuments();
+    } catch (error) {
+      console.error(
+        "Failed to upload document:",
+        error
+      );
+
+      setDocumentsError(
+        error instanceof Error
+          ? error.message
+          : "Failed to upload document"
+      );
+    } finally {
+      setDocumentUploading(false);
+    }
+  };
+
+  const handleDownloadDocument = async (
+    docItem: PatientDocument
+  ) => {
+    if (!id) {
+      return;
+    }
+
+    try {
+      setDownloadingDocumentId(docItem.id);
+      setDocumentsError("");
+      setDocumentsSuccess("");
+
+      const response = await fetch(
+        `http://localhost:4000/api/patients/${id}/documents/${docItem.id}/download`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          await parseResponseMessage(
+            response,
+            "Failed to download document"
+          )
+        );
+      }
+
+      const blob = await response.blob();
+      const objectUrl =
+        window.URL.createObjectURL(blob);
+
+      const link = window.document.createElement("a");
+      link.href = objectUrl;
+      link.download = docItem.originalName;
+      window.document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(objectUrl);
+
+      setDocumentsSuccess(
+        `Downloaded ${docItem.originalName}`
+      );
+    } catch (error) {
+      console.error(
+        "Failed to download document:",
+        error
+      );
+
+      setDocumentsError(
+        error instanceof Error
+          ? error.message
+          : "Failed to download document"
+      );
+    } finally {
+      setDownloadingDocumentId(null);
+    }
+  };
+
+  const handleDeleteDocument = async (
+    docItem: PatientDocument
+  ) => {
+    if (!id) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${docItem.originalName}"?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setDeletingDocumentId(docItem.id);
+      setDocumentsError("");
+      setDocumentsSuccess("");
+
+      const response = await fetch(
+        `http://localhost:4000/api/patients/${id}/documents/${docItem.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          await parseResponseMessage(
+            response,
+            "Failed to delete document"
+          )
+        );
+      }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(
+          result.message ||
+            "Failed to delete document"
+        );
+      }
+
+      setDocumentsSuccess(
+        result.message ||
+          "Document deleted successfully"
+      );
+      await fetchDocuments();
+    } catch (error) {
+      console.error(
+        "Failed to delete document:",
+        error
+      );
+
+      setDocumentsError(
+        error instanceof Error
+          ? error.message
+          : "Failed to delete document"
+      );
+    } finally {
+      setDeletingDocumentId(null);
     }
   };
 
@@ -2676,6 +3065,217 @@ function PatientDetails() {
               </section>
 
               {/* =========================
+                  Documents
+              ========================= */}
+
+              <section
+                id="patient-documents"
+                className="patient-details-section"
+              >
+
+                <div className="section-heading-row">
+
+                  <div>
+
+                    <h3>
+                      Documents
+                    </h3>
+
+                    <p className="section-description">
+                      Upload, download, and manage
+                      patient documents.
+                    </p>
+
+                  </div>
+
+                </div>
+
+                {documentsError && (
+                  <div
+                    className="auth-error"
+                    style={{
+                      marginBottom: "16px",
+                    }}
+                  >
+                    {documentsError}
+                  </div>
+                )}
+
+                {documentsSuccess && (
+                  <div
+                    className="auth-success"
+                    style={{
+                      marginBottom: "16px",
+                    }}
+                  >
+                    {documentsSuccess}
+                  </div>
+                )}
+
+                <form
+                  className="documents-upload-box"
+                  onSubmit={handleUploadDocument}
+                >
+
+                  <div className="document-upload-controls">
+
+                    <select
+                      className="document-type-select"
+                      value={documentType}
+                      onChange={(e) =>
+                        setDocumentType(
+                          e.target.value
+                        )
+                      }
+                      disabled={documentUploading}
+                    >
+                      <option value="">
+                        Select document type
+                      </option>
+
+                      {DOCUMENT_TYPE_OPTIONS.map(
+                        (option) => (
+                          <option
+                            key={option}
+                            value={option}
+                          >
+                            {option}
+                          </option>
+                        )
+                      )}
+                    </select>
+
+                    <input
+                      ref={documentFileInputRef}
+                      type="file"
+                      accept={DOCUMENT_ACCEPT}
+                      onChange={(e) => {
+                        const file =
+                          e.target.files?.[0] ||
+                          null;
+                        setSelectedDocumentFile(
+                          file
+                        );
+                        setDocumentsError("");
+                      }}
+                      disabled={documentUploading}
+                    />
+
+                    <button
+                      type="submit"
+                      className="primary-button upload-document-button"
+                      disabled={documentUploading}
+                    >
+                      {documentUploading
+                        ? "Uploading..."
+                        : "Upload Document"}
+                    </button>
+
+                  </div>
+
+                  <p className="document-upload-help">
+                    Allowed: PDF, JPG, PNG, WEBP,
+                    TXT, DOC, DOCX. Max size 10MB.
+                    {selectedDocumentFile
+                      ? ` Selected: ${selectedDocumentFile.name}`
+                      : ""}
+                  </p>
+
+                </form>
+
+                {documentsLoading ? (
+                  <div className="loading">
+                    Loading documents...
+                  </div>
+                ) : documents.length === 0 ? (
+                  <div className="empty-state">
+                    No documents uploaded for this
+                    patient.
+                  </div>
+                ) : (
+                  <div className="documents-list">
+                    {documents.map((docItem) => (
+                      <div
+                        key={docItem.id}
+                        className="document-card"
+                      >
+
+                        <div className="document-icon">
+                          📄
+                        </div>
+
+                        <div className="document-info">
+                          <strong>
+                            {docItem.originalName}
+                          </strong>
+
+                          <span>
+                            {docItem.documentType}
+                          </span>
+
+                          <small>
+                            {formatFileSize(
+                              docItem.size
+                            )}
+                            {" · "}
+                            {formatDate(
+                              docItem.createdAt
+                            )}
+                          </small>
+                        </div>
+
+                        <div className="document-actions">
+                          <button
+                            type="button"
+                            className="secondary-button"
+                            onClick={() =>
+                              handleDownloadDocument(
+                                docItem
+                              )
+                            }
+                            disabled={
+                              downloadingDocumentId ===
+                                docItem.id ||
+                              deletingDocumentId ===
+                                docItem.id
+                            }
+                          >
+                            {downloadingDocumentId ===
+                            docItem.id
+                              ? "Downloading..."
+                              : "Download"}
+                          </button>
+
+                          <button
+                            type="button"
+                            className="danger-button"
+                            onClick={() =>
+                              handleDeleteDocument(
+                                docItem
+                              )
+                            }
+                            disabled={
+                              deletingDocumentId ===
+                                docItem.id ||
+                              downloadingDocumentId ===
+                                docItem.id
+                            }
+                          >
+                            {deletingDocumentId ===
+                            docItem.id
+                              ? "Deleting..."
+                              : "Delete"}
+                          </button>
+                        </div>
+
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+              </section>
+
+              {/* =========================
                   Patient History
               ========================= */}
 
@@ -2797,7 +3397,23 @@ function PatientDetails() {
                     </div>
                   </div>
 
-                  <div className="patient-history-card">
+                  <div
+                    className="patient-history-card"
+                    role="button"
+                    tabIndex={0}
+                    onClick={
+                      scrollToDocumentsSection
+                    }
+                    onKeyDown={(e) => {
+                      if (
+                        e.key ===
+                          "Enter" ||
+                        e.key === " "
+                      ) {
+                        scrollToDocumentsSection();
+                      }
+                    }}
+                  >
                     <span className="history-icon">
                       📄
                     </span>
