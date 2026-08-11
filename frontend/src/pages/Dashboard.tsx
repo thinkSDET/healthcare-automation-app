@@ -58,7 +58,7 @@ function Dashboard() {
 
         <div className="dashboard-grid">
 
-          {(isAdmin || isDoctor || isPharmacist) && (
+          {(isAdmin || isDoctor) && (
             <div
               className="dashboard-card"
               onClick={() =>
@@ -75,7 +75,9 @@ function Dashboard() {
                 </h3>
 
                 <p>
-                  {isPharmacist ? "View patient records" : "Manage patient records"}
+                  {isAdmin
+                    ? "Manage patient records"
+                    : "View patient records"}
                 </p>
               </div>
             </div>
@@ -98,15 +100,15 @@ function Dashboard() {
                 </h3>
 
                 <p>
-                  Manage healthcare providers
+                  {isAdmin
+                    ? "Manage healthcare providers"
+                    : "View healthcare providers"}
                 </p>
               </div>
             </div>
           )}
 
-          {(isAdmin ||
-            isDoctor ||
-            isPatient) && (
+          {(isAdmin || isDoctor) && (
             <div
               className="dashboard-card"
               onClick={() =>
@@ -123,7 +125,9 @@ function Dashboard() {
                 </h3>
 
                 <p>
-                  Schedule and manage appointments
+                  {isAdmin
+                    ? "Schedule and manage appointments"
+                    : "View patient appointments"}
                 </p>
               </div>
             </div>
@@ -142,13 +146,13 @@ function Dashboard() {
               "Manage patients, doctors, appointments and healthcare workflows from one centralized platform."}
 
             {isDoctor &&
-              "Manage patients, doctors and appointments from one centralized platform."}
+              "View patients, provider directory and appointments. Clinical prescription tools are available from patient records."}
 
             {isPatient &&
-              "View your healthcare appointments and available services."}
+              "Your patient self-service portal is not available yet. Account access is limited to this dashboard for now."}
 
             {isPharmacist &&
-              "Review patient records, prescriptions and pharmacy orders from one centralized platform."}
+              "Your pharmacy workspace for prescriptions and orders is not available yet. Account access is limited to this dashboard for now."}
 
           </p>
 
