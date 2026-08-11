@@ -198,6 +198,16 @@ function PatientOrders() {
       orderId: number,
       status: string
     ) => {
+      if (status === "CANCELLED") {
+        const confirmed = window.confirm(
+          "Are you sure you want to cancel this order?"
+        );
+
+        if (!confirmed) {
+          return;
+        }
+      }
+
       try {
         setError("");
         setSuccess("");
