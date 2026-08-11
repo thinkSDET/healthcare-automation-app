@@ -129,11 +129,6 @@ function App() {
             element={<PatientPrescriptions />}
           />
 
-          <Route
-            path="/patients/:id/orders"
-            element={<PatientOrders />}
-          />
-
         </Route>
 
 
@@ -141,7 +136,7 @@ function App() {
             ADMIN ONLY
            ========================= */}
 
-        {/* Only ADMIN can create appointments */}
+        {/* Only ADMIN can create appointments and manage orders */}
         <Route
           element={
             <ProtectedRoute
@@ -155,6 +150,11 @@ function App() {
           <Route
             path="/appointments/new"
             element={<NewAppointment />}
+          />
+
+          <Route
+            path="/patients/:id/orders"
+            element={<PatientOrders />}
           />
 
         </Route>
