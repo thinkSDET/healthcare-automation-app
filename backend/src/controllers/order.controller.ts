@@ -153,14 +153,12 @@ export const getOrderById =
 
     try {
 
-      const orderId =
-        Number(
-          req.params.id
-        );
+      const identifier =
+        String(
+          req.params.id ?? ""
+        ).trim();
 
-      if (
-        Number.isNaN(orderId)
-      ) {
+      if (!identifier) {
         return res.status(400).json({
           success: false,
           message:
@@ -170,8 +168,8 @@ export const getOrderById =
 
       const order =
         await orderService
-          .getOrderById(
-            orderId
+          .getOrderByIdentifier(
+            identifier
           );
 
       const ownershipError =
@@ -505,6 +503,50 @@ export const updatePaymentStatus =
           message:
             "Invalid payment status",
         });
+      }
+
+      /*
+       * PATIENT may only set PAID or FAILED on their own order.
+       * ADMIN / PHARMACIST keep full payment-status access.
+       */
+      if (req.user?.role === "PATIENT") {
+        const patientAllowed = [
+          "PAID",
+          "FAILED",
+        ];
+
+        if (
+          !patientAllowed.includes(
+            paymentStatus
+          )
+        ) {
+          return res.status(403).json({
+            success: false,
+            message:
+              "Patients may only set payment status to PAID or FAILED",
+          });
+        }
+
+        const existingOrder =
+          await orderService.getOrderById(
+            orderId
+          );
+
+        const ownershipError =
+          await assertPatientOwnsPatientId(
+            req,
+            existingOrder.patientId
+          );
+
+        if (ownershipError) {
+          return res.status(
+            ownershipError.status
+          ).json({
+            success: false,
+            message:
+              ownershipError.message,
+          });
+        }
       }
 
       const order =

@@ -85,7 +85,7 @@ router.patch(
 router.patch(
   "/:id/payment-status",
   authenticate,
-  authorize("ADMIN", "PHARMACIST"),
+  authorize("ADMIN", "PHARMACIST", "PATIENT"),
   updatePaymentStatus
 );
 

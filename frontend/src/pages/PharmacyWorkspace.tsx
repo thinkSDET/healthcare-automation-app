@@ -134,9 +134,11 @@ function PharmacyWorkspace() {
 
   const handleLookupOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    const orderId = Number(orderIdInput);
-    if (!orderId || Number.isNaN(orderId)) {
-      setError("Enter a valid order ID.");
+    const identifier = orderIdInput.trim();
+    if (!identifier) {
+      setError(
+        "Enter a valid order ID or order number (e.g. ORD-...)."
+      );
       return;
     }
 
@@ -144,7 +146,7 @@ function PharmacyWorkspace() {
       setLoading(true);
       setError("");
       const response = await fetch(
-        `http://localhost:4000/api/orders/${orderId}`,
+        `http://localhost:4000/api/orders/${encodeURIComponent(identifier)}`,
         { headers: authHeaders() }
       );
       const result = await response.json();
@@ -382,13 +384,12 @@ function PharmacyWorkspace() {
                 <div className="form-group">
                   <label>Order ID</label>
                   <input
-                    type="number"
-                    min={1}
+                    type="text"
                     value={orderIdInput}
                     onChange={(e) =>
                       setOrderIdInput(e.target.value)
                     }
-                    placeholder="e.g. 12"
+                    placeholder="e.g. 12 or ORD-1786448939375"
                   />
                 </div>
                 <button

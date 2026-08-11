@@ -251,8 +251,12 @@ function AppointmentDetails() {
       return;
     }
 
+    const appointmentLabel =
+      appointment.appointmentNo || `appointment #${appointment.id}`;
+
     const confirmed = window.confirm(
-      "Cancel this scheduled appointment? This cannot be undone."
+      `Are you sure you want to cancel ${appointmentLabel}?\n\n` +
+        "This will cancel the appointment and cannot be undone."
     );
 
     if (!confirmed) {

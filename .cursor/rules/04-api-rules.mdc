@@ -1,0 +1,26 @@
+---
+description: API reuse, compatibility, and documentation rules
+alwaysApply: true
+---
+
+# API rules
+
+## References
+
+- [`docs/API_INVENTORY.md`](docs/API_INVENTORY.md) — existing endpoints
+- [`docs/API_TESTING_GUIDE.md`](docs/API_TESTING_GUIDE.md) — setup and standalone API testing
+- [`docs/openapi.yaml`](docs/openapi.yaml) — OpenAPI / API reference
+
+## Rules
+
+- Inspect existing APIs before creating a new API.
+- Reuse existing APIs when appropriate.
+- Do not create duplicate endpoints.
+- Add a new API only when the approved functionality genuinely requires it.
+- Preserve existing authentication.
+- Preserve existing authorization.
+- Validate important business rules server-side.
+- Keep API changes backward-compatible where possible.
+- Document meaningful new API behavior after approved API changes.
+
+Do not invent endpoints or request/response fields that are not in the inventory, OpenAPI, or code.

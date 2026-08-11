@@ -71,6 +71,20 @@ export const getPatientOrders =
 |--------------------------------------------------------------------------
 */
 
+const orderDetailInclude = {
+  patient: {
+    select: {
+      id: true,
+      medicalId: true,
+      firstName: true,
+      lastName: true,
+      phone: true,
+      email: true,
+    },
+  },
+  items: true,
+} as const;
+
 export const getOrderById =
   async (orderId: number) => {
 
@@ -80,20 +94,7 @@ export const getOrderById =
           id: orderId,
         },
 
-        include: {
-          patient: {
-            select: {
-              id: true,
-              medicalId: true,
-              firstName: true,
-              lastName: true,
-              phone: true,
-              email: true,
-            },
-          },
-
-          items: true,
-        },
+        include: orderDetailInclude,
       });
 
     if (!order) {
@@ -103,6 +104,108 @@ export const getOrderById =
     }
 
     return order;
+  };
+
+
+/*
+|--------------------------------------------------------------------------
+| Get Order By Public Order Number
+|--------------------------------------------------------------------------
+*/
+
+export const getOrderByOrderNo =
+  async (orderNo: string) => {
+
+    const normalized =
+      orderNo.trim();
+
+    if (!normalized) {
+      throw new Error(
+        "ORDER_NOT_FOUND"
+      );
+    }
+
+    let order =
+      await prisma.order.findUnique({
+        where: {
+          orderNo: normalized,
+        },
+
+        include: orderDetailInclude,
+      });
+
+    /*
+     * Pharmacists sometimes paste only the
+     * timestamp digits from ORD-{timestamp}.
+     * Those values are not internal ids
+     * (too large for Int PK), so retry with
+     * the ORD- prefix.
+     */
+    if (
+      !order &&
+      /^\d+$/.test(normalized)
+    ) {
+      order =
+        await prisma.order.findUnique({
+          where: {
+            orderNo: `ORD-${normalized}`,
+          },
+
+          include: orderDetailInclude,
+        });
+    }
+
+    if (!order) {
+      throw new Error(
+        "ORDER_NOT_FOUND"
+      );
+    }
+
+    return order;
+  };
+
+
+/*
+|--------------------------------------------------------------------------
+| Get Order By Path Identifier (id or orderNo)
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * Resolve GET /api/orders/:id identifier.
+ * - Digits within Prisma Int range → internal Order.id
+ * - Otherwise → public orderNo (e.g. ORD-...)
+ */
+export const getOrderByIdentifier =
+  async (identifier: string) => {
+
+    const raw =
+      String(identifier || "").trim();
+
+    if (!raw) {
+      throw new Error(
+        "ORDER_NOT_FOUND"
+      );
+    }
+
+    const PRISMA_INT_MAX =
+      2147483647;
+
+    const isInternalId =
+      /^\d+$/.test(raw) &&
+      Number.isSafeInteger(
+        Number(raw)
+      ) &&
+      Number(raw) >= 1 &&
+      Number(raw) <= PRISMA_INT_MAX;
+
+    if (isInternalId) {
+      return getOrderById(
+        Number(raw)
+      );
+    }
+
+    return getOrderByOrderNo(raw);
   };
 
 

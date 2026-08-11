@@ -51,6 +51,57 @@ const removeStoredValue = (key: string) => {
   sessionStorage.removeItem(key);
 };
 
+/**
+ * New tabs do not share sessionStorage with the opener.
+ * When Track Shipment (or similar) opens a same-origin tab
+ * without noopener, copy auth into this tab's sessionStorage
+ * so ProtectedRoute sees an authenticated session.
+ */
+const hydrateAuthFromOpener = () => {
+  if (
+    getStoredValue("token") &&
+    getStoredValue("user")
+  ) {
+    return;
+  }
+
+  try {
+    const opener = window.opener as Window | null;
+
+    if (!opener || opener.closed) {
+      return;
+    }
+
+    const openerToken =
+      opener.sessionStorage.getItem("token") ||
+      opener.localStorage.getItem("token");
+
+    const openerUser =
+      opener.sessionStorage.getItem("user") ||
+      opener.localStorage.getItem("user");
+
+    const openerRememberMe =
+      opener.sessionStorage.getItem("rememberMe") ||
+      opener.localStorage.getItem("rememberMe");
+
+    if (!openerToken || !openerUser) {
+      return;
+    }
+
+    sessionStorage.setItem("token", openerToken);
+    sessionStorage.setItem("user", openerUser);
+
+    if (openerRememberMe != null) {
+      sessionStorage.setItem(
+        "rememberMe",
+        openerRememberMe
+      );
+    }
+  } catch {
+    // Cross-origin opener or storage access blocked.
+  }
+};
+
 /** Read JWT from localStorage or sessionStorage (remember-me safe). */
 export const getAuthToken = () => {
   return getStoredValue("token");
@@ -117,6 +168,8 @@ export const AuthProvider = ({
 
   const [user, setUser] =
     useState<User | null>(() => {
+      hydrateAuthFromOpener();
+
       const storedUser =
         getStoredValue("user");
 
@@ -136,9 +189,10 @@ export const AuthProvider = ({
   ======================================================= */
 
   const [token, setToken] =
-    useState<string | null>(() =>
-      getStoredValue("token")
-    );
+    useState<string | null>(() => {
+      hydrateAuthFromOpener();
+      return getStoredValue("token");
+    });
 
   /* =======================================================
      LOGOUT

@@ -1,0 +1,17 @@
+---
+description: Prisma schema and migration safety rules
+alwaysApply: true
+---
+
+# Database / Prisma rules
+
+- Inspect the existing Prisma schema first (`backend/prisma/schema.prisma`).
+- Reuse existing models and relations when appropriate.
+- Avoid unnecessary schema changes.
+- Schema changes must be justified by **approved** functionality.
+- Create migrations only when genuinely required.
+- Never modify or destroy existing data unnecessarily.
+- Do not make database changes merely for convenience.
+- When schema work is approved and applied, verify migrations and Prisma client generation as applicable.
+
+Prefer additive models/fields over rewriting existing tables or enums unless explicitly approved.

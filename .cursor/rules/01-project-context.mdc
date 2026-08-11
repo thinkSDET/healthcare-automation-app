@@ -1,0 +1,35 @@
+---
+description: HealthOps project context and existing product modules
+alwaysApply: true
+---
+
+# Project context
+
+Healthcare Operations Management System (UI brand: **HealthOps**).
+
+## Structure
+
+- `frontend/` — React SPA (Vite), role-based routes and portals
+- `backend/` — Express API, Zod validators, Prisma ORM, PostgreSQL
+- `docs/` — product roadmap, API inventory, testing guide, OpenAPI
+
+## Major business modules (existing)
+
+- **Auth / security** — register, login, JWT, password reset/change, account lockout
+- **Users** — admin user management; roles in schema include ADMIN, DOCTOR, PHARMACIST, PATIENT, SUPPORT, VIEWER
+- **Patients** — records, deactivate, dependents, emergency contact, documents, medical profile
+- **Doctors** — provider registry with status (including ON_LEAVE)
+- **Appointments** — admin create; status lifecycle with overlap checks; patient history is view-only in the portal
+- **Prescriptions** — create with items; statuses ACTIVE / COMPLETED / CANCELLED
+- **Orders / payments** — order lifecycle and payment status; patient pay/track UI
+- **Pharmacy workspace** — pharmacist lookup of patient prescriptions/orders and status updates
+- **Patient portal** — profile, appointments (view), orders, tracking, payment flows
+
+## Authorization notes
+
+- Backend `authenticate` / `authorize` / patient-access checks are the security boundary
+- SUPPORT and VIEWER exist in `UserRole`; many routes do not currently authorize them
+
+## Accuracy
+
+Do not invent modules, APIs, fields, or workflows. If uncertain, inspect the repo and state uncertainty rather than asserting facts.

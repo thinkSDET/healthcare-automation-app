@@ -1,0 +1,30 @@
+---
+description: Authentication and RBAC authorization principles
+alwaysApply: true
+---
+
+# RBAC rules
+
+## Existing roles (schema)
+
+- ADMIN
+- DOCTOR
+- PATIENT
+- PHARMACIST
+- SUPPORT
+- VIEWER
+
+Do not invent new roles without explicit approval.
+
+## Principles
+
+- Backend authorization is the **security boundary**.
+- Frontend visibility is **not** security.
+- Preserve existing permissions.
+- Do not grant permissions simply to make implementation easier.
+- New permissions must have a clear business reason.
+- Respect patient ownership boundaries (own-record / own-order checks).
+- Preserve existing authentication and session/JWT behavior.
+- Check both role and resource ownership where applicable.
+
+SUPPORT and VIEWER exist in the role enum; do not assume every route authorizes them—inspect route `authorize(...)` lists before relying on them.

@@ -1,0 +1,37 @@
+---
+description: Additive development and change-scope rules
+alwaysApply: true
+---
+
+# Development rules
+
+## Preserve what works
+
+- Preserve working functionality.
+- New functionality must be **additive**.
+- Avoid unnecessary refactoring and unrelated changes.
+- Keep implementation scope focused on the approved request.
+- Reuse existing logic where appropriate.
+- Do not rewrite working workflows without a clear, approved reason.
+- Do not introduce dependencies unnecessarily.
+- Inspect the existing implementation before changing it.
+- Prefer the smallest correct change.
+- Never claim a change was verified unless it was actually verified.
+
+## New product functionality process
+
+1. **Inspect** existing implementation and docs  
+2. **Plan** the change  
+3. Obtain explicit **approval**  
+4. **Implement** only the approved scope  
+5. **Verify** with relevant checks  
+6. **Report** files/API/schema impact  
+7. **Stop** and wait for further approval  
+
+Do not implement multiple roadmap features together unless the user explicitly requests that.
+
+## Plan vs implement
+
+- When the user asks for a **plan**: inspect, produce the plan, do not modify application code, wait for approval.
+- When the user explicitly approves **implementation**: implement only that scope, verify, report, stop.
+- Never assume approval from discussion alone.
