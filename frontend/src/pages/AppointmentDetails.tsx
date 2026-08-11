@@ -320,7 +320,7 @@ function AppointmentDetails() {
             className="secondary-button"
             onClick={() => navigate("/appointments")}
           >
-            ← Back
+            ← Back to Appointments
           </button>
         </header>
       </div>
@@ -339,7 +339,7 @@ function AppointmentDetails() {
           onClick={() => navigate("/appointments")}
           disabled={saving}
         >
-          ← Back
+          ← Back to Appointments
         </button>
       </header>
 

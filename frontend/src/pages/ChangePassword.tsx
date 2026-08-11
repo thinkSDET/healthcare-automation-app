@@ -178,7 +178,7 @@ function ChangePassword() {
             navigate("/dashboard")
           }
         >
-          ← Back
+          ← Back to Dashboard
         </button>
 
       </header>

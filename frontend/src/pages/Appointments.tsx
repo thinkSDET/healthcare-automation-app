@@ -4,6 +4,7 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import ContextualBackLink from "../components/ContextualBackLink";
 
 interface Appointment {
   id: number;
@@ -186,18 +187,25 @@ function Appointments() {
 
         </div>
 
-        {isAdmin && (
-          <button
-            className="primary-button"
-            onClick={() =>
-              navigate(
-                "/appointments/new"
-              )
-            }
-          >
-            + New Appointment
-          </button>
-        )}
+        <div className="page-header-actions">
+          <ContextualBackLink
+            to="/dashboard"
+            label="Back to Dashboard"
+          />
+
+          {isAdmin && (
+            <button
+              className="primary-button"
+              onClick={() =>
+                navigate(
+                  "/appointments/new"
+                )
+              }
+            >
+              + New Appointment
+            </button>
+          )}
+        </div>
 
       </header>
 

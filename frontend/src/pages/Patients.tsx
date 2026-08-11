@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import ContextualBackLink from "../components/ContextualBackLink";
 
 interface Patient {
   id: number;
@@ -417,14 +418,21 @@ function Patients() {
           </p>
         </div>
 
-        <button
-          className="primary-button"
-          onClick={() =>
-            setShowForm(true)
-          }
-        >
-          + Add Patient
-        </button>
+        <div className="page-header-actions">
+          <ContextualBackLink
+            to="/dashboard"
+            label="Back to Dashboard"
+          />
+
+          <button
+            className="primary-button"
+            onClick={() =>
+              setShowForm(true)
+            }
+          >
+            + Add Patient
+          </button>
+        </div>
       </header>
 
       {/* ================= CONTENT ================= */}
