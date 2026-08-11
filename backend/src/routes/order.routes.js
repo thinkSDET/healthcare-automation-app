@@ -9,13 +9,13 @@ const router = (0, express_1.Router)();
 | Patient Order History
 |--------------------------------------------------------------------------
 */
-router.get("/patient/:patientId", auth_1.authenticate, (0, auth_1.authorize)("ADMIN", "PHARMACIST"), order_controller_1.getPatientOrders);
+router.get("/patient/:patientId", auth_1.authenticate, (0, auth_1.authorize)("ADMIN", "PHARMACIST", "PATIENT"), order_controller_1.getPatientOrders);
 /*
 |--------------------------------------------------------------------------
 | Get Order
 |--------------------------------------------------------------------------
 */
-router.get("/:id", auth_1.authenticate, (0, auth_1.authorize)("ADMIN", "PHARMACIST"), order_controller_1.getOrderById);
+router.get("/:id", auth_1.authenticate, (0, auth_1.authorize)("ADMIN", "PHARMACIST", "PATIENT"), order_controller_1.getOrderById);
 /*
 |--------------------------------------------------------------------------
 | Create Order

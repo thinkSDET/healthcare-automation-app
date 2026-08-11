@@ -1,7 +1,9 @@
-import { Request, Response } from "express";
-export declare const getAppointments: (_req: Request, res: Response) => Promise<void>;
-export declare const getAppointmentById: (req: Request, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
-export declare const createAppointment: (req: Request, res: Response) => Promise<void>;
-export declare const updateAppointment: (req: Request, res: Response) => Promise<void>;
-export declare const cancelAppointment: (req: Request, res: Response) => Promise<void>;
+import { Response } from "express";
+import { AuthRequest } from "../middleware/auth";
+export declare const getAppointments: (_req: AuthRequest, res: Response) => Promise<void>;
+export declare const getAppointmentById: (req: AuthRequest, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const createAppointment: (req: AuthRequest, res: Response) => Promise<void>;
+export declare const updateAppointment: (req: AuthRequest, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const updateAppointmentStatus: (req: AuthRequest, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
+export declare const cancelAppointment: (req: AuthRequest, res: Response) => Promise<Response<any, Record<string, any>> | undefined>;
 //# sourceMappingURL=appointment.controller.d.ts.map

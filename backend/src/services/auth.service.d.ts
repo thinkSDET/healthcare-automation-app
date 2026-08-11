@@ -28,6 +28,7 @@ export declare const loginUser: ({ email, password, rememberMe, }: LoginInput) =
         firstName: string;
         lastName: string;
         role: import("../generated/prisma/enums").UserRole;
+        patientId: number | null;
     };
     expiresIn: string;
 }>;

@@ -1,16 +1,70 @@
 import { prisma } from "../config/prisma";
 
-const ACTIVE_STATUSES = {
-  notIn: ["CANCELLED", "NO_SHOW"] as const,
+export type AppointmentStatusValue =
+  | "SCHEDULED"
+  | "CONFIRMED"
+  | "CHECKED_IN"
+  | "IN_CONSULTATION"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "NO_SHOW";
+
+const TERMINAL_STATUSES: AppointmentStatusValue[] = [
+  "COMPLETED",
+  "CANCELLED",
+  "NO_SHOW",
+];
+
+const ACTIVE_FOR_OVERLAP: AppointmentStatusValue[] = [
+  "SCHEDULED",
+  "CONFIRMED",
+  "CHECKED_IN",
+  "IN_CONSULTATION",
+];
+
+const EDITABLE_STATUSES: AppointmentStatusValue[] = [
+  "SCHEDULED",
+  "CONFIRMED",
+];
+
+/** from → allowed next statuses */
+const ALLOWED_TRANSITIONS: Record<
+  AppointmentStatusValue,
+  AppointmentStatusValue[]
+> = {
+  SCHEDULED: ["CONFIRMED", "CANCELLED", "NO_SHOW"],
+  CONFIRMED: ["CHECKED_IN"],
+  CHECKED_IN: ["IN_CONSULTATION"],
+  IN_CONSULTATION: ["COMPLETED"],
+  COMPLETED: [],
+  CANCELLED: [],
+  NO_SHOW: [],
 };
 
-const getEndTime = (
-  startTime: Date,
-  duration: number
-) => {
-  return new Date(
-    startTime.getTime() + duration * 60 * 1000
-  );
+/** role → statuses that role may transition *to* */
+const ROLE_TARGET_STATUSES: Record<
+  string,
+  AppointmentStatusValue[]
+> = {
+  ADMIN: [
+    "CONFIRMED",
+    "CHECKED_IN",
+    "IN_CONSULTATION",
+    "COMPLETED",
+    "CANCELLED",
+    "NO_SHOW",
+  ],
+  DOCTOR: [
+    "CONFIRMED",
+    "CHECKED_IN",
+    "IN_CONSULTATION",
+    "COMPLETED",
+    "NO_SHOW",
+  ],
+};
+
+const getEndTime = (startTime: Date, duration: number) => {
+  return new Date(startTime.getTime() + duration * 60 * 1000);
 };
 
 const appointmentsOverlap = (
@@ -22,11 +76,11 @@ const appointmentsOverlap = (
   const endA = getEndTime(startA, durationA);
   const endB = getEndTime(startB, durationB);
 
-  return (
-    startA < endB &&
-    endA > startB
-  );
+  return startA < endB && endA > startB;
 };
+
+const isTerminal = (status: AppointmentStatusValue) =>
+  TERMINAL_STATUSES.includes(status);
 
 export const getAppointments = async () => {
   return prisma.appointment.findMany({
@@ -40,9 +94,7 @@ export const getAppointments = async () => {
   });
 };
 
-export const getAppointmentById = async (
-  id: number
-) => {
+export const getAppointmentById = async (id: number) => {
   return prisma.appointment.findUnique({
     where: { id },
     include: {
@@ -64,94 +116,84 @@ export const createAppointment = async (data: {
 }) => {
   const duration = data.duration ?? 30;
 
-  // -----------------------------------------
-  // Basic validation
-  // -----------------------------------------
-
   if (duration <= 0) {
-    throw new Error(
-      "Appointment duration must be greater than 0"
-    );
+    throw new Error("Appointment duration must be greater than 0");
   }
 
   if (data.appointmentAt < new Date()) {
+    throw new Error("Appointment cannot be scheduled in the past");
+  }
+
+  const patient = await prisma.patient.findUnique({
+    where: { id: data.patientId },
+  });
+
+  if (!patient) {
+    throw new Error("Patient not found");
+  }
+
+  const doctor = await prisma.doctor.findUnique({
+    where: { id: data.doctorId },
+  });
+
+  if (!doctor) {
+    throw new Error("Doctor not found");
+  }
+
+  if (doctor.status !== "ACTIVE") {
     throw new Error(
-      "Appointment cannot be scheduled in the past"
+      "Doctor is not active and cannot receive appointments"
     );
   }
 
-  // -----------------------------------------
-  // Get active appointments for doctor
-  // -----------------------------------------
+  const doctorAppointments = await prisma.appointment.findMany({
+    where: {
+      doctorId: data.doctorId,
+      status: { in: ACTIVE_FOR_OVERLAP },
+    },
+  });
 
-  const doctorAppointments =
-    await prisma.appointment.findMany({
-      where: {
-        doctorId: data.doctorId,
-        status: ACTIVE_STATUSES,
-      },
-    });
-
-  // -----------------------------------------
-  // Doctor conflict check
-  // -----------------------------------------
-
-  const doctorConflict =
-    doctorAppointments.some((appointment) =>
-      appointmentsOverlap(
-        data.appointmentAt,
-        duration,
-        appointment.appointmentAt,
-        appointment.duration ?? 30
-      )
-    );
+  const doctorConflict = doctorAppointments.some((appointment) =>
+    appointmentsOverlap(
+      data.appointmentAt,
+      duration,
+      appointment.appointmentAt,
+      appointment.duration ?? 30
+    )
+  );
 
   if (doctorConflict) {
-    throw new Error(
-      "Doctor already has an overlapping appointment"
-    );
+    throw new Error("Doctor already has an overlapping appointment");
   }
 
-  // -----------------------------------------
-  // Get active appointments for patient
-  // -----------------------------------------
+  const patientAppointments = await prisma.appointment.findMany({
+    where: {
+      patientId: data.patientId,
+      status: { in: ACTIVE_FOR_OVERLAP },
+    },
+  });
 
-  const patientAppointments =
-    await prisma.appointment.findMany({
-      where: {
-        patientId: data.patientId,
-        status: ACTIVE_STATUSES,
-      },
-    });
-
-  // -----------------------------------------
-  // Patient conflict check
-  // -----------------------------------------
-
-  const patientConflict =
-    patientAppointments.some((appointment) =>
-      appointmentsOverlap(
-        data.appointmentAt,
-        duration,
-        appointment.appointmentAt,
-        appointment.duration ?? 30
-      )
-    );
+  const patientConflict = patientAppointments.some((appointment) =>
+    appointmentsOverlap(
+      data.appointmentAt,
+      duration,
+      appointment.appointmentAt,
+      appointment.duration ?? 30
+    )
+  );
 
   if (patientConflict) {
-    throw new Error(
-      "Patient already has an overlapping appointment"
-    );
+    throw new Error("Patient already has an overlapping appointment");
   }
-
-  // -----------------------------------------
-  // Create appointment
-  // -----------------------------------------
 
   return prisma.appointment.create({
     data: {
       ...data,
       duration,
+    },
+    include: {
+      patient: true,
+      doctor: true,
     },
   });
 };
@@ -162,161 +204,165 @@ export const updateAppointment = async (
     appointmentAt?: Date;
     duration?: number;
     type?: "IN_PERSON" | "VIDEO" | "PHONE";
-    status?:
-      | "SCHEDULED"
-      | "CONFIRMED"
-      | "COMPLETED"
-      | "CANCELLED"
-      | "NO_SHOW";
     reason?: string;
     notes?: string;
   }
 ) => {
-  // -----------------------------------------
-  // Get existing appointment
-  // -----------------------------------------
-
-  const existingAppointment =
-    await prisma.appointment.findUnique({
-      where: { id },
-    });
+  const existingAppointment = await prisma.appointment.findUnique({
+    where: { id },
+  });
 
   if (!existingAppointment) {
-    throw new Error(
-      "Appointment not found"
-    );
+    throw new Error("Appointment not found");
   }
 
-  // -----------------------------------------
-  // If appointment is being cancelled/no-show,
-  // no conflict validation is required.
-  // -----------------------------------------
+  const currentStatus =
+    existingAppointment.status as AppointmentStatusValue;
 
-  if (
-    data.status === "CANCELLED" ||
-    data.status === "NO_SHOW"
-  ) {
-    return prisma.appointment.update({
-      where: { id },
-      data,
-    });
+  if (isTerminal(currentStatus)) {
+    throw new Error("Cannot modify a terminal appointment");
+  }
+
+  if (!EDITABLE_STATUSES.includes(currentStatus)) {
+    throw new Error(
+      "Appointment schedule can only be edited when SCHEDULED or CONFIRMED"
+    );
   }
 
   const newStart =
-    data.appointmentAt ??
-    existingAppointment.appointmentAt;
+    data.appointmentAt ?? existingAppointment.appointmentAt;
 
   const newDuration =
-    data.duration ??
-    existingAppointment.duration ??
-    30;
-
-  // -----------------------------------------
-  // Basic validation
-  // -----------------------------------------
+    data.duration ?? existingAppointment.duration ?? 30;
 
   if (newDuration <= 0) {
-    throw new Error(
-      "Appointment duration must be greater than 0"
-    );
+    throw new Error("Appointment duration must be greater than 0");
   }
 
   if (newStart < new Date()) {
-    throw new Error(
-      "Appointment cannot be scheduled in the past"
-    );
+    throw new Error("Appointment cannot be scheduled in the past");
   }
 
-  // -----------------------------------------
-  // Check doctor conflicts
-  // -----------------------------------------
+  const doctorAppointments = await prisma.appointment.findMany({
+    where: {
+      doctorId: existingAppointment.doctorId,
+      id: { not: id },
+      status: { in: ACTIVE_FOR_OVERLAP },
+    },
+  });
 
-  const doctorAppointments =
-    await prisma.appointment.findMany({
-      where: {
-        doctorId:
-          existingAppointment.doctorId,
-
-        id: {
-          not: id,
-        },
-
-        status: ACTIVE_STATUSES,
-      },
-    });
-
-  const doctorConflict =
-    doctorAppointments.some((appointment) =>
-      appointmentsOverlap(
-        newStart,
-        newDuration,
-        appointment.appointmentAt,
-        appointment.duration ?? 30
-      )
-    );
+  const doctorConflict = doctorAppointments.some((appointment) =>
+    appointmentsOverlap(
+      newStart,
+      newDuration,
+      appointment.appointmentAt,
+      appointment.duration ?? 30
+    )
+  );
 
   if (doctorConflict) {
-    throw new Error(
-      "Doctor already has an overlapping appointment"
-    );
+    throw new Error("Doctor already has an overlapping appointment");
   }
 
-  // -----------------------------------------
-  // Check patient conflicts
-  // -----------------------------------------
+  const patientAppointments = await prisma.appointment.findMany({
+    where: {
+      patientId: existingAppointment.patientId,
+      id: { not: id },
+      status: { in: ACTIVE_FOR_OVERLAP },
+    },
+  });
 
-  const patientAppointments =
-    await prisma.appointment.findMany({
-      where: {
-        patientId:
-          existingAppointment.patientId,
-
-        id: {
-          not: id,
-        },
-
-        status: ACTIVE_STATUSES,
-      },
-    });
-
-  const patientConflict =
-    patientAppointments.some((appointment) =>
-      appointmentsOverlap(
-        newStart,
-        newDuration,
-        appointment.appointmentAt,
-        appointment.duration ?? 30
-      )
-    );
+  const patientConflict = patientAppointments.some((appointment) =>
+    appointmentsOverlap(
+      newStart,
+      newDuration,
+      appointment.appointmentAt,
+      appointment.duration ?? 30
+    )
+  );
 
   if (patientConflict) {
-    throw new Error(
-      "Patient already has an overlapping appointment"
-    );
+    throw new Error("Patient already has an overlapping appointment");
   }
-
-  // -----------------------------------------
-  // Update appointment
-  // -----------------------------------------
 
   return prisma.appointment.update({
     where: { id },
     data: {
       ...data,
-      ...(data.duration !== undefined
-        ? { duration: newDuration }
-        : {}),
+      ...(data.duration !== undefined ? { duration: newDuration } : {}),
+    },
+    include: {
+      patient: true,
+      doctor: true,
     },
   });
 };
 
-export const cancelAppointment = async (
-  id: number
+export const updateAppointmentStatus = async (
+  id: number,
+  nextStatus: AppointmentStatusValue,
+  role: string
 ) => {
+  const existingAppointment = await prisma.appointment.findUnique({
+    where: { id },
+  });
+
+  if (!existingAppointment) {
+    throw new Error("Appointment not found");
+  }
+
+  const currentStatus =
+    existingAppointment.status as AppointmentStatusValue;
+
+  if (isTerminal(currentStatus)) {
+    throw new Error("Cannot modify a terminal appointment");
+  }
+
+  const allowedNext = ALLOWED_TRANSITIONS[currentStatus] ?? [];
+
+  if (!allowedNext.includes(nextStatus)) {
+    throw new Error("Invalid appointment status transition");
+  }
+
+  const roleTargets = ROLE_TARGET_STATUSES[role] ?? [];
+
+  if (!roleTargets.includes(nextStatus)) {
+    throw new Error(
+      "You do not have permission to perform this appointment status change"
+    );
+  }
+
+  return prisma.appointment.update({
+    where: { id },
+    data: { status: nextStatus },
+    include: {
+      patient: true,
+      doctor: true,
+    },
+  });
+};
+
+export const cancelAppointment = async (id: number) => {
+  const existingAppointment = await prisma.appointment.findUnique({
+    where: { id },
+  });
+
+  if (!existingAppointment) {
+    throw new Error("Appointment not found");
+  }
+
+  if (existingAppointment.status !== "SCHEDULED") {
+    throw new Error("Only scheduled appointments can be cancelled");
+  }
+
   return prisma.appointment.update({
     where: { id },
     data: {
       status: "CANCELLED",
+    },
+    include: {
+      patient: true,
+      doctor: true,
     },
   });
 };
