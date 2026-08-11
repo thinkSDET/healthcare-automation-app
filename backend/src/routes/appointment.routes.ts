@@ -3,12 +3,18 @@ import {
   authenticate,
   authorize,
 } from "../middleware/auth";
-
+import { validate } from "../middleware/validate";
+import {
+  createAppointmentSchema,
+  updateAppointmentSchema,
+  updateAppointmentStatusSchema,
+} from "../validators/appointment.validator";
 import {
   getAppointments,
   getAppointmentById,
   createAppointment,
   updateAppointment,
+  updateAppointmentStatus,
   cancelAppointment,
 } from "../controllers/appointment.controller";
 
@@ -23,6 +29,26 @@ router.get(
   getAppointments
 );
 
+// Create appointment
+// ONLY ADMIN can create appointments.
+router.post(
+  "/",
+  authenticate,
+  authorize("ADMIN"),
+  validate(createAppointmentSchema),
+  createAppointment
+);
+
+// Update appointment status (lifecycle)
+// ADMIN and DOCTOR — transition rules enforced in service.
+router.patch(
+  "/:id/status",
+  authenticate,
+  authorize("ADMIN", "DOCTOR"),
+  validate(updateAppointmentStatusSchema),
+  updateAppointmentStatus
+);
+
 // View appointment details
 // ADMIN and DOCTOR can view appointment details.
 router.get(
@@ -32,26 +58,18 @@ router.get(
   getAppointmentById
 );
 
-// Create appointment
-// ONLY ADMIN can create appointments.
-router.post(
-  "/",
-  authenticate,
-  authorize("ADMIN"),
-  createAppointment
-);
-
-// Update appointment
-// ONLY ADMIN can update appointments.
+// Update appointment schedule/details
+// ONLY ADMIN can update appointments (no status via PUT).
 router.put(
   "/:id",
   authenticate,
   authorize("ADMIN"),
+  validate(updateAppointmentSchema),
   updateAppointment
 );
 
 // Cancel appointment
-// ONLY ADMIN can cancel appointments.
+// ONLY ADMIN can cancel appointments (SCHEDULED → CANCELLED).
 router.delete(
   "/:id",
   authenticate,

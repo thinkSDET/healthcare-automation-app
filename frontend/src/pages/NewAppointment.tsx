@@ -53,55 +53,7 @@ function NewAppointment() {
 
   const loadFormData = async () => {
     try {
-      if (!patientId) {
-        setError("Please select a patient.");
-        setLoading(false);
-        return;
-      }
-
-      if (!doctorId) {
-        setError("Please select a doctor.");
-        setLoading(false);
-        return;
-      }
-
-      if (!appointmentAt) {
-        setError(
-          "Please select an appointment date and time."
-        );
-        setLoading(false);
-        return;
-      }
-
-      const selectedDate =
-        new Date(appointmentAt);
-
-      if (
-        Number.isNaN(
-          selectedDate.getTime()
-        )
-      ) {
-        setError(
-          "Please select a valid appointment date and time."
-        );
-        setLoading(false);
-        return;
-      }
-
-      const availabilityError =
-        validateDoctorAvailability(
-          Number(doctorId),
-          selectedDate,
-          Number(duration)
-        );
-
-      if (availabilityError) {
-        setError(
-          availabilityError
-        );
-        setLoading(false);
-        return;
-      }
+      setError("");
 
       const token = getAuthToken();
 
@@ -115,93 +67,59 @@ function NewAppointment() {
         doctorsResponse,
         appointmentsResponse,
       ] = await Promise.all([
-        fetch(
-          "http://localhost:4000/api/patients",
-          { headers }
-        ),
-        fetch(
-          "http://localhost:4000/api/doctors",
-          { headers }
-        ),
-        fetch(
-          "http://localhost:4000/api/appointments",
-          { headers }
-        ),
+        fetch("http://localhost:4000/api/patients", { headers }),
+        fetch("http://localhost:4000/api/doctors", { headers }),
+        fetch("http://localhost:4000/api/appointments", { headers }),
       ]);
 
-      const patientsResult =
-        await patientsResponse.json();
+      const patientsResult = await patientsResponse.json();
+      const doctorsResult = await doctorsResponse.json();
+      const appointmentsResult = await appointmentsResponse.json();
 
-      const doctorsResult =
-        await doctorsResponse.json();
-
-      const appointmentsResult =
-        await appointmentsResponse.json();
-
-      if (
-        patientsResponse.ok &&
-        patientsResult.success
-      ) {
+      if (patientsResponse.ok && patientsResult.success) {
         setPatients(patientsResult.data);
       }
 
-      if (
-        doctorsResponse.ok &&
-        doctorsResult.success
-      ) {
+      if (doctorsResponse.ok && doctorsResult.success) {
         setDoctors(doctorsResult.data);
       }
 
-      if (
-        appointmentsResponse.ok &&
-        appointmentsResult.success
-      ) {
-        setAppointments(
-          appointmentsResult.data
-        );
+      if (appointmentsResponse.ok && appointmentsResult.success) {
+        setAppointments(appointmentsResult.data);
       }
-    } catch (error) {
-      console.error(error);
-      setError(
-        "Unable to load patients and doctors."
-      );
+
+      if (
+        !patientsResponse.ok ||
+        !doctorsResponse.ok ||
+        !appointmentsResponse.ok
+      ) {
+        setError("Unable to load patients and doctors.");
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Unable to load patients and doctors.");
     } finally {
       setLoadingData(false);
     }
   };
 
+  const getDoctorAvailability = (selectedDoctorId: number) => {
+    const defaultSlots = [1, 2, 3, 4, 5].map((day) => ({
+      day,
+      startTime: "09:00",
+      endTime: "17:00",
+    }));
 
-  const getDoctorAvailability = (
-    selectedDoctorId: number
-  ) => {
-    const defaultSlots = [1, 2, 3, 4, 5].map(
-      (day) => ({
-        day,
-        startTime: "09:00",
-        endTime: "17:00",
-      })
-    );
-
-    const raw =
-      localStorage.getItem(
-        "doctorAvailability"
-      );
+    const raw = localStorage.getItem("doctorAvailability");
 
     if (!raw) {
       return defaultSlots;
     }
 
     try {
-      const saved =
-        JSON.parse(raw);
+      const saved = JSON.parse(raw);
 
-      return (
-        saved[
-          String(
-            selectedDoctorId
-          )
-        ] || defaultSlots
-      );
+      return saved[String(selectedDoctorId)] || defaultSlots;
     } catch {
       return defaultSlots;
     }
@@ -212,38 +130,24 @@ function NewAppointment() {
     appointmentDate: Date,
     appointmentDuration: number
   ) => {
-    const doctor =
-      doctors.find(
-        (item) =>
-          item.id ===
-          selectedDoctorId
-      );
+    const doctor = doctors.find(
+      (item) => item.id === selectedDoctorId
+    );
 
     if (!doctor) {
       return "Please select a doctor.";
     }
 
-    if (
-      (doctor.status ?? "ACTIVE").toUpperCase() !==
-      "ACTIVE"
-    ) {
+    if ((doctor.status ?? "ACTIVE").toUpperCase() !== "ACTIVE") {
       return "This doctor is not active and cannot receive new appointments.";
     }
 
-    const day =
-      appointmentDate.getDay();
+    const day = appointmentDate.getDay();
 
-    const slots =
-      getDoctorAvailability(
-        selectedDoctorId
-      ).filter(
-        (slot: {
-          day: number;
-          startTime: string;
-          endTime: string;
-        }) =>
-          slot.day === day
-      );
+    const slots = getDoctorAvailability(selectedDoctorId).filter(
+      (slot: { day: number; startTime: string; endTime: string }) =>
+        slot.day === day
+    );
 
     if (slots.length === 0) {
       return `Dr. ${doctor.lastName} is not available on ${appointmentDate.toLocaleDateString(
@@ -253,99 +157,56 @@ function NewAppointment() {
     }
 
     const startMinutes =
-      appointmentDate.getHours() *
-        60 +
-      appointmentDate.getMinutes();
+      appointmentDate.getHours() * 60 + appointmentDate.getMinutes();
 
-    const endMinutes =
-      startMinutes +
-      appointmentDuration;
+    const endMinutes = startMinutes + appointmentDuration;
 
-    const insideSlot =
-      slots.some(
-        (slot: {
-          startTime: string;
-          endTime: string;
-        }) => {
-          const [sh, sm] =
-            slot.startTime
-              .split(":")
-              .map(Number);
+    const insideSlot = slots.some(
+      (slot: { startTime: string; endTime: string }) => {
+        const [sh, sm] = slot.startTime.split(":").map(Number);
+        const [eh, em] = slot.endTime.split(":").map(Number);
 
-          const [eh, em] =
-            slot.endTime
-              .split(":")
-              .map(Number);
+        const slotStart = sh * 60 + sm;
+        const slotEnd = eh * 60 + em;
 
-          const slotStart =
-            sh * 60 + sm;
-
-          const slotEnd =
-            eh * 60 + em;
-
-          return (
-            startMinutes >=
-              slotStart &&
-            endMinutes <=
-              slotEnd
-          );
-        }
-      );
+        return startMinutes >= slotStart && endMinutes <= slotEnd;
+      }
+    );
 
     if (!insideSlot) {
       return "The selected appointment time and duration fall outside the doctor's availability.";
     }
 
-    const requestedStart =
-      appointmentDate.getTime();
-
+    const requestedStart = appointmentDate.getTime();
     const requestedEnd =
-      requestedStart +
-      appointmentDuration *
-        60 *
-        1000;
+      requestedStart + appointmentDuration * 60 * 1000;
 
-    const overlaps =
-      appointments.some(
-        (appointment) => {
-          if (
-            appointment.doctorId !==
-            selectedDoctorId
-          ) {
-            return false;
-          }
+    const overlaps = appointments.some((appointment) => {
+      if (appointment.doctorId !== selectedDoctorId) {
+        return false;
+      }
 
-          const status =
-            appointment.status.toUpperCase();
+      const status = appointment.status.toUpperCase();
 
-          if (
-            status === "CANCELLED" ||
-            status === "COMPLETED"
-          ) {
-            return false;
-          }
+      if (
+        status === "CANCELLED" ||
+        status === "COMPLETED" ||
+        status === "NO_SHOW"
+      ) {
+        return false;
+      }
 
-          const existingStart =
-            new Date(
-              appointment.appointmentAt
-            ).getTime();
+      const existingStart = new Date(
+        appointment.appointmentAt
+      ).getTime();
 
-          const existingEnd =
-            existingStart +
-            Number(
-              appointment.duration
-            ) *
-              60 *
-              1000;
+      const existingEnd =
+        existingStart + Number(appointment.duration) * 60 * 1000;
 
-          return (
-            requestedStart <
-              existingEnd &&
-            requestedEnd >
-              existingStart
-          );
-        }
+      return (
+        requestedStart < existingEnd && requestedEnd > existingStart
       );
+    });
 
     if (overlaps) {
       return "The selected doctor already has an overlapping appointment.";
@@ -354,15 +215,45 @@ function NewAppointment() {
     return "";
   };
 
-  const handleSubmit = async (
-    e: React.FormEvent
-  ) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     setError("");
     setLoading(true);
 
     try {
+      if (!patientId) {
+        throw new Error("Please select a patient.");
+      }
+
+      if (!doctorId) {
+        throw new Error("Please select a doctor.");
+      }
+
+      if (!appointmentAt) {
+        throw new Error(
+          "Please select an appointment date and time."
+        );
+      }
+
+      const selectedDate = new Date(appointmentAt);
+
+      if (Number.isNaN(selectedDate.getTime())) {
+        throw new Error(
+          "Please select a valid appointment date and time."
+        );
+      }
+
+      const availabilityError = validateDoctorAvailability(
+        Number(doctorId),
+        selectedDate,
+        Number(duration)
+      );
+
+      if (availabilityError) {
+        throw new Error(availabilityError);
+      }
+
       const token = getAuthToken();
 
       const response = await fetch(
@@ -377,9 +268,7 @@ function NewAppointment() {
             appointmentNo: `APT-${Date.now()}`,
             patientId: Number(patientId),
             doctorId: Number(doctorId),
-            appointmentAt: new Date(
-              appointmentAt
-            ).toISOString(),
+            appointmentAt: selectedDate.toISOString(),
             duration: Number(duration),
             type,
             reason,
@@ -392,18 +281,17 @@ function NewAppointment() {
 
       if (!response.ok || !result.success) {
         throw new Error(
-          result.message ||
-            "Failed to create appointment"
+          result.message || "Failed to create appointment"
         );
       }
 
       navigate("/appointments");
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
 
       setError(
-        error instanceof Error
-          ? error.message
+        err instanceof Error
+          ? err.message
           : "Failed to create appointment"
       );
     } finally {
@@ -427,296 +315,158 @@ function NewAppointment() {
 
   return (
     <div className="page">
-
-      {/* Header */}
-
       <header className="patients-header">
         <div>
           <h1>New Appointment</h1>
-
-          <p>
-            Schedule a new appointment for a patient.
-          </p>
+          <p>Schedule a new appointment for a patient.</p>
         </div>
 
         <button
           type="button"
           className="secondary-button"
-          onClick={() =>
-            navigate("/appointments")
-          }
+          onClick={() => navigate("/appointments")}
         >
           ← Back
         </button>
       </header>
 
-      {/* Content */}
-
       <main className="patients-content">
-
         <div className="appointment-form-card">
-
-          {/* Card Header */}
-
           <div className="appointment-form-header">
-
             <div>
-              <div className="appointment-icon">
-                📅
-              </div>
-
+              <div className="appointment-icon">📅</div>
               <div>
                 <h2>Appointment Details</h2>
-
                 <p>
-                  Enter the details below to schedule
-                  an appointment.
+                  Enter the details below to schedule an appointment.
                 </p>
               </div>
             </div>
-
           </div>
 
-          {/* Error */}
+          {error && <div className="error-message">{error}</div>}
 
-          {error && (
-            <div className="error-message">
-              {error}
-            </div>
-          )}
-
-          {/* Form */}
-
-          <form
-            className="appointment-form"
-            onSubmit={handleSubmit}
-          >
-
-            {/* Patient + Doctor */}
-
+          <form className="appointment-form" onSubmit={handleSubmit}>
             <div className="form-section">
-
               <h3>Patient & Doctor</h3>
 
               <div className="form-grid">
-
                 <div className="form-group">
-
-                  <label htmlFor="patient">
-                    Patient
-                  </label>
-
+                  <label htmlFor="patient">Patient</label>
                   <select
                     id="patient"
                     value={patientId}
-                    onChange={(e) =>
-                      setPatientId(e.target.value)
-                    }
+                    onChange={(e) => setPatientId(e.target.value)}
                     required
                   >
-                    <option value="">
-                      Select patient
-                    </option>
-
+                    <option value="">Select patient</option>
                     {patients.map((patient) => (
-                      <option
-                        key={patient.id}
-                        value={patient.id}
-                      >
-                        {patient.medicalId} —{" "}
-                        {patient.firstName}{" "}
+                      <option key={patient.id} value={patient.id}>
+                        {patient.medicalId} — {patient.firstName}{" "}
                         {patient.lastName}
                       </option>
                     ))}
                   </select>
-
                 </div>
 
                 <div className="form-group">
-
-                  <label htmlFor="doctor">
-                    Doctor
-                  </label>
-
+                  <label htmlFor="doctor">Doctor</label>
                   <select
                     id="doctor"
                     value={doctorId}
-                    onChange={(e) =>
-                      setDoctorId(e.target.value)
-                    }
+                    onChange={(e) => setDoctorId(e.target.value)}
                     required
                   >
-                    <option value="">
-                      Select doctor
-                    </option>
-
+                    <option value="">Select doctor</option>
                     {doctors.map((doctor) => (
-                      <option
-                        key={doctor.id}
-                        value={doctor.id}
-                      >
-                        Dr. {doctor.firstName}{" "}
-                        {doctor.lastName} —{" "}
+                      <option key={doctor.id} value={doctor.id}>
+                        Dr. {doctor.firstName} {doctor.lastName} —{" "}
                         {doctor.specialization}
                       </option>
                     ))}
                   </select>
-
                 </div>
-
               </div>
-
             </div>
 
-            {/* Schedule */}
-
             <div className="form-section">
-
               <h3>Schedule</h3>
 
               <div className="form-grid">
-
                 <div className="form-group">
-
-                  <label htmlFor="appointmentAt">
-                    Date & Time
-                  </label>
-
+                  <label htmlFor="appointmentAt">Date & Time</label>
                   <input
                     id="appointmentAt"
                     type="datetime-local"
                     value={appointmentAt}
-                    onChange={(e) =>
-                      setAppointmentAt(e.target.value)
-                    }
+                    onChange={(e) => setAppointmentAt(e.target.value)}
                     required
                   />
-
                 </div>
 
                 <div className="form-group">
-
-                  <label htmlFor="duration">
-                    Duration
-                  </label>
-
+                  <label htmlFor="duration">Duration</label>
                   <select
                     id="duration"
                     value={duration}
-                    onChange={(e) =>
-                      setDuration(e.target.value)
-                    }
+                    onChange={(e) => setDuration(e.target.value)}
                   >
-                    <option value="15">
-                      15 minutes
-                    </option>
-
-                    <option value="30">
-                      30 minutes
-                    </option>
-
-                    <option value="45">
-                      45 minutes
-                    </option>
-
-                    <option value="60">
-                      60 minutes
-                    </option>
+                    <option value="15">15 minutes</option>
+                    <option value="30">30 minutes</option>
+                    <option value="45">45 minutes</option>
+                    <option value="60">60 minutes</option>
                   </select>
-
                 </div>
-
               </div>
-
             </div>
 
-            {/* Appointment Type */}
-
             <div className="form-section">
-
               <h3>Appointment Information</h3>
 
               <div className="form-grid">
-
                 <div className="form-group">
-
-                  <label htmlFor="type">
-                    Appointment Type
-                  </label>
-
+                  <label htmlFor="type">Appointment Type</label>
                   <select
                     id="type"
                     value={type}
-                    onChange={(e) =>
-                      setType(e.target.value)
-                    }
+                    onChange={(e) => setType(e.target.value)}
                   >
-                    <option value="IN_PERSON">
-                      In Person
-                    </option>
-
-                    <option value="VIDEO">
-                      Video Consultation
-                    </option>
-
-                    <option value="PHONE">
-                      Phone Consultation
-                    </option>
+                    <option value="IN_PERSON">In Person</option>
+                    <option value="VIDEO">Video Consultation</option>
+                    <option value="PHONE">Phone Consultation</option>
                   </select>
-
                 </div>
 
                 <div className="form-group">
-
-                  <label htmlFor="reason">
-                    Reason for Visit
-                  </label>
-
+                  <label htmlFor="reason">Reason for Visit</label>
                   <input
                     id="reason"
                     type="text"
                     placeholder="Routine consultation"
                     value={reason}
-                    onChange={(e) =>
-                      setReason(e.target.value)
-                    }
+                    onChange={(e) => setReason(e.target.value)}
                     required
                   />
-
                 </div>
-
               </div>
 
               <div className="form-group">
-
-                <label htmlFor="notes">
-                  Notes
-                </label>
-
+                <label htmlFor="notes">Notes</label>
                 <textarea
                   id="notes"
                   rows={4}
                   placeholder="Add any additional notes..."
                   value={notes}
-                  onChange={(e) =>
-                    setNotes(e.target.value)
-                  }
+                  onChange={(e) => setNotes(e.target.value)}
                 />
-
               </div>
-
             </div>
 
-            {/* Actions */}
-
             <div className="form-actions">
-
               <button
                 type="button"
                 className="secondary-button"
-                onClick={() =>
-                  navigate("/appointments")
-                }
+                onClick={() => navigate("/appointments")}
                 disabled={loading}
               >
                 Cancel
@@ -731,15 +481,10 @@ function NewAppointment() {
                   ? "Creating Appointment..."
                   : "Create Appointment"}
               </button>
-
             </div>
-
           </form>
-
         </div>
-
       </main>
-
     </div>
   );
 }

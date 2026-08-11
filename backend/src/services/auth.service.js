@@ -227,6 +227,14 @@ const loginUser = async ({ email, password, rememberMe = false, }) => {
             ? REMEMBER_ME_EXPIRY
             : NORMAL_TOKEN_EXPIRY,
     });
+    const linkedPatient = await prisma_1.prisma.patient.findUnique({
+        where: {
+            userId: user.id,
+        },
+        select: {
+            id: true,
+        },
+    });
     return {
         token,
         user: {
@@ -235,6 +243,7 @@ const loginUser = async ({ email, password, rememberMe = false, }) => {
             firstName: user.firstName,
             lastName: user.lastName,
             role: user.role,
+            patientId: linkedPatient?.id ?? null,
         },
         expiresIn: rememberMe
             ? REMEMBER_ME_EXPIRY

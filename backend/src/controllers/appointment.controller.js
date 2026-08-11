@@ -33,21 +33,48 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.cancelAppointment = exports.updateAppointment = exports.createAppointment = exports.getAppointmentById = exports.getAppointments = void 0;
+exports.cancelAppointment = exports.updateAppointmentStatus = exports.updateAppointment = exports.createAppointment = exports.getAppointmentById = exports.getAppointments = void 0;
 const express_1 = require("express");
+const auth_1 = require("../middleware/auth");
 const appointmentService = __importStar(require("../services/appointment.service"));
+const mapAppointmentError = (error) => {
+    const message = error instanceof Error
+        ? error.message
+        : "Appointment operation failed";
+    switch (message) {
+        case "Appointment not found":
+        case "Patient not found":
+        case "Doctor not found":
+            return { status: 404, message };
+        case "You do not have permission to perform this appointment status change":
+            return { status: 403, message };
+        case "Doctor already has an overlapping appointment":
+        case "Patient already has an overlapping appointment":
+            return { status: 409, message };
+        case "Invalid appointment status transition":
+        case "Cannot modify a terminal appointment":
+        case "Appointment schedule can only be edited when SCHEDULED or CONFIRMED":
+        case "Only scheduled appointments can be cancelled":
+        case "Appointment cannot be scheduled in the past":
+        case "Appointment duration must be greater than 0":
+        case "Doctor is not active and cannot receive appointments":
+            return { status: 400, message };
+        default:
+            return { status: 500, message };
+    }
+};
 const getAppointments = async (_req, res) => {
     try {
         const appointments = await appointmentService.getAppointments();
         res.status(200).json({
             success: true,
-            data: appointments
+            data: appointments,
         });
     }
     catch {
         res.status(500).json({
             success: false,
-            message: "Failed to fetch appointments"
+            message: "Failed to fetch appointments",
         });
     }
 };
@@ -55,22 +82,28 @@ exports.getAppointments = getAppointments;
 const getAppointmentById = async (req, res) => {
     try {
         const id = Number(req.params.id);
+        if (Number.isNaN(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid appointment ID",
+            });
+        }
         const appointment = await appointmentService.getAppointmentById(id);
         if (!appointment) {
             return res.status(404).json({
                 success: false,
-                message: "Appointment not found"
+                message: "Appointment not found",
             });
         }
         res.status(200).json({
             success: true,
-            data: appointment
+            data: appointment,
         });
     }
     catch {
         res.status(500).json({
             success: false,
-            message: "Failed to fetch appointment"
+            message: "Failed to fetch appointment",
         });
     }
 };
@@ -79,20 +112,20 @@ const createAppointment = async (req, res) => {
     try {
         const appointment = await appointmentService.createAppointment({
             ...req.body,
-            appointmentAt: new Date(req.body.appointmentAt)
+            appointmentAt: new Date(req.body.appointmentAt),
         });
         res.status(201).json({
             success: true,
-            data: appointment
+            data: appointment,
         });
     }
     catch (error) {
-        const message = error instanceof Error
-            ? error.message
-            : "Failed to create appointment";
-        res.status(409).json({
+        const mapped = mapAppointmentError(error);
+        res.status(mapped.status).json({
             success: false,
-            message
+            message: mapped.status === 500
+                ? "Failed to create appointment"
+                : mapped.message,
         });
     }
 };
@@ -100,39 +133,89 @@ exports.createAppointment = createAppointment;
 const updateAppointment = async (req, res) => {
     try {
         const id = Number(req.params.id);
+        if (Number.isNaN(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid appointment ID",
+            });
+        }
         const data = {
             ...req.body,
             ...(req.body.appointmentAt && {
-                appointmentAt: new Date(req.body.appointmentAt)
-            })
+                appointmentAt: new Date(req.body.appointmentAt),
+            }),
         };
         const appointment = await appointmentService.updateAppointment(id, data);
         res.status(200).json({
             success: true,
-            data: appointment
+            data: appointment,
         });
     }
-    catch {
-        res.status(500).json({
+    catch (error) {
+        const mapped = mapAppointmentError(error);
+        res.status(mapped.status).json({
             success: false,
-            message: "Failed to update appointment"
+            message: mapped.status === 500
+                ? "Failed to update appointment"
+                : mapped.message,
         });
     }
 };
 exports.updateAppointment = updateAppointment;
+const updateAppointmentStatus = async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        if (Number.isNaN(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid appointment ID",
+            });
+        }
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: "Authentication required",
+            });
+        }
+        const appointment = await appointmentService.updateAppointmentStatus(id, req.body.status, req.user.role);
+        res.status(200).json({
+            success: true,
+            data: appointment,
+        });
+    }
+    catch (error) {
+        const mapped = mapAppointmentError(error);
+        res.status(mapped.status).json({
+            success: false,
+            message: mapped.status === 500
+                ? "Failed to update appointment status"
+                : mapped.message,
+        });
+    }
+};
+exports.updateAppointmentStatus = updateAppointmentStatus;
 const cancelAppointment = async (req, res) => {
     try {
         const id = Number(req.params.id);
+        if (Number.isNaN(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid appointment ID",
+            });
+        }
         const appointment = await appointmentService.cancelAppointment(id);
         res.status(200).json({
             success: true,
-            data: appointment
+            data: appointment,
         });
     }
-    catch {
-        res.status(500).json({
+    catch (error) {
+        const mapped = mapAppointmentError(error);
+        res.status(mapped.status).json({
             success: false,
-            message: "Failed to cancel appointment"
+            message: mapped.status === 500
+                ? "Failed to cancel appointment"
+                : mapped.message,
         });
     }
 };

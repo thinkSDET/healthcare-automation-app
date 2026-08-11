@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 interface Appointment {
@@ -12,7 +12,7 @@ interface Appointment {
   type: string;
   status: string;
   reason: string;
-  notes: string;
+  notes: string | null;
 
   patient?: {
     id: number;
@@ -30,344 +30,551 @@ interface Appointment {
   };
 }
 
-function Appointments() {
+type StatusAction = {
+  label: string;
+  nextStatus: string;
+  adminOnly?: boolean;
+};
+
+const STATUS_ACTIONS: Record<string, StatusAction[]> = {
+  SCHEDULED: [
+    { label: "Confirm", nextStatus: "CONFIRMED" },
+    { label: "Mark No-show", nextStatus: "NO_SHOW" },
+  ],
+  CONFIRMED: [
+    { label: "Check in", nextStatus: "CHECKED_IN" },
+  ],
+  CHECKED_IN: [
+    { label: "Start consultation", nextStatus: "IN_CONSULTATION" },
+  ],
+  IN_CONSULTATION: [
+    { label: "Complete", nextStatus: "COMPLETED" },
+  ],
+};
+
+const toDatetimeLocalValue = (iso: string) => {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const pad = (n: number) => String(n).padStart(2, "0");
+
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+    date.getDate()
+  )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+function AppointmentDetails() {
+  const { id } = useParams();
+  const navigate = useNavigate();
   const { token, user } = useAuth();
 
-  const role = user?.role?.toUpperCase();
+  const role = user?.role?.toUpperCase() ?? "";
   const isAdmin = role === "ADMIN";
+  const isDoctor = role === "DOCTOR";
+  const canAdvance = isAdmin || isDoctor;
 
-  const [appointments, setAppointments] =
-    useState<Appointment[]>([]);
+  const [appointment, setAppointment] = useState<Appointment | null>(
+    null
+  );
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const [loading, setLoading] =
-    useState(true);
+  const [appointmentAt, setAppointmentAt] = useState("");
+  const [duration, setDuration] = useState("30");
+  const [type, setType] = useState("IN_PERSON");
+  const [reason, setReason] = useState("");
+  const [notes, setNotes] = useState("");
 
-  const [search, setSearch] =
-    useState("");
+  const getToken = () =>
+    token ||
+    localStorage.getItem("token") ||
+    sessionStorage.getItem("token");
 
-  const navigate = useNavigate();
+  const syncForm = (data: Appointment) => {
+    setAppointmentAt(toDatetimeLocalValue(data.appointmentAt));
+    setDuration(String(data.duration ?? 30));
+    setType(data.type || "IN_PERSON");
+    setReason(data.reason || "");
+    setNotes(data.notes || "");
+  };
 
-  useEffect(() => {
-    fetchAppointments();
-  }, []);
-
-  const fetchAppointments = async () => {
+  const fetchAppointment = async () => {
     try {
-      /*
-       * Token is provided by AuthContext.
-       *
-       * AuthContext handles whether the token
-       * comes from localStorage or sessionStorage.
-       */
-      const currentToken = token;
+      setLoading(true);
+      setError("");
 
       const response = await fetch(
-        "http://localhost:4000/api/appointments",
+        `http://localhost:4000/api/appointments/${id}`,
         {
-          method: "GET",
-
           headers: {
-            Authorization: `Bearer ${currentToken}`,
-            "Content-Type": "application/json",
+            Authorization: `Bearer ${getToken()}`,
           },
         }
       );
 
-      const result =
-        await response.json();
+      const result = await response.json();
 
-      console.log(
-        "Appointments API response:",
-        result
-      );
-
-      if (
-        response.ok &&
-        result.success
-      ) {
-        setAppointments(
-          result.data
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message || "Failed to load appointment"
         );
       }
 
-    } catch (error) {
-      console.error(
-        "Failed to fetch appointments:",
-        error
+      setAppointment(result.data);
+      syncForm(result.data);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to load appointment"
       );
-
+      setAppointment(null);
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredAppointments =
-    appointments.filter(
-      (appointment) => {
+  useEffect(() => {
+    if (id) {
+      fetchAppointment();
+    }
+  }, [id]);
 
-        const searchText =
-          search.toLowerCase();
+  const status = (appointment?.status || "").toUpperCase();
+  const canEditSchedule =
+    isAdmin && (status === "SCHEDULED" || status === "CONFIRMED");
+  const canCancel = isAdmin && status === "SCHEDULED";
+  const availableActions = STATUS_ACTIONS[status] ?? [];
 
-        const patientName =
-          `${appointment.patient?.firstName ?? ""} ${
-            appointment.patient?.lastName ?? ""
-          }`.toLowerCase();
+  const handleStatusChange = async (nextStatus: string) => {
+    if (!appointment) {
+      return;
+    }
 
-        const doctorName =
-          `${appointment.doctor?.firstName ?? ""} ${
-            appointment.doctor?.lastName ?? ""
-          }`.toLowerCase();
+    setSaving(true);
+    setError("");
+    setSuccess("");
 
-        return (
-          appointment.appointmentNo
-            .toLowerCase()
-            .includes(searchText) ||
+    try {
+      const response = await fetch(
+        `http://localhost:4000/api/appointments/${appointment.id}/status`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ status: nextStatus }),
+        }
+      );
 
-          patientName.includes(
-            searchText
-          ) ||
+      const result = await response.json();
 
-          doctorName.includes(
-            searchText
-          ) ||
-
-          appointment.status
-            .toLowerCase()
-            .includes(searchText)
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message || "Failed to update appointment status"
         );
       }
+
+      setAppointment(result.data);
+      syncForm(result.data);
+      setSuccess(`Status updated to ${nextStatus}.`);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to update appointment status"
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveSchedule = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!appointment || !canEditSchedule) {
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await fetch(
+        `http://localhost:4000/api/appointments/${appointment.id}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            appointmentAt: new Date(appointmentAt).toISOString(),
+            duration: Number(duration),
+            type,
+            reason,
+            notes: notes || undefined,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message || "Failed to update appointment"
+        );
+      }
+
+      setAppointment(result.data);
+      syncForm(result.data);
+      setSuccess("Appointment details saved.");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to update appointment"
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!appointment || !canCancel) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Cancel this scheduled appointment? This cannot be undone."
     );
 
-  const formatDateTime = (
-    date: string
-  ) => {
-    return new Date(
-      date
-    ).toLocaleString();
+    if (!confirmed) {
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await fetch(
+        `http://localhost:4000/api/appointments/${appointment.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message || "Failed to cancel appointment"
+        );
+      }
+
+      setAppointment(result.data);
+      syncForm(result.data);
+      setSuccess("Appointment cancelled.");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to cancel appointment"
+      );
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="page">
+        <main className="patients-content">
+          <div className="patients-card">
+            <div className="loading">Loading appointment...</div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (!appointment) {
+    return (
+      <div className="page">
+        <header className="patients-header">
+          <div>
+            <h1>Appointment</h1>
+            <p>{error || "Appointment not found."}</p>
+          </div>
+          <button
+            className="secondary-button"
+            onClick={() => navigate("/appointments")}
+          >
+            ← Back
+          </button>
+        </header>
+      </div>
+    );
+  }
 
   return (
     <div className="page">
-
       <header className="patients-header">
-
         <div>
-
-          <h1>
-            Appointments
-          </h1>
-
-          <p>
-            Schedule and manage
-            patient appointments.
-          </p>
-
+          <h1>{appointment.appointmentNo}</h1>
+          <p>Appointment details and lifecycle actions.</p>
         </div>
-
-        {isAdmin && (
-          <button
-            className="primary-button"
-            onClick={() =>
-              navigate(
-                "/appointments/new"
-              )
-            }
-          >
-            + New Appointment
-          </button>
-        )}
-
+        <button
+          className="secondary-button"
+          onClick={() => navigate("/appointments")}
+          disabled={saving}
+        >
+          ← Back
+        </button>
       </header>
 
       <main className="patients-content">
+        {error && (
+          <div className="error-message" style={{ marginBottom: 16 }}>
+            {error}
+          </div>
+        )}
 
-        <div className="patients-card">
+        {success && (
+          <div
+            className="success-message"
+            style={{ marginBottom: 16 }}
+          >
+            {success}
+          </div>
+        )}
 
+        <div className="patients-card" style={{ marginBottom: 20 }}>
           <div className="table-header">
-
-            <h2>
-              Appointment Records
-            </h2>
-
-            <input
-              type="text"
-              placeholder="Search appointments..."
-              className="search-input"
-              value={search}
-              onChange={(e) =>
-                setSearch(
-                  e.target.value
-                )
-              }
-            />
-
+            <h2>Summary</h2>
+            <span className="status-badge">{appointment.status}</span>
           </div>
 
-          {loading ? (
-
-            <div className="loading">
-              Loading appointments...
+          <div className="form-grid" style={{ padding: "0 24px 24px" }}>
+            <div className="form-group">
+              <label>Patient</label>
+              <p>
+                {appointment.patient
+                  ? `${appointment.patient.firstName} ${appointment.patient.lastName}`
+                  : `Patient #${appointment.patientId}`}
+              </p>
+              {appointment.patient && (
+                <small>{appointment.patient.medicalId}</small>
+              )}
             </div>
 
-          ) : filteredAppointments.length === 0 ? (
-
-            <div className="empty-state">
-              No appointments found.
+            <div className="form-group">
+              <label>Doctor</label>
+              <p>
+                {appointment.doctor
+                  ? `Dr. ${appointment.doctor.firstName} ${appointment.doctor.lastName}`
+                  : `Doctor #${appointment.doctorId}`}
+              </p>
+              {appointment.doctor && (
+                <small>{appointment.doctor.specialization}</small>
+              )}
             </div>
 
-          ) : (
-
-            <div className="table-container">
-
-              <table>
-
-                <thead>
-
-                  <tr>
-                    <th>
-                      Appointment
-                    </th>
-
-                    <th>
-                      Patient
-                    </th>
-
-                    <th>
-                      Doctor
-                    </th>
-
-                    <th>
-                      Date & Time
-                    </th>
-
-                    <th>
-                      Type
-                    </th>
-
-                    <th>
-                      Duration
-                    </th>
-
-                    <th>
-                      Status
-                    </th>
-                  </tr>
-
-                </thead>
-
-                <tbody>
-
-                  {filteredAppointments.map(
-                    (appointment) => (
-
-                      <tr
-                        key={
-                          appointment.id
-                        }
-                        className="clickable-row"
-                        onClick={() =>
-                          navigate(
-                            `/appointments/${appointment.id}`
-                          )
-                        }
-                      >
-
-                        <td>
-
-                          <strong>
-                            {
-                              appointment.appointmentNo
-                            }
-                          </strong>
-
-                        </td>
-
-                        <td>
-
-                          <strong>
-                            {appointment.patient
-                              ? `${appointment.patient.firstName} ${appointment.patient.lastName}`
-                              : `Patient #${appointment.patientId}`}
-                          </strong>
-
-                          {appointment.patient && (
-                            <small>
-                              {
-                                appointment
-                                  .patient
-                                  .medicalId
-                              }
-                            </small>
-                          )}
-
-                        </td>
-
-                        <td>
-
-                          <strong>
-                            {appointment.doctor
-                              ? `Dr. ${appointment.doctor.firstName} ${appointment.doctor.lastName}`
-                              : `Doctor #${appointment.doctorId}`}
-                          </strong>
-
-                          {appointment.doctor && (
-                            <small>
-                              {
-                                appointment
-                                  .doctor
-                                  .specialization
-                              }
-                            </small>
-                          )}
-
-                        </td>
-
-                        <td>
-                          {formatDateTime(
-                            appointment.appointmentAt
-                          )}
-                        </td>
-
-                        <td>
-                          {appointment.type}
-                        </td>
-
-                        <td>
-                          {
-                            appointment.duration
-                          }{" "}
-                          mins
-                        </td>
-
-                        <td>
-
-                          <span className="status-badge">
-                            {
-                              appointment.status
-                            }
-                          </span>
-
-                        </td>
-
-                      </tr>
-
-                    )
-                  )}
-
-                </tbody>
-
-              </table>
-
+            <div className="form-group">
+              <label>Date & Time</label>
+              <p>
+                {new Date(appointment.appointmentAt).toLocaleString()}
+              </p>
             </div>
 
-          )}
+            <div className="form-group">
+              <label>Type / Duration</label>
+              <p>
+                {appointment.type} · {appointment.duration} mins
+              </p>
+            </div>
 
+            <div className="form-group">
+              <label>Reason</label>
+              <p>{appointment.reason}</p>
+            </div>
+
+            <div className="form-group">
+              <label>Notes</label>
+              <p>{appointment.notes || "—"}</p>
+            </div>
+          </div>
         </div>
 
-      </main>
+        {canAdvance && availableActions.length > 0 && (
+          <div className="patients-card" style={{ marginBottom: 20 }}>
+            <div className="table-header">
+              <h2>Lifecycle actions</h2>
+            </div>
+            <div
+              className="form-actions"
+              style={{ padding: "0 24px 24px", justifyContent: "flex-start" }}
+            >
+              {availableActions.map((action) => (
+                <button
+                  key={action.nextStatus}
+                  type="button"
+                  className="primary-button"
+                  disabled={saving}
+                  onClick={() =>
+                    handleStatusChange(action.nextStatus)
+                  }
+                >
+                  {action.label}
+                </button>
+              ))}
 
+              {canCancel && (
+                <button
+                  type="button"
+                  className="secondary-button"
+                  disabled={saving}
+                  onClick={handleCancel}
+                >
+                  Cancel appointment
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {canCancel && availableActions.length === 0 && (
+          <div className="patients-card" style={{ marginBottom: 20 }}>
+            <div className="table-header">
+              <h2>Lifecycle actions</h2>
+            </div>
+            <div
+              className="form-actions"
+              style={{ padding: "0 24px 24px", justifyContent: "flex-start" }}
+            >
+              <button
+                type="button"
+                className="secondary-button"
+                disabled={saving}
+                onClick={handleCancel}
+              >
+                Cancel appointment
+              </button>
+            </div>
+          </div>
+        )}
+
+        {canEditSchedule && (
+          <div className="appointment-form-card">
+            <div className="appointment-form-header">
+              <div>
+                <h2>Edit schedule & details</h2>
+                <p>
+                  Admin can update schedule while the appointment is
+                  SCHEDULED or CONFIRMED.
+                </p>
+              </div>
+            </div>
+
+            <form
+              className="appointment-form"
+              onSubmit={handleSaveSchedule}
+            >
+              <div className="form-section">
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label htmlFor="appointmentAt">Date & Time</label>
+                    <input
+                      id="appointmentAt"
+                      type="datetime-local"
+                      value={appointmentAt}
+                      onChange={(e) =>
+                        setAppointmentAt(e.target.value)
+                      }
+                      required
+                      disabled={saving}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="duration">Duration</label>
+                    <select
+                      id="duration"
+                      value={duration}
+                      onChange={(e) => setDuration(e.target.value)}
+                      disabled={saving}
+                    >
+                      <option value="15">15 minutes</option>
+                      <option value="30">30 minutes</option>
+                      <option value="45">45 minutes</option>
+                      <option value="60">60 minutes</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="type">Appointment Type</label>
+                    <select
+                      id="type"
+                      value={type}
+                      onChange={(e) => setType(e.target.value)}
+                      disabled={saving}
+                    >
+                      <option value="IN_PERSON">In Person</option>
+                      <option value="VIDEO">Video Consultation</option>
+                      <option value="PHONE">Phone Consultation</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="reason">Reason for Visit</label>
+                    <input
+                      id="reason"
+                      type="text"
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                      required
+                      disabled={saving}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="notes">Notes</label>
+                  <textarea
+                    id="notes"
+                    rows={4}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    disabled={saving}
+                  />
+                </div>
+              </div>
+
+              <div className="form-actions">
+                <button
+                  type="submit"
+                  className="primary-button"
+                  disabled={saving}
+                >
+                  {saving ? "Saving..." : "Save changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+      </main>
     </div>
   );
 }
 
-export default Appointments;
+export default AppointmentDetails;
