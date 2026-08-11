@@ -1,0 +1,35 @@
+---
+description: Master product roadmap governance for new features
+alwaysApply: true
+---
+
+# Product roadmap
+
+Master Product Feature Roadmap:
+
+→ [`docs/NEXT_PRODUCT_FEATURES.md`](docs/NEXT_PRODUCT_FEATURES.md)
+
+## Before implementing new product functionality
+
+1. Read the roadmap.
+2. Identify the relevant phase.
+3. Follow its business requirements.
+4. Respect its dependencies.
+5. Do not skip roadmap phases without explicit user approval.
+6. Do not implement multiple roadmap phases together.
+7. Treat **PROPOSED** functionality as proposed until explicitly approved for implementation.
+
+## Genuine product functionality only
+
+Roadmap work must be real healthcare-operations business capability.
+
+Do **not** add functionality merely for:
+
+- UI testing
+- automation practice
+- browser testing
+- artificial testing scenarios
+- cosmetic UI
+- duplicate CRUD
+
+Testing value should come naturally from real business workflows.

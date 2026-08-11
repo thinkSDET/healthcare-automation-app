@@ -1,0 +1,24 @@
+---
+description: Verification, regression, and honest reporting rules
+alwaysApply: true
+---
+
+# Testing and verification
+
+After implementation, perform **relevant** checks, for example:
+
+- frontend build
+- backend checks
+- Prisma checks / migrations when applicable
+- API verification when applicable
+- functional workflow verification
+- important negative / error scenarios
+- regression checks for related existing functionality
+
+## Honesty
+
+- Distinguish **pre-existing failures** from failures introduced by the current change.
+- Never claim a test or check passed unless it actually passed.
+- For functional features, verify the complete business workflow—not only that a page renders.
+
+If a check was skipped, say so explicitly in the report.

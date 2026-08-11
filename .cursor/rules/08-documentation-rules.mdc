@@ -1,0 +1,24 @@
+---
+description: Documentation alignment and anti-duplication rules
+alwaysApply: true
+---
+
+# Documentation rules
+
+## Canonical documents
+
+| Document | Role |
+|----------|------|
+| [`docs/NEXT_PRODUCT_FEATURES.md`](docs/NEXT_PRODUCT_FEATURES.md) | Master product roadmap |
+| [`docs/API_INVENTORY.md`](docs/API_INVENTORY.md) | Existing API inventory |
+| [`docs/API_TESTING_GUIDE.md`](docs/API_TESTING_GUIDE.md) | API setup / testing guidance |
+| [`docs/openapi.yaml`](docs/openapi.yaml) | API reference |
+
+## Rules
+
+- Keep documentation aligned with actual implementation.
+- Do not invent APIs or database behavior.
+- Update API documentation when approved API changes are made.
+- Do not duplicate the master roadmap into other documents.
+- Keep implementation plans separate from permanent product documentation.
+- Clearly identify **proposed** functionality versus **implemented** functionality.
