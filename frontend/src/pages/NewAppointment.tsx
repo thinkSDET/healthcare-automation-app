@@ -326,7 +326,7 @@ function NewAppointment() {
           className="secondary-button"
           onClick={() => navigate("/appointments")}
         >
-          ← Back
+          ← Back to Appointments
         </button>
       </header>
 

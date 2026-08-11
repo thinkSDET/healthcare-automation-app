@@ -26,6 +26,7 @@ import MyPatientProfile from "./pages/MyPatientProfile";
 import MyAppointments from "./pages/MyAppointments";
 import MyOrders from "./pages/MyOrders";
 import PharmacyWorkspace from "./pages/PharmacyWorkspace";
+import AppLayout from "./components/AppLayout";
 
 import "./App.css";
 
@@ -73,17 +74,17 @@ function App() {
            ========================= */}
 
         <Route element={<ProtectedRoute />}>
+          <Route element={<AppLayout />}>
+            <Route
+              path="/dashboard"
+              element={<Dashboard />}
+            />
 
-          <Route
-            path="/dashboard"
-            element={<Dashboard />}
-          />
-
-          <Route
-            path="/change-password"
-            element={<ChangePassword />}
-          />
-
+            <Route
+              path="/change-password"
+              element={<ChangePassword />}
+            />
+          </Route>
         </Route>
 
 
@@ -101,37 +102,37 @@ function App() {
             />
           }
         >
+          <Route element={<AppLayout />}>
+            <Route
+              path="/patients"
+              element={<Patients />}
+            />
 
-          <Route
-            path="/patients"
-            element={<Patients />}
-          />
+            <Route
+              path="/doctors"
+              element={<Doctors />}
+            />
 
-          <Route
-            path="/doctors"
-            element={<Doctors />}
-          />
+            <Route
+              path="/appointments"
+              element={<Appointments />}
+            />
 
-          <Route
-            path="/appointments"
-            element={<Appointments />}
-          />
+            <Route
+              path="/appointments/:id"
+              element={<AppointmentDetails />}
+            />
 
-          <Route
-            path="/appointments/:id"
-            element={<AppointmentDetails />}
-          />
+            <Route
+              path="/patients/:id"
+              element={<PatientDetails />}
+            />
 
-          <Route
-            path="/patients/:id"
-            element={<PatientDetails />}
-          />
-
-          <Route
-            path="/patients/:id/prescriptions"
-            element={<PatientPrescriptions />}
-          />
-
+            <Route
+              path="/patients/:id/prescriptions"
+              element={<PatientPrescriptions />}
+            />
+          </Route>
         </Route>
 
 
@@ -148,17 +149,17 @@ function App() {
             />
           }
         >
+          <Route element={<AppLayout />}>
+            <Route
+              path="/appointments/new"
+              element={<NewAppointment />}
+            />
 
-          <Route
-            path="/appointments/new"
-            element={<NewAppointment />}
-          />
-
-          <Route
-            path="/patients/:id/orders"
-            element={<PatientOrders />}
-          />
-
+            <Route
+              path="/patients/:id/orders"
+              element={<PatientOrders />}
+            />
+          </Route>
         </Route>
 
 
@@ -175,22 +176,22 @@ function App() {
             />
           }
         >
+          <Route element={<AppLayout />}>
+            <Route
+              path="/my/profile"
+              element={<MyPatientProfile />}
+            />
 
-          <Route
-            path="/my/profile"
-            element={<MyPatientProfile />}
-          />
+            <Route
+              path="/my/appointments"
+              element={<MyAppointments />}
+            />
 
-          <Route
-            path="/my/appointments"
-            element={<MyAppointments />}
-          />
-
-          <Route
-            path="/my/orders"
-            element={<MyOrders />}
-          />
-
+            <Route
+              path="/my/orders"
+              element={<MyOrders />}
+            />
+          </Route>
         </Route>
 
 
@@ -207,12 +208,12 @@ function App() {
             />
           }
         >
-
-          <Route
-            path="/pharmacy"
-            element={<PharmacyWorkspace />}
-          />
-
+          <Route element={<AppLayout />}>
+            <Route
+              path="/pharmacy"
+              element={<PharmacyWorkspace />}
+            />
+          </Route>
         </Route>
 
 

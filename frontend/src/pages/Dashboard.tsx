@@ -3,7 +3,7 @@ import { useAuth } from "../context/AuthContext";
 
 function Dashboard() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   const role =
     user?.role?.toUpperCase();
@@ -20,39 +20,20 @@ function Dashboard() {
   const isPharmacist =
     role === "PHARMACIST";
 
-  const handleLogout = () => {
-    logout();
-
-    navigate("/login", {
-      replace: true,
-    });
-  };
-
   return (
     <div className="dashboard-page">
 
-      <header className="dashboard-header">
+      <section className="dashboard-welcome-banner">
+        <h1>
+          Healthcare Dashboard
+        </h1>
 
-        <div>
-          <h1>
-            Healthcare Dashboard
-          </h1>
-
-          <p>
-            Welcome{" "}
-            {user?.firstName || ""}{" "}
-            {user?.lastName || ""}!
-          </p>
-        </div>
-
-        <button
-          className="logout-button"
-          onClick={handleLogout}
-        >
-          Logout
-        </button>
-
-      </header>
+        <p>
+          Welcome{" "}
+          {user?.firstName || ""}{" "}
+          {user?.lastName || ""}!
+        </p>
+      </section>
 
       <main className="dashboard-content">
 

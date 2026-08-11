@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import ContextualBackLink from "../components/ContextualBackLink";
 
 interface Doctor {
   id: number;
@@ -1280,20 +1281,27 @@ function Doctors() {
           </p>
         </div>
 
-        {/* Only ADMIN can add doctors */}
+        <div className="page-header-actions">
+          <ContextualBackLink
+            to="/dashboard"
+            label="Back to Dashboard"
+          />
 
-        {isAdmin && (
-          <button
-            type="button"
-            className="primary-button"
-            onClick={() => {
-              resetDoctorForm();
-              setShowAddDoctor(true);
-            }}
-          >
-            + Add Doctor
-          </button>
-        )}
+          {/* Only ADMIN can add doctors */}
+
+          {isAdmin && (
+            <button
+              type="button"
+              className="primary-button"
+              onClick={() => {
+                resetDoctorForm();
+                setShowAddDoctor(true);
+              }}
+            >
+              + Add Doctor
+            </button>
+          )}
+        </div>
 
       </header>
 

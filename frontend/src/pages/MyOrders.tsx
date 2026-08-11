@@ -171,7 +171,7 @@ function MyOrders() {
           className="secondary-button"
           onClick={() => navigate("/dashboard")}
         >
-          ← Dashboard
+          ← Back to Dashboard
         </button>
       </header>
 
