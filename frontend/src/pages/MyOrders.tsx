@@ -174,10 +174,11 @@ function MyOrders() {
   };
 
   const openTracking = (orderId: number) => {
+    // Keep window.opener so the new tab can inherit sessionStorage auth
+    // (noopener/noreferrer would block that and force Login).
     window.open(
       `/my/orders/${orderId}/tracking`,
-      "_blank",
-      "noopener,noreferrer"
+      "_blank"
     );
   };
 
