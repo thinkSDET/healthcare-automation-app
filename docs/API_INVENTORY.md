@@ -50,33 +50,38 @@ Quick reference for every backend endpoint discovered in the current codebase (`
 | PUT | `/api/appointments/:id` | Yes | ADMIN | Update schedule/details (not status) |
 | PATCH | `/api/appointments/:id/status` | Yes | ADMIN, DOCTOR | Lifecycle status transition |
 | DELETE | `/api/appointments/:id` | Yes | ADMIN | Cancel if SCHEDULED → CANCELLED |
-| GET | `/api/prescriptions/patient/:patientId` | Yes | ADMIN, DOCTOR, PHARMACIST | List prescriptions for patient |
-| GET | `/api/prescriptions/:id` | Yes | ADMIN, DOCTOR, PHARMACIST | Get prescription |
+| GET | `/api/prescriptions/patient/:patientId` | Yes | ADMIN, DOCTOR, PHARMACIST, PATIENT* | List prescriptions for patient |
+| GET | `/api/prescriptions/:id` | Yes | ADMIN, DOCTOR, PHARMACIST, PATIENT* | Get prescription |
 | POST | `/api/prescriptions` | Yes | ADMIN, DOCTOR | Create prescription |
 | PATCH | `/api/prescriptions/:id/status` | Yes | ADMIN, DOCTOR, PHARMACIST | Update prescription status |
 | DELETE | `/api/prescriptions/:id` | Yes | ADMIN, DOCTOR | Delete prescription |
+| POST | `/api/prescriptions/:id/refill-requests` | Yes | ADMIN, PHARMACIST, PATIENT* | Create refill/renewal request (PHARMACIST: REFILL only) |
+| GET | `/api/refill-requests` | Yes | ADMIN, DOCTOR, PHARMACIST, PATIENT* | List refill/renewal requests (filters: status, patientId, requestType) |
+| GET | `/api/refill-requests/:id` | Yes | ADMIN, DOCTOR, PHARMACIST, PATIENT* | Get refill/renewal request |
+| PATCH | `/api/refill-requests/:id/status` | Yes | ADMIN, DOCTOR, PHARMACIST, PATIENT* | Approve/reject/cancel per role and request type |
+| POST | `/api/refill-requests/:id/create-order` | Yes | ADMIN, PATIENT* | Create order from APPROVED request and mark FULFILLED |
 | GET | `/api/orders/patient/:patientId` | Yes | ADMIN, PHARMACIST, PATIENT* | List orders for patient |
 | GET | `/api/orders/:id` | Yes | ADMIN, PHARMACIST, PATIENT* | Get order |
 | POST | `/api/orders` | Yes | ADMIN, PATIENT* | Create order |
 | PATCH | `/api/orders/:id/status` | Yes | ADMIN, PHARMACIST | Update order status |
-| PATCH | `/api/orders/:id/payment-status` | Yes | ADMIN, PHARMACIST | Update payment status |
+| PATCH | `/api/orders/:id/payment-status` | Yes | ADMIN, PHARMACIST, PATIENT* | Update payment status |
 | DELETE | `/api/orders/:id` | Yes | ADMIN | Delete order |
 
-\* **PATIENT ownership:** when role is `PATIENT`, the patientId (path/body or order’s patientId) must match the Patient linked to the JWT `userId`. Otherwise **403**.
+\* **PATIENT ownership:** when role is `PATIENT`, the patientId (path/body or resource’s patientId) must match the Patient linked to the JWT `userId`. Otherwise **403**.
 
 ## Roles present in schema
 
 | Role | Notes |
 |------|--------|
-| ADMIN | Full admin APIs; appointment create/update/cancel |
-| DOCTOR | Clinical read/write within authorize lists; no appointment create |
-| PHARMACIST | Prescriptions read/status; orders list/get/status/payment |
-| PATIENT | Own patient record (via `requirePatientAccess`); own orders |
+| ADMIN | Full admin APIs; appointment create/update/cancel; refill/renewal review |
+| DOCTOR | Clinical read/write within authorize lists; no appointment create; renewal approve |
+| PHARMACIST | Prescriptions read/status; orders list/get/status/payment; refill request (not renewal) + refill approve |
+| PATIENT | Own patient record; own prescriptions (read); own refill/renewal requests; own orders |
 | SUPPORT | Exists in `UserRole` / admin user create schema; **no route currently authorizes SUPPORT** |
 | VIEWER | Exists in `UserRole` / admin user create schema; **no route currently authorizes VIEWER** |
 
 ## Totals
 
-- **Endpoints documented:** 53
+- **Endpoints documented:** 58
 - **Full OpenAPI:** [openapi.yaml](./openapi.yaml)
 - **Testing guide:** [API_TESTING_GUIDE.md](./API_TESTING_GUIDE.md)

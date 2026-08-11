@@ -9,6 +9,7 @@ import cors from "cors";
 import prescriptionRoutes from "./routes/prescription.routes";
 import orderRoutes
   from "./routes/order.routes";
+import refillRequestRoutes from "./routes/refill-request.routes";
 
 
 const app = express();
@@ -32,6 +33,10 @@ app.use(
 app.use(
   "/api/orders",
   orderRoutes
+);
+app.use(
+  "/api/refill-requests",
+  refillRequestRoutes
 );
 
 // Health check

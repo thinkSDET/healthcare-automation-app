@@ -3,8 +3,47 @@ import {
   Response,
 } from "express";
 
+import { prisma } from "../config/prisma";
+import type { AuthRequest } from "../middleware/auth";
+
 import * as prescriptionService
   from "../services/prescription.service";
+
+const getOwnPatientId = async (userId: number) => {
+  const patient = await prisma.patient.findUnique({
+    where: { userId },
+    select: { id: true },
+  });
+  return patient?.id ?? null;
+};
+
+const assertPatientOwnsPatientId = async (
+  req: AuthRequest,
+  patientId: number
+) => {
+  if (req.user?.role?.toUpperCase() !== "PATIENT") {
+    return null;
+  }
+
+  const ownPatientId = await getOwnPatientId(req.user.userId);
+
+  if (!ownPatientId) {
+    return {
+      status: 403,
+      message: "No patient record is linked to this account",
+    };
+  }
+
+  if (ownPatientId !== patientId) {
+    return {
+      status: 403,
+      message:
+        "You do not have permission to access prescriptions for this patient",
+    };
+  }
+
+  return null;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -14,7 +53,7 @@ import * as prescriptionService
 
 export const getPatientPrescriptions =
   async (
-    req: Request,
+    req: AuthRequest,
     res: Response
   ) => {
 
@@ -30,6 +69,19 @@ export const getPatientPrescriptions =
           success: false,
           message:
             "Invalid patient ID",
+        });
+      }
+
+      const ownershipError =
+        await assertPatientOwnsPatientId(
+          req,
+          patientId
+        );
+
+      if (ownershipError) {
+        return res.status(ownershipError.status).json({
+          success: false,
+          message: ownershipError.message,
         });
       }
 
@@ -80,7 +132,7 @@ export const getPatientPrescriptions =
 
 export const getPrescriptionById =
   async (
-    req: Request,
+    req: AuthRequest,
     res: Response
   ) => {
 
@@ -106,6 +158,19 @@ export const getPrescriptionById =
           .getPrescriptionById(
             prescriptionId
           );
+
+      const ownershipError =
+        await assertPatientOwnsPatientId(
+          req,
+          prescription.patientId
+        );
+
+      if (ownershipError) {
+        return res.status(ownershipError.status).json({
+          success: false,
+          message: ownershipError.message,
+        });
+      }
 
       return res.status(200).json({
         success: true,

@@ -150,6 +150,7 @@ API prefixes (from `server.ts`):
 - `/api/doctors`
 - `/api/appointments`
 - `/api/prescriptions`
+- `/api/refill-requests`
 - `/api/orders`
 
 ---
@@ -568,6 +569,14 @@ Document upload multer rejections (unsupported MIME / >10MB): **structured statu
 - [ ] Register PATIENT without DOB/gender/phone → 400
 - [ ] Health check when DB down → 500 DOWN payload
 - [ ] Concurrent overlapping bookings for same doctor/patient
+- [ ] PATIENT can list own prescriptions; cannot list another patient's
+- [ ] PHARMACIST cannot create RENEWAL request → 403
+- [ ] PHARMACIST cannot approve RENEWAL → 403
+- [ ] Duplicate SUBMITTED refill request → 409
+- [ ] Reject without rejectionReason → 400
+- [ ] create-order on non-APPROVED request → 400
+- [ ] Second create-order on same request → 409
+- [ ] Renewal approve does not change Prescription.status
 
 ---
 
