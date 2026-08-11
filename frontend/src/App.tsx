@@ -22,6 +22,10 @@ import ProtectedRoute from "./pages/ProtectedRoute";
 import PatientDetails from "./pages/PatientDetails";
 import PatientPrescriptions from "./pages/PatientPrescriptions";
 import PatientOrders from "./pages/PatientOrders";
+import MyPatientProfile from "./pages/MyPatientProfile";
+import MyAppointments from "./pages/MyAppointments";
+import MyOrders from "./pages/MyOrders";
+import PharmacyWorkspace from "./pages/PharmacyWorkspace";
 
 import "./App.css";
 
@@ -68,7 +72,6 @@ function App() {
             AUTHENTICATED ROUTES
            ========================= */}
 
-        {/* Everyone who is authenticated */}
         <Route element={<ProtectedRoute />}>
 
           <Route
@@ -136,7 +139,6 @@ function App() {
             ADMIN ONLY
            ========================= */}
 
-        {/* Only ADMIN can create appointments and manage orders */}
         <Route
           element={
             <ProtectedRoute
@@ -155,6 +157,60 @@ function App() {
           <Route
             path="/patients/:id/orders"
             element={<PatientOrders />}
+          />
+
+        </Route>
+
+
+        {/* =========================
+            PATIENT PORTAL
+           ========================= */}
+
+        <Route
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "PATIENT",
+              ]}
+            />
+          }
+        >
+
+          <Route
+            path="/my/profile"
+            element={<MyPatientProfile />}
+          />
+
+          <Route
+            path="/my/appointments"
+            element={<MyAppointments />}
+          />
+
+          <Route
+            path="/my/orders"
+            element={<MyOrders />}
+          />
+
+        </Route>
+
+
+        {/* =========================
+            PHARMACIST WORKSPACE
+           ========================= */}
+
+        <Route
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "PHARMACIST",
+              ]}
+            />
+          }
+        >
+
+          <Route
+            path="/pharmacy"
+            element={<PharmacyWorkspace />}
           />
 
         </Route>

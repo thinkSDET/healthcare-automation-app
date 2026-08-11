@@ -133,6 +133,98 @@ function Dashboard() {
             </div>
           )}
 
+          {isPatient && (
+            <div
+              className="dashboard-card"
+              onClick={() =>
+                navigate("/my/profile")
+              }
+            >
+              <div className="card-icon">
+                👤
+              </div>
+
+              <div>
+                <h3>
+                  My Profile
+                </h3>
+
+                <p>
+                  View your patient information
+                </p>
+              </div>
+            </div>
+          )}
+
+          {isPatient && (
+            <div
+              className="dashboard-card"
+              onClick={() =>
+                navigate("/my/appointments")
+              }
+            >
+              <div className="card-icon">
+                📅
+              </div>
+
+              <div>
+                <h3>
+                  My Appointments
+                </h3>
+
+                <p>
+                  View your appointment history
+                </p>
+              </div>
+            </div>
+          )}
+
+          {isPatient && (
+            <div
+              className="dashboard-card"
+              onClick={() =>
+                navigate("/my/orders")
+              }
+            >
+              <div className="card-icon">
+                📦
+              </div>
+
+              <div>
+                <h3>
+                  My Orders
+                </h3>
+
+                <p>
+                  View and create your orders
+                </p>
+              </div>
+            </div>
+          )}
+
+          {isPharmacist && (
+            <div
+              className="dashboard-card"
+              onClick={() =>
+                navigate("/pharmacy")
+              }
+            >
+              <div className="card-icon">
+                💊
+              </div>
+
+              <div>
+                <h3>
+                  Pharmacy Workspace
+                </h3>
+
+                <p>
+                  Manage prescriptions and orders
+                </p>
+              </div>
+            </div>
+          )}
+
         </div>
 
         <section className="dashboard-welcome">
@@ -149,10 +241,10 @@ function Dashboard() {
               "View patients, provider directory and appointments. Clinical prescription tools are available from patient records."}
 
             {isPatient &&
-              "Your patient self-service portal is not available yet. Account access is limited to this dashboard for now."}
+              "Access your profile, appointments and pharmacy orders from your patient portal."}
 
             {isPharmacist &&
-              "Your pharmacy workspace for prescriptions and orders is not available yet. Account access is limited to this dashboard for now."}
+              "Look up prescriptions and orders by patient, order or prescription ID to update pharmacy status."}
 
           </p>
 

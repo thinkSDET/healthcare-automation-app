@@ -105,7 +105,10 @@ const MAX_DOCUMENT_SIZE_BYTES = 10 * 1024 * 1024;
 function PatientDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+
+  const isAdmin =
+    user?.role?.toUpperCase() === "ADMIN";
 
   const [patient, setPatient] =
     useState<Patient | null>(null);
@@ -3361,41 +3364,43 @@ function PatientDetails() {
                     </div>
                   </div>
 
-                  <div
-                    className="patient-history-card"
-                    role="button"
-                    tabIndex={0}
-                    onClick={() =>
-                      navigate(
-                        `/patients/${patient.id}/orders`
-                      )
-                    }
-                    onKeyDown={(e) => {
-                      if (
-                        e.key ===
-                          "Enter" ||
-                        e.key === " "
-                      ) {
+                  {isAdmin && (
+                    <div
+                      className="patient-history-card"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() =>
                         navigate(
                           `/patients/${patient.id}/orders`
-                        );
+                        )
                       }
-                    }}
-                  >
-                    <span className="history-icon">
-                      📦
-                    </span>
+                      onKeyDown={(e) => {
+                        if (
+                          e.key ===
+                            "Enter" ||
+                          e.key === " "
+                        ) {
+                          navigate(
+                            `/patients/${patient.id}/orders`
+                          );
+                        }
+                      }}
+                    >
+                      <span className="history-icon">
+                        📦
+                      </span>
 
-                    <div>
-                      <strong>
-                        Orders
-                      </strong>
+                      <div>
+                        <strong>
+                          Orders
+                        </strong>
 
-                      <p>
-                        View order history
-                      </p>
+                        <p>
+                          View order history
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <div
                     className="patient-history-card"

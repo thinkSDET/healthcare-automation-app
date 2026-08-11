@@ -12,6 +12,7 @@ interface User {
   lastName: string;
   email: string;
   role: string;
+  patientId?: number | null;
 }
 
 interface AuthContextType {

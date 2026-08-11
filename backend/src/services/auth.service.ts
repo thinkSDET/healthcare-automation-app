@@ -379,6 +379,16 @@ export const loginUser = async ({
     }
   );
 
+  const linkedPatient =
+    await prisma.patient.findUnique({
+      where: {
+        userId: user.id,
+      },
+      select: {
+        id: true,
+      },
+    });
+
   return {
     token,
 
@@ -388,6 +398,7 @@ export const loginUser = async ({
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
+      patientId: linkedPatient?.id ?? null,
     },
 
     expiresIn: rememberMe

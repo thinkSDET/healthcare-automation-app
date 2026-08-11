@@ -29,7 +29,7 @@ const router =
 router.get(
   "/patient/:patientId",
   authenticate,
-  authorize("ADMIN", "PHARMACIST"),
+  authorize("ADMIN", "PHARMACIST", "PATIENT"),
   getPatientOrders
 );
 
@@ -43,7 +43,7 @@ router.get(
 router.get(
   "/:id",
   authenticate,
-  authorize("ADMIN", "PHARMACIST"),
+  authorize("ADMIN", "PHARMACIST", "PATIENT"),
   getOrderById
 );
 

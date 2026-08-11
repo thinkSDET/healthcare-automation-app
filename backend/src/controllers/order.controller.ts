@@ -1,10 +1,58 @@
-import {
-  Request,
+import type {
   Response,
 } from "express";
 
+import { prisma } from "../config/prisma";
+import type { AuthRequest } from "../middleware/auth";
+
 import * as orderService
   from "../services/order.service";
+
+const getOwnPatientId = async (
+  userId: number
+) => {
+  const patient =
+    await prisma.patient.findUnique({
+      where: {
+        userId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+  return patient?.id ?? null;
+};
+
+const assertPatientOwnsPatientId = async (
+  req: AuthRequest,
+  patientId: number
+) => {
+  if (req.user?.role !== "PATIENT") {
+    return null;
+  }
+
+  const ownPatientId =
+    await getOwnPatientId(req.user.userId);
+
+  if (!ownPatientId) {
+    return {
+      status: 403,
+      message:
+        "No patient record is linked to this account",
+    };
+  }
+
+  if (ownPatientId !== patientId) {
+    return {
+      status: 403,
+      message:
+        "You do not have permission to access orders for this patient",
+    };
+  }
+
+  return null;
+};
 
 
 /*
@@ -15,7 +63,7 @@ import * as orderService
 
 export const getPatientOrders =
   async (
-    req: Request,
+    req: AuthRequest,
     res: Response
   ) => {
 
@@ -33,6 +81,22 @@ export const getPatientOrders =
           success: false,
           message:
             "Invalid patient ID",
+        });
+      }
+
+      const ownershipError =
+        await assertPatientOwnsPatientId(
+          req,
+          patientId
+        );
+
+      if (ownershipError) {
+        return res.status(
+          ownershipError.status
+        ).json({
+          success: false,
+          message:
+            ownershipError.message,
         });
       }
 
@@ -83,7 +147,7 @@ export const getPatientOrders =
 
 export const getOrderById =
   async (
-    req: Request,
+    req: AuthRequest,
     res: Response
   ) => {
 
@@ -109,6 +173,22 @@ export const getOrderById =
           .getOrderById(
             orderId
           );
+
+      const ownershipError =
+        await assertPatientOwnsPatientId(
+          req,
+          order.patientId
+        );
+
+      if (ownershipError) {
+        return res.status(
+          ownershipError.status
+        ).json({
+          success: false,
+          message:
+            ownershipError.message,
+        });
+      }
 
       return res.status(200).json({
         success: true,
@@ -151,7 +231,7 @@ export const getOrderById =
 
 export const createOrder =
   async (
-    req: Request,
+    req: AuthRequest,
     res: Response
   ) => {
 
@@ -186,11 +266,30 @@ export const createOrder =
         });
       }
 
+      const requestedPatientId =
+        Number(patientId);
+
+      const ownershipError =
+        await assertPatientOwnsPatientId(
+          req,
+          requestedPatientId
+        );
+
+      if (ownershipError) {
+        return res.status(
+          ownershipError.status
+        ).json({
+          success: false,
+          message:
+            ownershipError.message,
+        });
+      }
+
       const order =
         await orderService
           .createOrder({
             patientId:
-              Number(patientId),
+              requestedPatientId,
 
             orderDate,
 
@@ -268,7 +367,7 @@ export const createOrder =
 
 export const updateOrderStatus =
   async (
-    req: Request,
+    req: AuthRequest,
     res: Response
   ) => {
 
@@ -364,7 +463,7 @@ export const updateOrderStatus =
 
 export const updatePaymentStatus =
   async (
-    req: Request,
+    req: AuthRequest,
     res: Response
   ) => {
 
@@ -458,7 +557,7 @@ export const updatePaymentStatus =
 
 export const deleteOrder =
   async (
-    req: Request,
+    req: AuthRequest,
     res: Response
   ) => {
 
