@@ -1,0 +1,3672 @@
+# Healthcare Automation API — OpenAPI 3.0.3
+# Generated from the current backend implementation.
+# Do not treat this as a design draft; paths/fields/roles match the code.
+
+openapi: 3.0.3
+info:
+  title: Healthcare Automation API
+  version: 1.0.0
+  description: |
+    OpenAPI specification generated from the current backend implementation
+    (backend/src/routes, controllers, services, validators, middleware).
+    
+    ## Authentication
+    Most endpoints require header:
+    `Authorization: Bearer <JWT>`
+    
+    Obtain JWT via POST /api/auth/login.
+    Token claims: userId (number), role (string), email (string).
+    Default expiry: 1h. With rememberMe: 30d.
+    Secret: process.env.JWT_SECRET or fallback "local-development-secret".
+    
+    ## Roles (UserRole enum)
+    ADMIN, DOCTOR, PHARMACIST, PATIENT, SUPPORT, VIEWER
+    
+    SUPPORT and VIEWER exist in the schema and can be assigned via admin user APIs,
+    but no current route authorize() list includes them for business resources.
+    
+    ## Base URL
+    http://localhost:4000 (PORT hardcoded in backend/src/server.ts)
+    
+servers:
+  - url: "http://localhost:4000"
+    description: "Local backend (PORT=4000 in server.ts)"
+tags:
+  - name: Health
+    description: API/database health
+  - name: Authentication
+    description: "Register, login, password, logout"
+  - name: Users
+    description: Admin user management
+  - name: Patients
+    description: Patient CRUD and deactivate
+  - name: Dependents
+    description: Patient dependents
+  - name: Emergency Contact
+    description: Patient emergency contact
+  - name: Documents
+    description: Patient document upload/download
+  - name: Medical Profile
+    description: Patient medical profile
+  - name: Doctors
+    description: Doctor directory CRUD
+  - name: Appointments
+    description: Scheduling and lifecycle
+  - name: Prescriptions
+    description: Prescription CRUD and status
+  - name: Orders
+    description: Pharmacy/order APIs (fulfillment roles include PHARMACIST)
+paths:
+  /api/health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: "Checks API process and database connectivity via `SELECT 1`. No authentication required."
+      operationId: getHealth
+      security: []
+      responses:
+        200:
+          description: API and database are healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthUp"
+              example:
+                status: UP
+                database: CONNECTED
+                message: Healthcare API is running
+        500:
+          description: Database connection failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthDown"
+              example:
+                status: DOWN
+                database: DISCONNECTED
+                message: Database connection failed
+  /api/auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Public registration
+      description: |
+        Registers a new user. Public roles allowed: PATIENT, DOCTOR, PHARMACIST.
+        ADMIN cannot be created via this endpoint (403).
+        Default role if omitted: PATIENT.
+        Patient registration requires dateOfBirth, gender, and phone (address optional). Creates User + linked Patient with medicalId PAT-#####.
+      operationId: register
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+            example:
+              firstName: Jane
+              lastName: Doe
+              email: "jane.doe@example.com"
+              password: SecurePass123
+              role: PATIENT
+              dateOfBirth: 1990-05-15
+              gender: FEMALE
+              phone: 9876543210
+              address: 12 Oak Street
+      responses:
+        201:
+          description: User registered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: "#/components/schemas/RegisteredUser"
+              example:
+                success: true
+                data:
+                  id: 10
+                  firstName: Jane
+                  lastName: Doe
+                  email: "jane.doe@example.com"
+                  role: PATIENT
+        400:
+          description: Patient profile fields missing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                message: "Date of birth, gender, phone and address are required for patient registration."
+        403:
+          description: Disallowed public role (e.g. ADMIN)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                message: This account type cannot be created through public registration.
+        409:
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                message: Email already exists
+        500:
+          $ref: "#/components/responses/ServerError"
+  /api/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login and obtain JWT
+      description: |
+        Authenticates with email + password.
+        Returns JWT signed with JWT_SECRET (default fallback: local-development-secret if env unset).
+        Token payload: { userId, role, email }.
+        expiresIn: "1h" normally, or "30d" when rememberMe is true.
+        Locks account after 5 failed attempts for 15 minutes.
+        Rejects INACTIVE and LOCKED users.
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+            example:
+              email: "admin@healthcare.local"
+              password: "Admin@12345"
+              rememberMe: false
+      responses:
+        200:
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+              example:
+                success: true
+                message: Login successful
+                data:
+                  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                  user:
+                    id: 1
+                    email: "admin@healthcare.local"
+                    firstName: System
+                    lastName: Administrator
+                    role: ADMIN
+                    patientId: null
+                  expiresIn: 1h
+        400:
+          description: Missing email or password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                message: Email and password are required
+        401:
+          description: "Invalid credentials, locked account, or inactive/locked user status"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                message: Invalid email or password
+  /api/auth/forgot-password:
+    post:
+      tags:
+        - Authentication
+      summary: Request password reset
+      description: "Always returns a generic success message (no email enumeration). If the user exists, creates a 15-minute reset token. In development, also returns resetToken and logs it to the server console."
+      operationId: forgotPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordRequest"
+            example:
+              email: "jane.doe@example.com"
+      responses:
+        200:
+          description: Request accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForgotPasswordResponse"
+        400:
+          description: Email missing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                message: Email is required
+        500:
+          $ref: "#/components/responses/ServerError"
+  /api/auth/reset-password:
+    post:
+      tags:
+        - Authentication
+      summary: Reset password with token
+      description: Consumes a one-time reset token from forgot-password.
+      operationId: resetPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+            example:
+              token: "<raw-reset-token>"
+              newPassword: NewSecurePass123
+      responses:
+        200:
+          description: Password reset
+          content:
+            application/json:
+              example:
+                success: true
+                message: Password reset successfully
+        400:
+          description: Missing fields or invalid/expired/used token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/auth/change-password:
+    post:
+      tags:
+        - Authentication
+      summary: Change password (authenticated)
+      description: Requires Bearer JWT. Any authenticated role. Updates passwordHash for the token subject userId.
+      operationId: changePassword
+      security:
+        - BearerAuth: 
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+            example:
+              currentPassword: OldPass123
+              newPassword: NewPass456
+      responses:
+        200:
+          description: Password changed
+          content:
+            application/json:
+              example:
+                success: true
+                message: Password changed successfully
+        400:
+          description: Validation or password rule failure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+  /api/auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Logout contract
+      description: JWT is stateless. This endpoint requires authentication and returns success so clients have a logout API contract. Token invalidation is client-side.
+      operationId: logout
+      security:
+        - BearerAuth: 
+
+      responses:
+        200:
+          description: Logout acknowledged
+          content:
+            application/json:
+              example:
+                success: true
+                message: Logout successful
+        401:
+          $ref: "#/components/responses/Unauthorized"
+  /api/users:
+    get:
+      tags:
+        - Users
+      summary: List users
+      description: "Roles: ADMIN. Others receive 403. Requires Bearer JWT."
+      operationId: getUsers
+      security:
+        - BearerAuth: 
+
+      responses:
+        200:
+          description: User list (passwordHash excluded)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/UserPublic"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/ServerError"
+    post:
+      tags:
+        - Users
+      summary: Create user (admin)
+      description: "Roles: ADMIN. Others receive 403. Requires Bearer JWT. Zod roles: ADMIN, DOCTOR, PHARMACIST, SUPPORT, VIEWER (PATIENT not in createUserSchema). Field passwordHash is the request field name (min 8) — stored as-is into User.passwordHash by the service (caller is expected to supply an already-hashed value based on field naming)."
+      operationId: createUser
+      security:
+        - BearerAuth: 
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+            example:
+              firstName: Alex
+              lastName: Admin
+              email: "alex@example.com"
+              passwordHash: plaintextOrHashMin8
+              role: SUPPORT
+      responses:
+        201:
+          description: Created — returns prisma user create result (includes passwordHash)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: "#/components/schemas/UserRecord"
+        400:
+          $ref: "#/components/responses/ValidationError"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/ServerError"
+  /api/users/{id}:
+    get:
+      tags:
+        - Users
+      summary: Get user by ID
+      description: "Roles: ADMIN. Others receive 403. Requires Bearer JWT."
+      operationId: getUserById
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: User ID
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: "#/components/schemas/UserPublic"
+        400:
+          description: Invalid user ID
+          content:
+            application/json:
+              example:
+                success: false
+                message: Invalid user ID
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+    put:
+      tags:
+        - Users
+      summary: Update user
+      description: "Roles: ADMIN. Others receive 403. Requires Bearer JWT."
+      operationId: updateUser
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: User ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequest"
+            example:
+              status: INACTIVE
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: "#/components/schemas/UserRecord"
+        400:
+          $ref: "#/components/responses/ValidationError"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/ServerError"
+    delete:
+      tags:
+        - Users
+      summary: Delete user
+      description: "Roles: ADMIN. Others receive 403. Requires Bearer JWT."
+      operationId: deleteUser
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: User ID
+      responses:
+        204:
+          description: Deleted (empty body)
+        400:
+          description: Invalid user ID
+          content:
+            application/json:
+              example:
+                success: false
+                message: Invalid user ID
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/ServerError"
+  /api/patients:
+    get:
+      tags:
+        - Patients
+      summary: List patients
+      description: "Roles: ADMIN, DOCTOR. PATIENT/PHARMACIST → 403."
+      operationId: getPatients
+      security:
+        - BearerAuth: 
+
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Patient"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/ServerError"
+    post:
+      tags:
+        - Patients
+      summary: Create patient
+      description: "Roles: ADMIN, DOCTOR. Validated by createPatientSchema."
+      operationId: createPatient
+      security:
+        - BearerAuth: 
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePatientRequest"
+            example:
+              medicalId: PAT-90001
+              firstName: John
+              lastName: Smith
+              dateOfBirth: 1985-03-20
+              gender: MALE
+              email: "john.smith@example.com"
+              phone: 9876543210
+              address: 45 Pine Ave
+              bloodGroup: O+
+      responses:
+        201:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: "#/components/schemas/Patient"
+        400:
+          $ref: "#/components/responses/ValidationError"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/ServerError"
+  /api/patients/{id}:
+    get:
+      tags:
+        - Patients
+      summary: Get patient by ID
+      description: |
+        Access control via requirePatientAccess:
+        - ADMIN, DOCTOR: any patientId
+        - PATIENT: only when Patient.userId === JWT userId
+        - Other roles (e.g. PHARMACIST): 403 "You do not have permission to access patient records"
+        Invalid id → 400. Missing patient for PATIENT ownership check → 404.
+      operationId: getPatientById
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Patient ID
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: "#/components/schemas/Patient"
+        400:
+          description: Invalid patient ID
+          content:
+            application/json:
+              example:
+                success: false
+                message: Invalid patient ID
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+    put:
+      tags:
+        - Patients
+      summary: Update patient
+      description: |
+        Access control via requirePatientAccess:
+        - ADMIN, DOCTOR: any patientId
+        - PATIENT: only when Patient.userId === JWT userId
+        - Other roles (e.g. PHARMACIST): 403 "You do not have permission to access patient records"
+        Invalid id → 400. Missing patient for PATIENT ownership check → 404. Validated by updatePatientSchema.
+      operationId: updatePatient
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Patient ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePatientRequest"
+            example:
+              phone: 9998887776
+              address: New address
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: "#/components/schemas/Patient"
+        400:
+          $ref: "#/components/responses/ValidationError"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/ServerError"
+    delete:
+      tags:
+        - Patients
+      summary: Permanently delete patient
+      description: "Roles: ADMIN only."
+      operationId: deletePatient
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Patient ID
+      responses:
+        204:
+          description: Deleted (empty body)
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/ServerError"
+  /api/patients/{id}/deactivate:
+    patch:
+      tags:
+        - Patients
+      summary: Deactivate patient
+      description: "Roles: ADMIN, DOCTOR. Sets status to INACTIVE."
+      operationId: deactivatePatient
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Patient ID
+      responses:
+        200:
+          description: Deactivated
+          content:
+            application/json:
+              example:
+                success: true
+                message: Patient deactivated successfully
+                data:
+                  id: 1
+                  status: INACTIVE
+        400:
+          description: Invalid ID or already inactive
+          content:
+            application/json:
+              example:
+                success: false
+                message: Patient is already inactive
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+  /api/patients/{id}/dependents:
+    get:
+      tags:
+        - Dependents
+      summary: List dependents
+      description: |
+        Access control via requirePatientAccess:
+        - ADMIN, DOCTOR: any patientId
+        - PATIENT: only when Patient.userId === JWT userId
+        - Other roles (e.g. PHARMACIST): 403 "You do not have permission to access patient records"
+        Invalid id → 400. Missing patient for PATIENT ownership check → 404.
+      operationId: getPatientDependents
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Patient ID
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PatientDependent"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/ServerError"
+    post:
+      tags:
+        - Dependents
+      summary: Add dependent
+      description: |
+        Access control via requirePatientAccess:
+        - ADMIN, DOCTOR: any patientId
+        - PATIENT: only when Patient.userId === JWT userId
+        - Other roles (e.g. PHARMACIST): 403 "You do not have permission to access patient records"
+        Invalid id → 400. Missing patient for PATIENT ownership check → 404. Required body fields: firstName, lastName, relationship. Optional: dateOfBirth, gender, phone, email.
+      operationId: createPatientDependent
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Patient ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDependentRequest"
+            example:
+              firstName: Sam
+              lastName: Smith
+              relationship: Child
+              dateOfBirth: 2015-01-01
+              gender: MALE
+      responses:
+        201:
+          description: Dependent created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    $ref: "#/components/schemas/PatientDependent"
+        400:
+          description: Missing required fields or invalid patient ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+  /api/patients/{id}/dependents/{dependentId}:
+    delete:
+      tags:
+        - Dependents
+      summary: Delete dependent
+      description: |
+        Access control via requirePatientAccess:
+        - ADMIN, DOCTOR: any patientId
+        - PATIENT: only when Patient.userId === JWT userId
+        - Other roles (e.g. PHARMACIST): 403 "You do not have permission to access patient records"
+        Invalid id → 400. Missing patient for PATIENT ownership check → 404.
+      operationId: deletePatientDependent
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Patient ID
+        - name: dependentId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Dependent ID
+      responses:
+        200:
+          description: Removed
+          content:
+            application/json:
+              example:
+                success: true
+                message: Dependent removed successfully
+        400:
+          description: Invalid dependent ID
+          content:
+            application/json:
+              example:
+                success: false
+                message: Invalid dependent ID
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+  /api/patients/{id}/emergency-contact:
+    get:
+      tags:
+        - Emergency Contact
+      summary: Get emergency contact
+      description: |
+        Access control via requirePatientAccess:
+        - ADMIN, DOCTOR: any patientId
+        - PATIENT: only when Patient.userId === JWT userId
+        - Other roles (e.g. PHARMACIST): 403 "You do not have permission to access patient records"
+        Invalid id → 400. Missing patient for PATIENT ownership check → 404. data may be null if none saved.
+      operationId: getPatientEmergencyContact
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Patient ID
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: "#/components/schemas/EmergencyContact"
+        400:
+          description: Invalid patient ID
+          content:
+            application/json:
+              example:
+                success: false
+                message: Invalid patient ID
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+    put:
+      tags:
+        - Emergency Contact
+      summary: Create or update emergency contact
+      description: |
+        Access control via requirePatientAccess:
+        - ADMIN, DOCTOR: any patientId
+        - PATIENT: only when Patient.userId === JWT userId
+        - Other roles (e.g. PHARMACIST): 403 "You do not have permission to access patient records"
+        Invalid id → 400. Missing patient for PATIENT ownership check → 404. Required: firstName+lastName (or single name split into parts), relationship, phone. Optional: alternatePhone, email, address.
+      operationId: savePatientEmergencyContact
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Patient ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmergencyContactRequest"
+            example:
+              firstName: Mary
+              lastName: Smith
+              relationship: Spouse
+              phone: 9112223333
+              email: "mary@example.com"
+      responses:
+        200:
+          description: Saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    $ref: "#/components/schemas/EmergencyContact"
+        400:
+          description: Missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+    delete:
+      tags:
+        - Emergency Contact
+      summary: Delete emergency contact
+      description: |
+        Access control via requirePatientAccess:
+        - ADMIN, DOCTOR: any patientId
+        - PATIENT: only when Patient.userId === JWT userId
+        - Other roles (e.g. PHARMACIST): 403 "You do not have permission to access patient records"
+        Invalid id → 400. Missing patient for PATIENT ownership check → 404.
+      operationId: deletePatientEmergencyContact
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Patient ID
+      responses:
+        200:
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        400:
+          description: Invalid patient ID
+          content:
+            application/json:
+              example:
+                success: false
+                message: Invalid patient ID
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+  /api/patients/{id}/documents:
+    get:
+      tags:
+        - Documents
+      summary: List patient documents
+      description: |
+        Access control via requirePatientAccess:
+        - ADMIN, DOCTOR: any patientId
+        - PATIENT: only when Patient.userId === JWT userId
+        - Other roles (e.g. PHARMACIST): 403 "You do not have permission to access patient records"
+        Invalid id → 400. Missing patient for PATIENT ownership check → 404.
+      operationId: getPatientDocuments
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Patient ID
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PatientDocument"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+    post:
+      tags:
+        - Documents
+      summary: Upload patient document
+      description: |
+        Roles: ADMIN, DOCTOR only (authorize middleware — PATIENT cannot upload).
+        multipart/form-data field name for file: document.
+        Also requires form field documentType (string).
+        Allowed MIME types: application/pdf, image/jpeg, image/png, image/webp, text/plain, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document.
+        Max file size: 10 MB.
+        Note: There is no dedicated Express error middleware for multer rejections; unsupported type / oversized file error HTTP shape is not standardized in controllers.
+      operationId: uploadPatientDocument
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Patient ID
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - document
+                - documentType
+              properties:
+                document:
+                  type: string
+                  format: binary
+                documentType:
+                  type: string
+                  example: Lab Report
+      responses:
+        201:
+          description: Uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    $ref: "#/components/schemas/PatientDocument"
+        400:
+          description: Missing file or documentType / invalid patient ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+  /api/patients/{id}/documents/{documentId}/download:
+    get:
+      tags:
+        - Documents
+      summary: Download patient document
+      description: |
+        Access control via requirePatientAccess:
+        - ADMIN, DOCTOR: any patientId
+        - PATIENT: only when Patient.userId === JWT userId
+        - Other roles (e.g. PHARMACIST): 403 "You do not have permission to access patient records"
+        Invalid id → 400. Missing patient for PATIENT ownership check → 404. Returns file download (res.download).
+      operationId: downloadPatientDocument
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Patient ID
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Document ID
+      responses:
+        200:
+          description: File stream
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        400:
+          description: Invalid IDs
+          content:
+            application/json:
+              example:
+                success: false
+                message: Invalid patient or document ID
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+  /api/patients/{id}/documents/{documentId}:
+    delete:
+      tags:
+        - Documents
+      summary: Delete patient document
+      description: "Roles: ADMIN, DOCTOR."
+      operationId: deletePatientDocument
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Patient ID
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Document ID
+      responses:
+        200:
+          description: Deleted
+          content:
+            application/json:
+              example:
+                success: true
+                message: Document deleted successfully
+        400:
+          description: Invalid IDs
+          content:
+            application/json:
+              example:
+                success: false
+                message: Invalid patient or document ID
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+  /api/patients/{id}/medical-profile:
+    get:
+      tags:
+        - Medical Profile
+      summary: Get medical profile
+      description: |
+        Access control via requirePatientAccess:
+        - ADMIN, DOCTOR: any patientId
+        - PATIENT: only when Patient.userId === JWT userId
+        - Other roles (e.g. PHARMACIST): 403 "You do not have permission to access patient records"
+        Invalid id → 400. Missing patient for PATIENT ownership check → 404.
+      operationId: getPatientMedicalProfile
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Patient ID
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: "#/components/schemas/MedicalProfile"
+        400:
+          description: Invalid patient ID
+          content:
+            application/json:
+              example:
+                success: false
+                message: Invalid patient ID
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+    put:
+      tags:
+        - Medical Profile
+      summary: Create or update medical profile
+      description: |
+        Access control via requirePatientAccess:
+        - ADMIN, DOCTOR: any patientId
+        - PATIENT: only when Patient.userId === JWT userId
+        - Other roles (e.g. PHARMACIST): 403 "You do not have permission to access patient records"
+        Invalid id → 400. Missing patient for PATIENT ownership check → 404. Body fields (all optional strings): medicalConditions, allergies, currentMedications, medicalNotes.
+      operationId: savePatientMedicalProfile
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Patient ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MedicalProfileRequest"
+            example:
+              medicalConditions: Hypertension
+              allergies: Penicillin
+              currentMedications: Amlodipine 5mg
+              medicalNotes: Follow up in 3 months
+      responses:
+        200:
+          description: Saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    $ref: "#/components/schemas/MedicalProfile"
+        400:
+          description: Invalid patient ID
+          content:
+            application/json:
+              example:
+                success: false
+                message: Invalid patient ID
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+  /api/patients/{id}/appointments:
+    get:
+      tags:
+        - Appointments
+      summary: Patient appointment history
+      description: |
+        Access control via requirePatientAccess:
+        - ADMIN, DOCTOR: any patientId
+        - PATIENT: only when Patient.userId === JWT userId
+        - Other roles (e.g. PHARMACIST): 403 "You do not have permission to access patient records"
+        Invalid id → 400. Missing patient for PATIENT ownership check → 404.
+      operationId: getPatientAppointments
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Patient ID
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Appointment"
+        400:
+          description: Invalid patient ID
+          content:
+            application/json:
+              example:
+                success: false
+                message: Invalid patient ID
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+  /api/doctors:
+    get:
+      tags:
+        - Doctors
+      summary: List doctors
+      description: "Roles: ADMIN, DOCTOR."
+      operationId: getDoctors
+      security:
+        - BearerAuth: 
+
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Doctor"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/ServerError"
+    post:
+      tags:
+        - Doctors
+      summary: Create doctor
+      description: "Roles: ADMIN. Validated by createDoctorSchema."
+      operationId: createDoctor
+      security:
+        - BearerAuth: 
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDoctorRequest"
+            example:
+              doctorCode: DOC-100
+              firstName: Priya
+              lastName: Nair
+              specialization: Cardiology
+              licenseNumber: LIC-7788
+              email: "priya.nair@example.com"
+              phone: 9123456780
+              experience: 12
+      responses:
+        201:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: "#/components/schemas/Doctor"
+        400:
+          $ref: "#/components/responses/ValidationError"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/ServerError"
+  /api/doctors/{id}:
+    get:
+      tags:
+        - Doctors
+      summary: Get doctor by ID
+      description: "Roles: ADMIN, DOCTOR."
+      operationId: getDoctorById
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Doctor ID
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: "#/components/schemas/Doctor"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+    put:
+      tags:
+        - Doctors
+      summary: Update doctor
+      description: "Roles: ADMIN. Validated by updateDoctorSchema."
+      operationId: updateDoctor
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Doctor ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDoctorRequest"
+            example:
+              experience: 13
+              status: ACTIVE
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: "#/components/schemas/Doctor"
+        400:
+          $ref: "#/components/responses/ValidationError"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/ServerError"
+    delete:
+      tags:
+        - Doctors
+      summary: Delete doctor
+      description: "Roles: ADMIN."
+      operationId: deleteDoctor
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Doctor ID
+      responses:
+        204:
+          description: Deleted (empty body)
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/ServerError"
+  /api/appointments:
+    get:
+      tags:
+        - Appointments
+      summary: List appointments
+      description: "Roles: ADMIN, DOCTOR. Includes patient and doctor relations."
+      operationId: getAppointments
+      security:
+        - BearerAuth: 
+
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AppointmentWithRelations"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/ServerError"
+    post:
+      tags:
+        - Appointments
+      summary: Create appointment
+      description: |
+        Roles: ADMIN only. Status transitions (from → allowed next):
+        - SCHEDULED → CONFIRMED | CANCELLED | NO_SHOW
+        - CONFIRMED → CHECKED_IN
+        - CHECKED_IN → IN_CONSULTATION
+        - IN_CONSULTATION → COMPLETED
+        - COMPLETED | CANCELLED | NO_SHOW → (terminal, no further changes)
+        
+        Role targets for PATCH status:
+        - ADMIN may transition to: CONFIRMED, CHECKED_IN, IN_CONSULTATION, COMPLETED, CANCELLED, NO_SHOW
+        - DOCTOR may transition to: CONFIRMED, CHECKED_IN, IN_CONSULTATION, COMPLETED, NO_SHOW (not CANCELLED via status endpoint)
+        DELETE /api/appointments/:id cancels only when status is SCHEDULED (ADMIN).
+        Rejects past appointmentAt, inactive doctor, overlapping doctor/patient appointments (active statuses).
+      operationId: createAppointment
+      security:
+        - BearerAuth: 
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAppointmentRequest"
+            example:
+              appointmentNo: APT-20260811-001
+              patientId: 1
+              doctorId: 1
+              appointmentAt: "2026-09-01T10:00:00.000Z"
+              duration: 30
+              type: IN_PERSON
+              reason: Annual checkup
+              notes: Fasting labs preferred
+      responses:
+        201:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: "#/components/schemas/AppointmentWithRelations"
+        400:
+          description: Validation or business rule failure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        409:
+          description: Overlapping appointment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                message: Doctor already has an overlapping appointment
+        500:
+          $ref: "#/components/responses/ServerError"
+  /api/appointments/{id}:
+    get:
+      tags:
+        - Appointments
+      summary: Get appointment by ID
+      description: "Roles: ADMIN, DOCTOR."
+      operationId: getAppointmentById
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Appointment ID
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: "#/components/schemas/AppointmentWithRelations"
+        400:
+          description: Invalid appointment ID
+          content:
+            application/json:
+              example:
+                success: false
+                message: Invalid appointment ID
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+    put:
+      tags:
+        - Appointments
+      summary: Update appointment schedule/details
+      description: "Roles: ADMIN. Does not update status. Editable only when SCHEDULED or CONFIRMED. Not when terminal."
+      operationId: updateAppointment
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Appointment ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAppointmentRequest"
+            example:
+              appointmentAt: "2026-09-01T11:00:00.000Z"
+              duration: 45
+              reason: Follow-up
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: "#/components/schemas/AppointmentWithRelations"
+        400:
+          description: Validation or business rule failure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        409:
+          description: Overlap conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        500:
+          $ref: "#/components/responses/ServerError"
+    delete:
+      tags:
+        - Appointments
+      summary: Cancel appointment (SCHEDULED → CANCELLED)
+      description: "Roles: ADMIN. Only when current status is SCHEDULED."
+      operationId: cancelAppointment
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Appointment ID
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: "#/components/schemas/AppointmentWithRelations"
+        400:
+          description: Not scheduled or invalid ID
+          content:
+            application/json:
+              example:
+                success: false
+                message: Only scheduled appointments can be cancelled
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+  /api/appointments/{id}/status:
+    patch:
+      tags:
+        - Appointments
+      summary: Update appointment lifecycle status
+      description: |
+        Roles: ADMIN, DOCTOR. Status transitions (from → allowed next):
+        - SCHEDULED → CONFIRMED | CANCELLED | NO_SHOW
+        - CONFIRMED → CHECKED_IN
+        - CHECKED_IN → IN_CONSULTATION
+        - IN_CONSULTATION → COMPLETED
+        - COMPLETED | CANCELLED | NO_SHOW → (terminal, no further changes)
+        
+        Role targets for PATCH status:
+        - ADMIN may transition to: CONFIRMED, CHECKED_IN, IN_CONSULTATION, COMPLETED, CANCELLED, NO_SHOW
+        - DOCTOR may transition to: CONFIRMED, CHECKED_IN, IN_CONSULTATION, COMPLETED, NO_SHOW (not CANCELLED via status endpoint)
+        DELETE /api/appointments/:id cancels only when status is SCHEDULED (ADMIN).
+      operationId: updateAppointmentStatus
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Appointment ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAppointmentStatusRequest"
+            example:
+              status: CONFIRMED
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: "#/components/schemas/AppointmentWithRelations"
+        400:
+          description: Invalid transition or ID
+          content:
+            application/json:
+              example:
+                success: false
+                message: Invalid appointment status transition
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          description: "Role cannot target this status, or authorize failure"
+          content:
+            application/json:
+              example:
+                success: false
+                message: You do not have permission to perform this appointment status change
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+  /api/prescriptions/patient/{patientId}:
+    get:
+      tags:
+        - Prescriptions
+      summary: List prescriptions for a patient
+      description: "Roles: ADMIN, DOCTOR, PHARMACIST. No patient-ownership check on this route."
+      operationId: getPatientPrescriptions
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: patientId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Patient ID
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PrescriptionSummary"
+        400:
+          description: Invalid patient ID
+          content:
+            application/json:
+              example:
+                success: false
+                message: Invalid patient ID
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+  /api/prescriptions:
+    post:
+      tags:
+        - Prescriptions
+      summary: Create prescription
+      description: "Roles: ADMIN, DOCTOR. Requires patientId, doctorId, and non-empty items[]. Each item requires medicineName, dosage, frequency, duration. prescriptionNo auto-generated as RX-{timestamp}."
+      operationId: createPrescription
+      security:
+        - BearerAuth: 
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePrescriptionRequest"
+            example:
+              patientId: 1
+              doctorId: 1
+              diagnosis: Seasonal allergy
+              notes: Take after meals
+              items:
+                - medicineName: Cetirizine
+                  dosage: 10mg
+                  frequency: Once daily
+                  duration: 7 days
+                  route: Oral
+                  instructions: At night
+      responses:
+        201:
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    $ref: "#/components/schemas/PrescriptionDetail"
+        400:
+          description: Missing patient/doctor/items or invalid item fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+  /api/prescriptions/{id}:
+    get:
+      tags:
+        - Prescriptions
+      summary: Get prescription by ID
+      description: "Roles: ADMIN, DOCTOR, PHARMACIST."
+      operationId: getPrescriptionById
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Prescription ID
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: "#/components/schemas/PrescriptionDetail"
+        400:
+          description: Invalid prescription ID
+          content:
+            application/json:
+              example:
+                success: false
+                message: Invalid prescription ID
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+    delete:
+      tags:
+        - Prescriptions
+      summary: Delete prescription
+      description: "Roles: ADMIN, DOCTOR."
+      operationId: deletePrescription
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Prescription ID
+      responses:
+        200:
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        400:
+          description: Invalid prescription ID
+          content:
+            application/json:
+              example:
+                success: false
+                message: Invalid prescription ID
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+  /api/prescriptions/{id}/status:
+    patch:
+      tags:
+        - Prescriptions
+      summary: Update prescription status
+      description: "Roles: ADMIN, DOCTOR, PHARMACIST. Allowed status values: ACTIVE, COMPLETED, CANCELLED."
+      operationId: updatePrescriptionStatus
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Prescription ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePrescriptionStatusRequest"
+            example:
+              status: COMPLETED
+      responses:
+        200:
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    $ref: "#/components/schemas/PrescriptionDetail"
+        400:
+          description: Invalid ID or status
+          content:
+            application/json:
+              example:
+                success: false
+                message: Invalid prescription status
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+  /api/orders/patient/{patientId}:
+    get:
+      tags:
+        - Orders
+      summary: List orders for a patient
+      description: |
+        Roles: ADMIN, PHARMACIST, PATIENT. Patient ownership (when JWT role is PATIENT):
+        - Must have linked Patient for userId
+        - patientId in path/body (or order.patientId) must equal own patient id
+        Otherwise 403. ADMIN and PHARMACIST are not ownership-restricted on these checks.
+      operationId: getPatientOrders
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: patientId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Patient ID
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/OrderWithItems"
+        400:
+          description: Invalid patient ID
+          content:
+            application/json:
+              example:
+                success: false
+                message: Invalid patient ID
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+  /api/orders:
+    post:
+      tags:
+        - Orders
+      summary: Create order
+      description: |
+        Roles: ADMIN, PATIENT. Patient ownership (when JWT role is PATIENT):
+        - Must have linked Patient for userId
+        - patientId in path/body (or order.patientId) must equal own patient id
+        Otherwise 403. ADMIN and PHARMACIST are not ownership-restricted on these checks.
+        Requires patientId and non-empty items[] with productName, positive integer quantity, unitPrice >= 0.
+        orderNo auto-generated as ORD-{timestamp}. totalAmount computed server-side.
+      operationId: createOrder
+      security:
+        - BearerAuth: 
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrderRequest"
+            example:
+              patientId: 1
+              deliveryAddress: 12 Oak Street
+              notes: Leave at reception
+              items:
+                - productName: Cetirizine 10mg
+                  quantity: 2
+                  unitPrice: 45.5
+      responses:
+        201:
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    $ref: "#/components/schemas/OrderDetail"
+        400:
+          description: Missing patient/items or invalid item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+  /api/orders/{id}:
+    get:
+      tags:
+        - Orders
+      summary: Get order by ID
+      description: |
+        Roles: ADMIN, PHARMACIST, PATIENT. Patient ownership (when JWT role is PATIENT):
+        - Must have linked Patient for userId
+        - patientId in path/body (or order.patientId) must equal own patient id
+        Otherwise 403. ADMIN and PHARMACIST are not ownership-restricted on these checks.
+      operationId: getOrderById
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Order ID
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: "#/components/schemas/OrderDetail"
+        400:
+          description: Invalid order ID
+          content:
+            application/json:
+              example:
+                success: false
+                message: Invalid order ID
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+    delete:
+      tags:
+        - Orders
+      summary: Delete order
+      description: "Roles: ADMIN only."
+      operationId: deleteOrder
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Order ID
+      responses:
+        200:
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        400:
+          description: Invalid order ID
+          content:
+            application/json:
+              example:
+                success: false
+                message: Invalid order ID
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+  /api/orders/{id}/status:
+    patch:
+      tags:
+        - Orders
+      summary: Update order status
+      description: "Roles: ADMIN, PHARMACIST. Valid: PENDING, CONFIRMED, PROCESSING, SHIPPED, DELIVERED, CANCELLED."
+      operationId: updateOrderStatus
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Order ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateOrderStatusRequest"
+            example:
+              status: PROCESSING
+      responses:
+        200:
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    $ref: "#/components/schemas/OrderDetail"
+        400:
+          description: Invalid ID or status
+          content:
+            application/json:
+              example:
+                success: false
+                message: Invalid order status
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+  /api/orders/{id}/payment-status:
+    patch:
+      tags:
+        - Orders
+      summary: Update payment status
+      description: "Roles: ADMIN, PHARMACIST. Valid: PENDING, PAID, FAILED, REFUNDED."
+      operationId: updatePaymentStatus
+      security:
+        - BearerAuth: 
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Order ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePaymentStatusRequest"
+            example:
+              paymentStatus: PAID
+      responses:
+        200:
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    $ref: "#/components/schemas/OrderDetail"
+        400:
+          description: Invalid ID or payment status
+          content:
+            application/json:
+              example:
+                success: false
+                message: Invalid payment status
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "Send header: Authorization: Bearer <token> from login response data.token"
+  responses:
+    Unauthorized:
+      description: "Missing, invalid, or expired Bearer token"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            message: Authentication token is required
+    Forbidden:
+      description: Authenticated but role not allowed (or patient ownership failed)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            message: You do not have permission to access this resource
+    ValidationError:
+      description: Request body failed Zod validation
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            message: Validation failed
+            errors:
+              - field: email
+                message: Invalid email
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ServerError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+        errors:
+          type: array
+          description: Present on Zod validation failures (HTTP 400)
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+    HealthUp:
+      type: object
+      properties:
+        status:
+          type: string
+          example: UP
+        database:
+          type: string
+          example: CONNECTED
+        message:
+          type: string
+    HealthDown:
+      type: object
+      properties:
+        status:
+          type: string
+          example: DOWN
+        database:
+          type: string
+          example: DISCONNECTED
+        message:
+          type: string
+    RegisterRequest:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - email
+        - password
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        role:
+          type: string
+          enum:
+            - PATIENT
+            - DOCTOR
+            - PHARMACIST
+          default: PATIENT
+        dateOfBirth:
+          type: string
+          description: Required when role is PATIENT
+        gender:
+          type: string
+          enum:
+            - MALE
+            - FEMALE
+            - OTHER
+          description: Required when role is PATIENT
+        phone:
+          type: string
+          description: Required when role is PATIENT
+        address:
+          type: string
+    RegisteredUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+        rememberMe:
+          type: boolean
+          default: false
+    LoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            token:
+              type: string
+            user:
+              type: object
+              properties:
+                id:
+                  type: integer
+                email:
+                  type: string
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                role:
+                  type: string
+                patientId:
+                  type: integer
+                  nullable: true
+                  description: Linked Patient.id when present
+            expiresIn:
+              type: string
+              example: 1h
+    ForgotPasswordRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+    ForgotPasswordResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        resetToken:
+          type: string
+          description: Returned in current development implementation when user exists
+    ResetPasswordRequest:
+      type: object
+      required:
+        - token
+        - newPassword
+      properties:
+        token:
+          type: string
+        newPassword:
+          type: string
+    ChangePasswordRequest:
+      type: object
+      required:
+        - currentPassword
+        - newPassword
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+    UserPublic:
+      type: object
+      properties:
+        id:
+          type: integer
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum:
+            - ADMIN
+            - DOCTOR
+            - PHARMACIST
+            - PATIENT
+            - SUPPORT
+            - VIEWER
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+            - LOCKED
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    UserRecord:
+      allOf:
+        - $ref: "#/components/schemas/UserPublic"
+        - type: object
+          properties:
+            passwordHash:
+              type: string
+              description: May be present on create/update Prisma return
+    CreateUserRequest:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - email
+        - passwordHash
+      properties:
+        firstName:
+          type: string
+          minLength: 2
+          maxLength: 50
+        lastName:
+          type: string
+          minLength: 2
+          maxLength: 50
+        email:
+          type: string
+          format: email
+        passwordHash:
+          type: string
+          minLength: 8
+        role:
+          type: string
+          enum:
+            - ADMIN
+            - DOCTOR
+            - PHARMACIST
+            - SUPPORT
+            - VIEWER
+    UpdateUserRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          minLength: 2
+          maxLength: 50
+        lastName:
+          type: string
+          minLength: 2
+          maxLength: 50
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum:
+            - ADMIN
+            - DOCTOR
+            - PHARMACIST
+            - SUPPORT
+            - VIEWER
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+            - LOCKED
+    Patient:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+          nullable: true
+        medicalId:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        dateOfBirth:
+          type: string
+          format: date-time
+        gender:
+          type: string
+          enum:
+            - MALE
+            - FEMALE
+            - OTHER
+        email:
+          type: string
+          nullable: true
+        phone:
+          type: string
+        address:
+          type: string
+          nullable: true
+        bloodGroup:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+            - DECEASED
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CreatePatientRequest:
+      type: object
+      required:
+        - medicalId
+        - firstName
+        - lastName
+        - dateOfBirth
+        - gender
+        - phone
+      properties:
+        medicalId:
+          type: string
+          minLength: 3
+          maxLength: 30
+        firstName:
+          type: string
+          minLength: 2
+          maxLength: 50
+        lastName:
+          type: string
+          minLength: 2
+          maxLength: 50
+        dateOfBirth:
+          type: string
+          description: YYYY-MM-DD or ISO datetime
+        gender:
+          type: string
+          enum:
+            - MALE
+            - FEMALE
+            - OTHER
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          minLength: 10
+          maxLength: 15
+        address:
+          type: string
+          maxLength: 250
+        bloodGroup:
+          type: string
+          maxLength: 5
+    UpdatePatientRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          minLength: 2
+          maxLength: 50
+        lastName:
+          type: string
+          minLength: 2
+          maxLength: 50
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          minLength: 10
+          maxLength: 15
+        address:
+          type: string
+          maxLength: 250
+        bloodGroup:
+          type: string
+          maxLength: 5
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+            - DECEASED
+    PatientDependent:
+      type: object
+      properties:
+        id:
+          type: integer
+        patientId:
+          type: integer
+        firstName:
+          type: string
+        lastName:
+          type: string
+        relationship:
+          type: string
+        dateOfBirth:
+          type: string
+          format: date-time
+          nullable: true
+        gender:
+          type: string
+          enum:
+            - MALE
+            - FEMALE
+            - OTHER
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CreateDependentRequest:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - relationship
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        relationship:
+          type: string
+        dateOfBirth:
+          type: string
+        gender:
+          type: string
+          enum:
+            - MALE
+            - FEMALE
+            - OTHER
+        phone:
+          type: string
+        email:
+          type: string
+    EmergencyContact:
+      type: object
+      nullable: true
+      properties:
+        id:
+          type: integer
+        patientId:
+          type: integer
+        firstName:
+          type: string
+        lastName:
+          type: string
+        relationship:
+          type: string
+        phone:
+          type: string
+        alternatePhone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    EmergencyContactRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        name:
+          type: string
+          description: Alternative to firstName/lastName; split on whitespace
+        relationship:
+          type: string
+        phone:
+          type: string
+        alternatePhone:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+    PatientDocument:
+      type: object
+      properties:
+        id:
+          type: integer
+        patientId:
+          type: integer
+        originalName:
+          type: string
+        storedName:
+          type: string
+        documentType:
+          type: string
+        mimeType:
+          type: string
+        size:
+          type: integer
+        filePath:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    MedicalProfile:
+      type: object
+      nullable: true
+      properties:
+        id:
+          type: integer
+        patientId:
+          type: integer
+        medicalConditions:
+          type: string
+          nullable: true
+        allergies:
+          type: string
+          nullable: true
+        currentMedications:
+          type: string
+          nullable: true
+        medicalNotes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    MedicalProfileRequest:
+      type: object
+      properties:
+        medicalConditions:
+          type: string
+        allergies:
+          type: string
+        currentMedications:
+          type: string
+        medicalNotes:
+          type: string
+    Doctor:
+      type: object
+      properties:
+        id:
+          type: integer
+        doctorCode:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        specialization:
+          type: string
+        licenseNumber:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        experience:
+          type: integer
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+            - ON_LEAVE
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CreateDoctorRequest:
+      type: object
+      required:
+        - doctorCode
+        - firstName
+        - lastName
+        - specialization
+        - licenseNumber
+        - email
+        - phone
+        - experience
+      properties:
+        doctorCode:
+          type: string
+          minLength: 3
+          maxLength: 20
+        firstName:
+          type: string
+          minLength: 2
+          maxLength: 50
+        lastName:
+          type: string
+          minLength: 2
+          maxLength: 50
+        specialization:
+          type: string
+          minLength: 2
+          maxLength: 100
+        licenseNumber:
+          type: string
+          minLength: 3
+          maxLength: 50
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          minLength: 10
+          maxLength: 15
+        experience:
+          type: integer
+          minimum: 0
+          maximum: 60
+    UpdateDoctorRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          minLength: 2
+          maxLength: 50
+        lastName:
+          type: string
+          minLength: 2
+          maxLength: 50
+        specialization:
+          type: string
+          minLength: 2
+          maxLength: 100
+        phone:
+          type: string
+          minLength: 10
+          maxLength: 15
+        experience:
+          type: integer
+          minimum: 0
+          maximum: 60
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+            - ON_LEAVE
+    AppointmentStatus:
+      type: string
+      enum:
+        - SCHEDULED
+        - CONFIRMED
+        - CHECKED_IN
+        - IN_CONSULTATION
+        - COMPLETED
+        - CANCELLED
+        - NO_SHOW
+    Appointment:
+      type: object
+      properties:
+        id:
+          type: integer
+        appointmentNo:
+          type: string
+        patientId:
+          type: integer
+        doctorId:
+          type: integer
+        appointmentAt:
+          type: string
+          format: date-time
+        duration:
+          type: integer
+        type:
+          type: string
+          enum:
+            - IN_PERSON
+            - VIDEO
+            - PHONE
+        status:
+          $ref: "#/components/schemas/AppointmentStatus"
+        reason:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    AppointmentWithRelations:
+      allOf:
+        - $ref: "#/components/schemas/Appointment"
+        - type: object
+          properties:
+            patient:
+              $ref: "#/components/schemas/Patient"
+            doctor:
+              $ref: "#/components/schemas/Doctor"
+    CreateAppointmentRequest:
+      type: object
+      required:
+        - appointmentNo
+        - patientId
+        - doctorId
+        - appointmentAt
+        - reason
+      properties:
+        appointmentNo:
+          type: string
+          minLength: 3
+          maxLength: 30
+        patientId:
+          type: integer
+        doctorId:
+          type: integer
+        appointmentAt:
+          type: string
+          format: date-time
+        duration:
+          type: integer
+          minimum: 15
+          maximum: 180
+          default: 30
+        type:
+          type: string
+          enum:
+            - IN_PERSON
+            - VIDEO
+            - PHONE
+          default: IN_PERSON
+        reason:
+          type: string
+          minLength: 3
+          maxLength: 250
+        notes:
+          type: string
+          maxLength: 500
+    UpdateAppointmentRequest:
+      type: object
+      properties:
+        appointmentAt:
+          type: string
+          format: date-time
+        duration:
+          type: integer
+          minimum: 15
+          maximum: 180
+        type:
+          type: string
+          enum:
+            - IN_PERSON
+            - VIDEO
+            - PHONE
+        reason:
+          type: string
+          minLength: 3
+          maxLength: 250
+        notes:
+          type: string
+          maxLength: 500
+    UpdateAppointmentStatusRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: "#/components/schemas/AppointmentStatus"
+    PrescriptionItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        prescriptionId:
+          type: integer
+        medicineName:
+          type: string
+        dosage:
+          type: string
+        frequency:
+          type: string
+        duration:
+          type: string
+        route:
+          type: string
+          nullable: true
+        instructions:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    PrescriptionSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        prescriptionNo:
+          type: string
+        patientId:
+          type: integer
+        doctorId:
+          type: integer
+        prescribedAt:
+          type: string
+          format: date-time
+        diagnosis:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - COMPLETED
+            - CANCELLED
+        doctor:
+          type: object
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PrescriptionItem"
+    PrescriptionDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        prescriptionNo:
+          type: string
+        patientId:
+          type: integer
+        doctorId:
+          type: integer
+        prescribedAt:
+          type: string
+          format: date-time
+        diagnosis:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - COMPLETED
+            - CANCELLED
+        patient:
+          type: object
+        doctor:
+          type: object
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PrescriptionItem"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CreatePrescriptionRequest:
+      type: object
+      required:
+        - patientId
+        - doctorId
+        - items
+      properties:
+        patientId:
+          type: integer
+        doctorId:
+          type: integer
+        prescribedAt:
+          type: string
+        diagnosis:
+          type: string
+        notes:
+          type: string
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - COMPLETED
+            - CANCELLED
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required:
+              - medicineName
+              - dosage
+              - frequency
+              - duration
+            properties:
+              medicineName:
+                type: string
+              dosage:
+                type: string
+              frequency:
+                type: string
+              duration:
+                type: string
+              route:
+                type: string
+              instructions:
+                type: string
+    UpdatePrescriptionStatusRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - COMPLETED
+            - CANCELLED
+    OrderItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        orderId:
+          type: integer
+        productName:
+          type: string
+        quantity:
+          type: integer
+        unitPrice:
+          type: number
+        totalPrice:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    OrderWithItems:
+      type: object
+      properties:
+        id:
+          type: integer
+        orderNo:
+          type: string
+        patientId:
+          type: integer
+        orderDate:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum:
+            - PENDING
+            - CONFIRMED
+            - PROCESSING
+            - SHIPPED
+            - DELIVERED
+            - CANCELLED
+        paymentStatus:
+          type: string
+          enum:
+            - PENDING
+            - PAID
+            - FAILED
+            - REFUNDED
+        totalAmount:
+          type: number
+        deliveryAddress:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+    OrderDetail:
+      allOf:
+        - $ref: "#/components/schemas/OrderWithItems"
+        - type: object
+          properties:
+            patient:
+              type: object
+    CreateOrderRequest:
+      type: object
+      required:
+        - patientId
+        - items
+      properties:
+        patientId:
+          type: integer
+        orderDate:
+          type: string
+        status:
+          type: string
+          enum:
+            - PENDING
+            - CONFIRMED
+            - PROCESSING
+            - SHIPPED
+            - DELIVERED
+            - CANCELLED
+        paymentStatus:
+          type: string
+          enum:
+            - PENDING
+            - PAID
+            - FAILED
+            - REFUNDED
+        deliveryAddress:
+          type: string
+        notes:
+          type: string
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required:
+              - productName
+              - quantity
+              - unitPrice
+            properties:
+              productName:
+                type: string
+              quantity:
+                type: integer
+                minimum: 1
+              unitPrice:
+                type: number
+                minimum: 0
+    UpdateOrderStatusRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - PENDING
+            - CONFIRMED
+            - PROCESSING
+            - SHIPPED
+            - DELIVERED
+            - CANCELLED
+    UpdatePaymentStatusRequest:
+      type: object
+      required:
+        - paymentStatus
+      properties:
+        paymentStatus:
+          type: string
+          enum:
+            - PENDING
+            - PAID
+            - FAILED
+            - REFUNDED
