@@ -25,6 +25,9 @@ import PatientOrders from "./pages/PatientOrders";
 import MyPatientProfile from "./pages/MyPatientProfile";
 import MyAppointments from "./pages/MyAppointments";
 import MyOrders from "./pages/MyOrders";
+import ShipmentTracking from "./pages/ShipmentTracking";
+import OrderPayment from "./pages/OrderPayment";
+import PaymentFormEmbed from "./pages/PaymentFormEmbed";
 import PharmacyWorkspace from "./pages/PharmacyWorkspace";
 import AppLayout from "./components/AppLayout";
 
@@ -176,6 +179,12 @@ function App() {
             />
           }
         >
+          {/* Payment form embed — no app chrome (iframe target) */}
+          <Route
+            path="/payment-embed"
+            element={<PaymentFormEmbed />}
+          />
+
           <Route element={<AppLayout />}>
             <Route
               path="/my/profile"
@@ -190,6 +199,16 @@ function App() {
             <Route
               path="/my/orders"
               element={<MyOrders />}
+            />
+
+            <Route
+              path="/my/orders/:orderId/tracking"
+              element={<ShipmentTracking />}
+            />
+
+            <Route
+              path="/my/orders/:orderId/pay"
+              element={<OrderPayment />}
             />
           </Route>
         </Route>

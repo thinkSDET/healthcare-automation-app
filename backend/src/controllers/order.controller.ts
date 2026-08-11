@@ -507,6 +507,50 @@ export const updatePaymentStatus =
         });
       }
 
+      /*
+       * PATIENT may only set PAID or FAILED on their own order.
+       * ADMIN / PHARMACIST keep full payment-status access.
+       */
+      if (req.user?.role === "PATIENT") {
+        const patientAllowed = [
+          "PAID",
+          "FAILED",
+        ];
+
+        if (
+          !patientAllowed.includes(
+            paymentStatus
+          )
+        ) {
+          return res.status(403).json({
+            success: false,
+            message:
+              "Patients may only set payment status to PAID or FAILED",
+          });
+        }
+
+        const existingOrder =
+          await orderService.getOrderById(
+            orderId
+          );
+
+        const ownershipError =
+          await assertPatientOwnsPatientId(
+            req,
+            existingOrder.patientId
+          );
+
+        if (ownershipError) {
+          return res.status(
+            ownershipError.status
+          ).json({
+            success: false,
+            message:
+              ownershipError.message,
+          });
+        }
+      }
+
       const order =
         await orderService
           .updatePaymentStatus(

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 interface OrderItem {
@@ -17,7 +17,20 @@ interface Order {
   deliveryAddress?: string | null;
   notes?: string | null;
   orderDate?: string;
+  totalAmount?: number | string;
   items?: OrderItem[];
+}
+
+function canTrackShipment(status: string) {
+  const normalized = status.toUpperCase();
+  return ["PROCESSING", "SHIPPED", "DELIVERED"].includes(
+    normalized
+  );
+}
+
+function canMakePayment(paymentStatus: string) {
+  const normalized = paymentStatus.toUpperCase();
+  return normalized === "PENDING" || normalized === "FAILED";
 }
 
 function MyOrders() {
@@ -160,6 +173,14 @@ function MyOrders() {
     }
   };
 
+  const openTracking = (orderId: number) => {
+    window.open(
+      `/my/orders/${orderId}/tracking`,
+      "_blank",
+      "noopener,noreferrer"
+    );
+  };
+
   return (
     <div className="patients-page">
       <header className="patients-header">
@@ -197,6 +218,7 @@ function MyOrders() {
                 <h3>Orders</h3>
                 <p className="section-description">
                   Status updates are handled by pharmacy staff.
+                  Track shipment and make payment when available.
                 </p>
               </div>
               {patientId && (
@@ -335,6 +357,7 @@ function MyOrders() {
                       <th>Payment</th>
                       <th>Items</th>
                       <th>Date</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -358,6 +381,35 @@ function MyOrders() {
                                 order.orderDate
                               ).toLocaleString()
                             : "—"}
+                        </td>
+                        <td>
+                          <div className="order-row-actions">
+                            {canTrackShipment(order.status) && (
+                              <button
+                                type="button"
+                                className="secondary-button"
+                                onClick={() =>
+                                  openTracking(order.id)
+                                }
+                              >
+                                Track Shipment
+                              </button>
+                            )}
+                            {canMakePayment(order.paymentStatus) && (
+                              <Link
+                                to={`/my/orders/${order.id}/pay`}
+                                className="primary-button"
+                              >
+                                Make Payment
+                              </Link>
+                            )}
+                            {!canTrackShipment(order.status) &&
+                              !canMakePayment(
+                                order.paymentStatus
+                              ) && (
+                                <span className="muted-text">—</span>
+                              )}
+                          </div>
                         </td>
                       </tr>
                     ))}
