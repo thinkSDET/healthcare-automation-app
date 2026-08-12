@@ -1,4 +1,8 @@
 import { prisma } from "../config/prisma";
+import {
+  safeRecordAuditEvent,
+  type AuditContext,
+} from "./audit.service";
 
 interface OrderItemInput {
   productName: string;
@@ -217,7 +221,8 @@ export const getOrderByIdentifier =
 
 export const createOrder =
   async (
-    data: CreateOrderInput
+    data: CreateOrderInput,
+    auditContext?: AuditContext
   ) => {
 
     const patient =
@@ -273,7 +278,7 @@ export const createOrder =
     const orderNo =
       `ORD-${Date.now()}`;
 
-    return prisma.order.create({
+    const created = await prisma.order.create({
       data: {
 
         orderNo,
@@ -342,6 +347,22 @@ export const createOrder =
         },
       },
     });
+
+    if (auditContext) {
+      await safeRecordAuditEvent({
+        actorUserId: auditContext.actorUserId,
+        actorRole: auditContext.actorRole,
+        action: "CREATE",
+        entityType: "ORDER",
+        entityId: created.id,
+        metadata: {
+          orderNo: created.orderNo,
+          patientId: created.patientId,
+        },
+      });
+    }
+
+    return created;
   };
 
 
@@ -360,7 +381,8 @@ export const updateOrderStatus =
       | "PROCESSING"
       | "SHIPPED"
       | "DELIVERED"
-      | "CANCELLED"
+      | "CANCELLED",
+    auditContext?: AuditContext
   ) => {
 
     const order =
@@ -376,7 +398,7 @@ export const updateOrderStatus =
       );
     }
 
-    return prisma.order.update({
+    const updated = await prisma.order.update({
       where: {
         id: orderId,
       },
@@ -389,6 +411,24 @@ export const updateOrderStatus =
         items: true,
       },
     });
+
+    if (auditContext) {
+      await safeRecordAuditEvent({
+        actorUserId: auditContext.actorUserId,
+        actorRole: auditContext.actorRole,
+        action: "STATUS_CHANGE",
+        entityType: "ORDER",
+        entityId: updated.id,
+        metadata: {
+          orderNo: updated.orderNo,
+          field: "status",
+          from: order.status,
+          to: status,
+        },
+      });
+    }
+
+    return updated;
   };
 
 
@@ -405,7 +445,8 @@ export const updatePaymentStatus =
       | "PENDING"
       | "PAID"
       | "FAILED"
-      | "REFUNDED"
+      | "REFUNDED",
+    auditContext?: AuditContext
   ) => {
 
     const order =
@@ -421,7 +462,7 @@ export const updatePaymentStatus =
       );
     }
 
-    return prisma.order.update({
+    const updated = await prisma.order.update({
       where: {
         id: orderId,
       },
@@ -434,6 +475,24 @@ export const updatePaymentStatus =
         items: true,
       },
     });
+
+    if (auditContext) {
+      await safeRecordAuditEvent({
+        actorUserId: auditContext.actorUserId,
+        actorRole: auditContext.actorRole,
+        action: "STATUS_CHANGE",
+        entityType: "ORDER",
+        entityId: updated.id,
+        metadata: {
+          orderNo: updated.orderNo,
+          field: "paymentStatus",
+          from: order.paymentStatus,
+          to: paymentStatus,
+        },
+      });
+    }
+
+    return updated;
   };
 
 

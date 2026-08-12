@@ -1,9 +1,13 @@
-import { Request, Response } from "express";
+import type { Response } from "express";
+import type { AuthRequest } from "../middleware/auth";
 import * as doctorService from "../services/doctor.service";
 
-export const getDoctors = async (_req: Request, res: Response) => {
+export const getDoctors = async (req: AuthRequest, res: Response) => {
   try {
-    const doctors = await doctorService.getDoctors();
+    const role = req.user?.role?.toUpperCase();
+    const doctors = await doctorService.getDoctors({
+      activeOnly: role === "PATIENT",
+    });
 
     res.status(200).json({
       success: true,
@@ -18,15 +22,23 @@ export const getDoctors = async (_req: Request, res: Response) => {
 };
 
 export const getDoctorById = async (
-  req: Request,
+  req: AuthRequest,
   res: Response
 ) => {
   try {
     const id = Number(req.params.id);
+    const role = req.user?.role?.toUpperCase();
 
     const doctor = await doctorService.getDoctorById(id);
 
     if (!doctor) {
+      return res.status(404).json({
+        success: false,
+        message: "Doctor not found"
+      });
+    }
+
+    if (role === "PATIENT" && doctor.status !== "ACTIVE") {
       return res.status(404).json({
         success: false,
         message: "Doctor not found"
@@ -46,7 +58,7 @@ export const getDoctorById = async (
 };
 
 export const createDoctor = async (
-  req: Request,
+  req: AuthRequest,
   res: Response
 ) => {
   try {
@@ -65,7 +77,7 @@ export const createDoctor = async (
 };
 
 export const updateDoctor = async (
-  req: Request,
+  req: AuthRequest,
   res: Response
 ) => {
   try {
@@ -89,7 +101,7 @@ export const updateDoctor = async (
 };
 
 export const deleteDoctor = async (
-  req: Request,
+  req: AuthRequest,
   res: Response
 ) => {
   try {

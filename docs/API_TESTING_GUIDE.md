@@ -149,9 +149,14 @@ API prefixes (from `server.ts`):
 - `/api/patients`
 - `/api/doctors`
 - `/api/appointments`
+- `/api/appointment-requests`
 - `/api/prescriptions`
 - `/api/refill-requests`
 - `/api/orders`
+- `/api/audit-events`
+- `/api/medications`
+- `/api/replenishment-requests`
+- `/api/lab-orders`
 
 ---
 
@@ -577,6 +582,48 @@ Document upload multer rejections (unsupported MIME / >10MB): **structured statu
 - [ ] create-order on non-APPROVED request → 400
 - [ ] Second create-order on same request → 409
 - [ ] Renewal approve does not change Prescription.status
+- [ ] PATIENT can request appointment; ADMIN/DOCTOR can approve → SCHEDULED appointment created
+- [ ] PATIENT appointment request reject requires reason
+- [ ] PATIENT can cancel SUBMITTED appointment request only
+- [ ] Approve fails when doctor/patient slot already booked (request stays SUBMITTED)
+- [ ] PATIENT can list ACTIVE doctors only; cannot create doctors
+- [ ] PATIENT cannot POST /api/appointments directly
+
+### Audit APIs
+
+- [ ] Unauthenticated GET `/api/audit-events` → 401
+- [ ] PATIENT / DOCTOR / PHARMACIST GET → 403
+- [ ] ADMIN / VIEWER / SUPPORT GET → 200
+- [ ] PUT/PATCH/DELETE `/api/audit-events/:id` → 404 (no write routes)
+- [ ] After appointment create or status change, event appears with actor/action/entity/timestamp
+- [ ] Filters (action, entityType, entityId, actorUserId) return consistent subsets
+
+### Inventory / replenishment APIs
+
+- [ ] Create medication → stockStatus derived correctly
+- [ ] Adjust stock with reason → qty changes; movement recorded
+- [ ] Adjust causing negative stock → 400
+- [ ] Duplicate open replenishment for same medication → 409
+- [ ] PHARMACIST cannot APPROVE replenishment → 403
+- [ ] ADMIN approve → PHARMACIST receive → qty increases
+- [ ] Double receive → 400
+- [ ] PATIENT / DOCTOR cannot access medications → 403
+- [ ] Order create/status still does not change stock
+
+### Lab order APIs
+
+- [ ] ADMIN/DOCTOR create lab order with ACTIVE doctor → 201 REQUESTED
+- [ ] Create with INACTIVE/ON_LEAVE doctor → 400
+- [ ] ADMIN: REQUESTED → SAMPLE_COLLECTED → PROCESSING
+- [ ] DOCTOR cannot mark SAMPLE_COLLECTED → 403
+- [ ] ADMIN upload result → RESULT_AVAILABLE
+- [ ] PATIENT GET detail before ack → no resultSummary/resultFlag
+- [ ] PATIENT download before ack → 403
+- [ ] DOCTOR acknowledge → ACKNOWLEDGED; PatientDocument Lab Report created
+- [ ] PATIENT GET/download after ack → result visible
+- [ ] Acknowledge after ACKNOWLEDGED → 400
+- [ ] PHARMACIST access lab APIs → 403
+- [ ] Reject result → REJECTED; ADMIN return to PROCESSING; re-upload
 
 ---
 

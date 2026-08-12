@@ -1,7 +1,12 @@
 import { prisma } from "../config/prisma";
 
-export const getDoctors = async () => {
+export const getDoctors = async (options?: {
+  activeOnly?: boolean;
+}) => {
   return prisma.doctor.findMany({
+    where: options?.activeOnly
+      ? { status: "ACTIVE" }
+      : undefined,
     orderBy: {
       createdAt: "desc"
     }

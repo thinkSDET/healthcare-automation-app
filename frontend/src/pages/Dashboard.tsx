@@ -20,6 +20,11 @@ function Dashboard() {
   const isPharmacist =
     role === "PHARMACIST";
 
+  const canViewAudit =
+    role === "ADMIN" ||
+    role === "VIEWER" ||
+    role === "SUPPORT";
+
   return (
     <div className="dashboard-page">
 
@@ -154,7 +159,30 @@ function Dashboard() {
                 </h3>
 
                 <p>
-                  View your appointment history
+                  View appointments and request visits for staff approval
+                </p>
+              </div>
+            </div>
+          )}
+
+          {(isAdmin || isDoctor) && (
+            <div
+              className="dashboard-card"
+              onClick={() =>
+                navigate("/appointment-requests")
+              }
+            >
+              <div className="card-icon">
+                🗓️
+              </div>
+
+              <div>
+                <h3>
+                  Appointment Requests
+                </h3>
+
+                <p>
+                  Review and approve patient appointment requests
                 </p>
               </div>
             </div>
@@ -275,6 +303,75 @@ function Dashboard() {
             </div>
           )}
 
+          {(isAdmin || isPharmacist) && (
+            <div
+              className="dashboard-card"
+              onClick={() =>
+                navigate("/inventory")
+              }
+            >
+              <div className="card-icon">
+                📦
+              </div>
+
+              <div>
+                <h3>
+                  Inventory
+                </h3>
+
+                <p>
+                  Medication stock levels and adjustments
+                </p>
+              </div>
+            </div>
+          )}
+
+          {(isAdmin || isPharmacist) && (
+            <div
+              className="dashboard-card"
+              onClick={() =>
+                navigate("/replenishment-requests")
+              }
+            >
+              <div className="card-icon">
+                📥
+              </div>
+
+              <div>
+                <h3>
+                  Replenishment
+                </h3>
+
+                <p>
+                  Request, approve, and receive stock
+                </p>
+              </div>
+            </div>
+          )}
+
+          {canViewAudit && (
+            <div
+              className="dashboard-card"
+              onClick={() =>
+                navigate("/audit-logs")
+              }
+            >
+              <div className="card-icon">
+                📋
+              </div>
+
+              <div>
+                <h3>
+                  Audit Logs
+                </h3>
+
+                <p>
+                  Review clinical and operational mutation trail
+                </p>
+              </div>
+            </div>
+          )}
+
         </div>
 
         <section className="dashboard-welcome">
@@ -295,6 +392,9 @@ function Dashboard() {
 
             {isPharmacist &&
               "Look up prescriptions and orders, and review refill requests in the refill queue."}
+
+            {(role === "VIEWER" || role === "SUPPORT") &&
+              "Review the operational audit trail for important clinical and business changes."}
 
           </p>
 

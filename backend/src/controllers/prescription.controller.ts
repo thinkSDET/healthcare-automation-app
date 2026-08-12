@@ -213,11 +213,18 @@ export const getPrescriptionById =
 
 export const createPrescription =
   async (
-    req: Request,
+    req: AuthRequest,
     res: Response
   ) => {
 
     try {
+
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          message: "Authentication required",
+        });
+      }
 
       const {
         patientId,
@@ -253,23 +260,29 @@ export const createPrescription =
 
       const prescription =
         await prescriptionService
-          .createPrescription({
-            patientId:
-              Number(patientId),
+          .createPrescription(
+            {
+              patientId:
+                Number(patientId),
 
-            doctorId:
-              Number(doctorId),
+              doctorId:
+                Number(doctorId),
 
-            prescribedAt,
+              prescribedAt,
 
-            diagnosis,
+              diagnosis,
 
-            notes,
+              notes,
 
-            status,
+              status,
 
-            items,
-          });
+              items,
+            },
+            {
+              actorUserId: req.user.userId,
+              actorRole: req.user.role,
+            }
+          );
 
       return res.status(201).json({
         success: true,
@@ -341,11 +354,18 @@ export const createPrescription =
 
 export const updatePrescriptionStatus =
   async (
-    req: Request,
+    req: AuthRequest,
     res: Response
   ) => {
 
     try {
+
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          message: "Authentication required",
+        });
+      }
 
       const prescriptionId =
         Number(req.params.id);
@@ -384,7 +404,11 @@ export const updatePrescriptionStatus =
         await prescriptionService
           .updatePrescriptionStatus(
             prescriptionId,
-            status
+            status,
+            {
+              actorUserId: req.user.userId,
+              actorRole: req.user.role,
+            }
           );
 
       return res.status(200).json({
@@ -430,11 +454,18 @@ export const updatePrescriptionStatus =
 
 export const deletePrescription =
   async (
-    req: Request,
+    req: AuthRequest,
     res: Response
   ) => {
 
     try {
+
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          message: "Authentication required",
+        });
+      }
 
       const prescriptionId =
         Number(req.params.id);
@@ -454,7 +485,11 @@ export const deletePrescription =
       const result =
         await prescriptionService
           .deletePrescription(
-            prescriptionId
+            prescriptionId,
+            {
+              actorUserId: req.user.userId,
+              actorRole: req.user.role,
+            }
           );
 
       return res.status(200).json({

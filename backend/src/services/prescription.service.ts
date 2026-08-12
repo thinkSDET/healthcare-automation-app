@@ -1,4 +1,8 @@
 import { prisma } from "../config/prisma";
+import {
+  safeRecordAuditEvent,
+  type AuditContext,
+} from "./audit.service";
 
 /*
 |--------------------------------------------------------------------------
@@ -133,7 +137,8 @@ export const getPrescriptionById =
 
 export const createPrescription =
   async (
-    data: CreatePrescriptionInput
+    data: CreatePrescriptionInput,
+    auditContext?: AuditContext
   ) => {
 
     const patient =
@@ -188,7 +193,7 @@ export const createPrescription =
     const prescriptionNo =
       `RX-${Date.now()}`;
 
-    return prisma.prescription.create({
+    const created = await prisma.prescription.create({
       data: {
 
         prescriptionNo,
@@ -269,6 +274,23 @@ export const createPrescription =
         items: true,
       },
     });
+
+    if (auditContext) {
+      await safeRecordAuditEvent({
+        actorUserId: auditContext.actorUserId,
+        actorRole: auditContext.actorRole,
+        action: "CREATE",
+        entityType: "PRESCRIPTION",
+        entityId: created.id,
+        metadata: {
+          prescriptionNo: created.prescriptionNo,
+          patientId: created.patientId,
+          doctorId: created.doctorId,
+        },
+      });
+    }
+
+    return created;
   };
 
 
@@ -284,7 +306,8 @@ export const updatePrescriptionStatus =
     status:
       | "ACTIVE"
       | "COMPLETED"
-      | "CANCELLED"
+      | "CANCELLED",
+    auditContext?: AuditContext
   ) => {
 
     const prescription =
@@ -300,7 +323,7 @@ export const updatePrescriptionStatus =
       );
     }
 
-    return prisma.prescription.update({
+    const updated = await prisma.prescription.update({
       where: {
         id: prescriptionId,
       },
@@ -323,6 +346,23 @@ export const updatePrescriptionStatus =
         },
       },
     });
+
+    if (auditContext) {
+      await safeRecordAuditEvent({
+        actorUserId: auditContext.actorUserId,
+        actorRole: auditContext.actorRole,
+        action: "STATUS_CHANGE",
+        entityType: "PRESCRIPTION",
+        entityId: updated.id,
+        metadata: {
+          prescriptionNo: updated.prescriptionNo,
+          from: prescription.status,
+          to: status,
+        },
+      });
+    }
+
+    return updated;
   };
 
 
@@ -334,7 +374,8 @@ export const updatePrescriptionStatus =
 
 export const deletePrescription =
   async (
-    prescriptionId: number
+    prescriptionId: number,
+    auditContext?: AuditContext
   ) => {
 
     const prescription =
@@ -355,6 +396,20 @@ export const deletePrescription =
         id: prescriptionId,
       },
     });
+
+    if (auditContext) {
+      await safeRecordAuditEvent({
+        actorUserId: auditContext.actorUserId,
+        actorRole: auditContext.actorRole,
+        action: "DELETE",
+        entityType: "PRESCRIPTION",
+        entityId: prescriptionId,
+        metadata: {
+          prescriptionNo: prescription.prescriptionNo,
+          patientId: prescription.patientId,
+        },
+      });
+    }
 
     return {
       message:

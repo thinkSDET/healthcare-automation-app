@@ -31,6 +31,15 @@ import PaymentFormEmbed from "./pages/PaymentFormEmbed";
 import PharmacyWorkspace from "./pages/PharmacyWorkspace";
 import MyPrescriptions from "./pages/MyPrescriptions";
 import RefillRequestReview from "./pages/RefillRequestReview";
+import RequestAppointment from "./pages/RequestAppointment";
+import AppointmentRequestReview from "./pages/AppointmentRequestReview";
+import AuditLogs from "./pages/AuditLogs";
+import Inventory from "./pages/Inventory";
+import ReplenishmentRequests from "./pages/ReplenishmentRequests";
+import LabOrders from "./pages/LabOrders";
+import LabOrderDetails from "./pages/LabOrderDetails";
+import MyLabOrders from "./pages/MyLabOrders";
+import MyLabOrderDetails from "./pages/MyLabOrderDetails";
 import AppLayout from "./components/AppLayout";
 
 import "./App.css";
@@ -142,6 +151,21 @@ function App() {
               path="/refill-requests"
               element={<RefillRequestReview />}
             />
+
+            <Route
+              path="/appointment-requests"
+              element={<AppointmentRequestReview />}
+            />
+
+            <Route
+              path="/lab-orders"
+              element={<LabOrders />}
+            />
+
+            <Route
+              path="/lab-orders/:id"
+              element={<LabOrderDetails />}
+            />
           </Route>
         </Route>
 
@@ -168,6 +192,34 @@ function App() {
             <Route
               path="/patients/:id/orders"
               element={<PatientOrders />}
+            />
+          </Route>
+        </Route>
+
+
+        {/* =========================
+            ADMIN + PHARMACIST (Inventory)
+           ========================= */}
+
+        <Route
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "ADMIN",
+                "PHARMACIST",
+              ]}
+            />
+          }
+        >
+          <Route element={<AppLayout />}>
+            <Route
+              path="/inventory"
+              element={<Inventory />}
+            />
+
+            <Route
+              path="/replenishment-requests"
+              element={<ReplenishmentRequests />}
             />
           </Route>
         </Route>
@@ -204,6 +256,11 @@ function App() {
             />
 
             <Route
+              path="/my/appointments/request"
+              element={<RequestAppointment />}
+            />
+
+            <Route
               path="/my/orders"
               element={<MyOrders />}
             />
@@ -221,6 +278,16 @@ function App() {
             <Route
               path="/my/prescriptions"
               element={<MyPrescriptions />}
+            />
+
+            <Route
+              path="/my/lab-orders"
+              element={<MyLabOrders />}
+            />
+
+            <Route
+              path="/my/lab-orders/:id"
+              element={<MyLabOrderDetails />}
             />
           </Route>
         </Route>
@@ -247,6 +314,30 @@ function App() {
             <Route
               path="/refill-requests"
               element={<RefillRequestReview />}
+            />
+          </Route>
+        </Route>
+
+
+        {/* =========================
+            ADMIN + VIEWER + SUPPORT (Audit)
+           ========================= */}
+
+        <Route
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "ADMIN",
+                "VIEWER",
+                "SUPPORT",
+              ]}
+            />
+          }
+        >
+          <Route element={<AppLayout />}>
+            <Route
+              path="/audit-logs"
+              element={<AuditLogs />}
             />
           </Route>
         </Route>

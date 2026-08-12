@@ -37,6 +37,15 @@ model User {
   patient             Patient?
   refillRequestsCreated  PrescriptionRefillRequest[] @relation("RefillRequestedBy")
   refillRequestsReviewed PrescriptionRefillRequest[] @relation("RefillReviewedBy")
+  appointmentRequestsCreated  AppointmentRequest[] @relation("AppointmentRequestedBy")
+  appointmentRequestsReviewed AppointmentRequest[] @relation("AppointmentReviewedBy")
+  auditEvents                 AuditEvent[]
+  stockMovements              StockMovement[]
+  replenishmentRequestsCreated  ReplenishmentRequest[] @relation("ReplenishmentRequestedBy")
+  replenishmentRequestsReviewed ReplenishmentRequest[] @relation("ReplenishmentReviewedBy")
+  labTestOrdersCreated          LabTestOrder[] @relation("LabTestOrderCreatedBy")
+  labTestOrdersAcknowledged     LabTestOrder[] @relation("LabTestOrderAcknowledgedBy")
+  labTestOrdersResultUploaded   LabTestOrder[] @relation("LabTestOrderResultUploadedBy")
 }
 
 enum PatientStatus {
@@ -92,6 +101,8 @@ model Patient {
   prescriptions Prescription[]
   orders        Order[]
   refillRequests PrescriptionRefillRequest[]
+  appointmentRequests AppointmentRequest[]
+  labTestOrders LabTestOrder[]
 }
 
 enum DoctorStatus {
@@ -116,6 +127,8 @@ model Doctor {
 
   appointments Appointment[]
   prescriptions Prescription[]
+  appointmentRequests AppointmentRequest[]
+  labTestOrders LabTestOrder[]
 }
 
 enum AppointmentStatus {
@@ -150,10 +163,51 @@ model Appointment {
 
   patient Patient @relation(fields: [patientId], references: [id])
   doctor  Doctor  @relation(fields: [doctorId], references: [id])
+  appointmentRequest AppointmentRequest?
+  labTestOrders LabTestOrder[]
 
   @@index([patientId])
   @@index([doctorId])
   @@index([appointmentAt])
+}
+
+enum AppointmentRequestStatus {
+  SUBMITTED
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model AppointmentRequest {
+  id                Int                      @id @default(autoincrement())
+  requestNo         String                   @unique
+  patientId         Int
+  doctorId          Int
+  requestedAt       DateTime
+  duration          Int                      @default(30)
+  type              AppointmentType          @default(IN_PERSON)
+  reason            String
+  notes             String?
+  status            AppointmentRequestStatus @default(SUBMITTED)
+  requestedByUserId Int
+  reviewedByUserId  Int?
+  rejectionReason   String?
+  reviewedAt        DateTime?
+  appointmentId     Int?                     @unique
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+
+  patient     Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor      Doctor       @relation(fields: [doctorId], references: [id])
+  requestedBy User         @relation("AppointmentRequestedBy", fields: [requestedByUserId], references: [id])
+  reviewedBy  User?        @relation("AppointmentReviewedBy", fields: [reviewedByUserId], references: [id])
+  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([status])
+  @@index([requestedAt])
+  @@index([patientId, doctorId, requestedAt, status])
 }
 
 model PasswordResetToken {
@@ -213,6 +267,7 @@ model PatientDocument {
   updatedAt    DateTime @updatedAt
 
   patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  labTestOrderResult LabTestOrder? @relation("LabTestOrderResultDocument")
 
   @@index([patientId])
 }
@@ -369,4 +424,158 @@ model PrescriptionRefillRequest {
   @@index([status])
   @@index([requestType])
   @@index([prescriptionId, status])
+}
+
+model AuditEvent {
+  id           Int      @id @default(autoincrement())
+  occurredAt   DateTime @default(now())
+  actorUserId  Int?
+  actorRole    String
+  action       String
+  entityType   String
+  entityId     Int
+  metadata     Json?
+  actor        User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([occurredAt])
+  @@index([entityType, entityId])
+  @@index([actorUserId])
+  @@index([action])
+}
+
+enum MedicationStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Medication {
+  id               Int              @id @default(autoincrement())
+  sku              String           @unique
+  name             String
+  unit             String
+  quantityOnHand   Int              @default(0)
+  reorderLevel     Int              @default(0)
+  reorderQuantity  Int              @default(0)
+  status           MedicationStatus @default(ACTIVE)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  stockMovements         StockMovement[]
+  replenishmentRequests  ReplenishmentRequest[]
+
+  @@index([status])
+  @@index([name])
+  @@index([quantityOnHand])
+}
+
+enum ReplenishmentRequestStatus {
+  SUBMITTED
+  APPROVED
+  REJECTED
+  CANCELLED
+  RECEIVED
+}
+
+model ReplenishmentRequest {
+  id                Int                        @id @default(autoincrement())
+  requestNo         String                     @unique
+  medicationId      Int
+  requestedQuantity Int
+  status            ReplenishmentRequestStatus @default(SUBMITTED)
+  requestedByUserId Int
+  reviewedByUserId  Int?
+  rejectionReason   String?
+  notes             String?
+  receivedQuantity  Int?
+  reviewedAt        DateTime?
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+
+  medication  Medication      @relation(fields: [medicationId], references: [id])
+  requestedBy User            @relation("ReplenishmentRequestedBy", fields: [requestedByUserId], references: [id])
+  reviewedBy  User?           @relation("ReplenishmentReviewedBy", fields: [reviewedByUserId], references: [id])
+  movements   StockMovement[]
+
+  @@index([medicationId])
+  @@index([status])
+  @@index([medicationId, status])
+}
+
+model StockMovement {
+  id                     Int      @id @default(autoincrement())
+  medicationId           Int
+  movementType           String
+  quantityDelta          Int
+  quantityBefore         Int
+  quantityAfter          Int
+  reason                 String?
+  actorUserId            Int
+  replenishmentRequestId Int?
+  createdAt              DateTime @default(now())
+
+  medication           Medication            @relation(fields: [medicationId], references: [id])
+  actor                User                  @relation(fields: [actorUserId], references: [id])
+  replenishmentRequest ReplenishmentRequest? @relation(fields: [replenishmentRequestId], references: [id])
+
+  @@index([medicationId])
+  @@index([createdAt])
+  @@index([replenishmentRequestId])
+}
+
+enum LabTestOrderStatus {
+  REQUESTED
+  SAMPLE_COLLECTED
+  PROCESSING
+  RESULT_AVAILABLE
+  ACKNOWLEDGED
+  CANCELLED
+  REJECTED
+}
+
+enum LabResultFlag {
+  NORMAL
+  ABNORMAL
+  CRITICAL
+}
+
+model LabTestOrder {
+  id                       Int                @id @default(autoincrement())
+  orderNo                  String             @unique
+  patientId                Int
+  doctorId                 Int
+  appointmentId            Int?
+  testName                 String
+  status                   LabTestOrderStatus @default(REQUESTED)
+  orderedAt                DateTime           @default(now())
+  notes                    String?
+  createdByUserId          Int
+  resultSummary            String?
+  resultFlag               LabResultFlag?
+  resultOriginalName       String?
+  resultStoredName         String?
+  resultMimeType           String?
+  resultSize               Int?
+  resultFilePath           String?
+  resultUploadedAt         DateTime?
+  resultUploadedByUserId   Int?
+  resultDocumentId         Int?               @unique
+  acknowledgedByUserId     Int?
+  acknowledgedAt           DateTime?
+  rejectionReason          String?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+
+  patient              Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor               Doctor           @relation(fields: [doctorId], references: [id])
+  appointment          Appointment?     @relation(fields: [appointmentId], references: [id])
+  createdBy            User             @relation("LabTestOrderCreatedBy", fields: [createdByUserId], references: [id])
+  resultUploadedBy     User?            @relation("LabTestOrderResultUploadedBy", fields: [resultUploadedByUserId], references: [id])
+  acknowledgedBy       User?            @relation("LabTestOrderAcknowledgedBy", fields: [acknowledgedByUserId], references: [id])
+  resultDocument       PatientDocument? @relation("LabTestOrderResultDocument", fields: [resultDocumentId], references: [id])
+
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([status])
+  @@index([orderedAt])
+  @@index([patientId, status])
 }

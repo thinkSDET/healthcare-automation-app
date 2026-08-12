@@ -10,6 +10,11 @@ import prescriptionRoutes from "./routes/prescription.routes";
 import orderRoutes
   from "./routes/order.routes";
 import refillRequestRoutes from "./routes/refill-request.routes";
+import appointmentRequestRoutes from "./routes/appointment-request.routes";
+import auditRoutes from "./routes/audit.routes";
+import medicationRoutes from "./routes/medication.routes";
+import replenishmentRequestRoutes from "./routes/replenishment-request.routes";
+import labOrderRoutes from "./routes/lab-order.routes";
 
 
 const app = express();
@@ -37,6 +42,26 @@ app.use(
 app.use(
   "/api/refill-requests",
   refillRequestRoutes
+);
+app.use(
+  "/api/appointment-requests",
+  appointmentRequestRoutes
+);
+app.use(
+  "/api/audit-events",
+  auditRoutes
+);
+app.use(
+  "/api/medications",
+  medicationRoutes
+);
+app.use(
+  "/api/replenishment-requests",
+  replenishmentRequestRoutes
+);
+app.use(
+  "/api/lab-orders",
+  labOrderRoutes
 );
 
 // Health check

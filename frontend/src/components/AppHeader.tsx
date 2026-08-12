@@ -25,7 +25,23 @@ function getPrimaryNav(role?: string): NavItem[] {
       { to: "/patients", label: "Patients" },
       { to: "/doctors", label: "Doctors" },
       { to: "/appointments", label: "Appointments" },
+      { to: "/appointment-requests", label: "Appt Requests" },
       { to: "/refill-requests", label: "Refills" },
+      { to: "/lab-orders", label: "Lab Orders" },
+      ...(normalized === "ADMIN"
+        ? [
+            { to: "/inventory", label: "Inventory" },
+            { to: "/replenishment-requests", label: "Replenish" },
+            { to: "/audit-logs", label: "Audit Logs" },
+          ]
+        : []),
+    ];
+  }
+
+  if (normalized === "VIEWER" || normalized === "SUPPORT") {
+    return [
+      { to: "/dashboard", label: "Dashboard" },
+      { to: "/audit-logs", label: "Audit Logs" },
     ];
   }
 
@@ -35,6 +51,7 @@ function getPrimaryNav(role?: string): NavItem[] {
       { to: "/my/profile", label: "My Profile" },
       { to: "/my/appointments", label: "My Appointments" },
       { to: "/my/prescriptions", label: "My Prescriptions" },
+      { to: "/my/lab-orders", label: "My Lab Results" },
       { to: "/my/orders", label: "My Orders" },
     ];
   }
@@ -43,6 +60,8 @@ function getPrimaryNav(role?: string): NavItem[] {
     return [
       { to: "/dashboard", label: "Dashboard" },
       { to: "/pharmacy", label: "Pharmacy" },
+      { to: "/inventory", label: "Inventory" },
+      { to: "/replenishment-requests", label: "Replenish" },
       { to: "/refill-requests", label: "Refills" },
     ];
   }

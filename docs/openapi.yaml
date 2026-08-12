@@ -22,8 +22,9 @@ info:
     ## Roles (UserRole enum)
     ADMIN, DOCTOR, PHARMACIST, PATIENT, SUPPORT, VIEWER
     
-    SUPPORT and VIEWER exist in the schema and can be assigned via admin user APIs,
-    but no current route authorize() list includes them for business resources.
+    SUPPORT and VIEWER exist in the schema and can be assigned via admin user APIs.
+    They are authorized for read-only audit access via GET /api/audit-events
+    (along with ADMIN). Other business routes do not authorize SUPPORT/VIEWER.
     
     ## Base URL
     http://localhost:4000 (PORT hardcoded in backend/src/server.ts)
@@ -52,12 +53,22 @@ tags:
     description: Doctor directory CRUD
   - name: Appointments
     description: Scheduling and lifecycle
+  - name: AppointmentRequests
+    description: Patient appointment request and staff approval workflow
   - name: Prescriptions
     description: Prescription CRUD and status
   - name: RefillRequests
     description: Prescription refill and renewal request workflow
   - name: Orders
     description: Pharmacy/order APIs (fulfillment roles include PHARMACIST)
+  - name: Audit
+    description: Append-only clinical/operational audit trail (read-only)
+  - name: Medications
+    description: Pharmacy medication catalog and stock adjustments
+  - name: ReplenishmentRequests
+    description: Medication replenishment request workflow
+  - name: LabOrders
+    description: Lab test order, result upload, and clinical acknowledgment
 paths:
   /api/health:
     get:
@@ -1472,7 +1483,7 @@ paths:
       tags:
         - Doctors
       summary: List doctors
-      description: "Roles: ADMIN, DOCTOR."
+      description: "Roles: ADMIN, DOCTOR, PATIENT. PATIENT receives ACTIVE doctors only."
       operationId: getDoctors
       security:
         - BearerAuth: 
@@ -1972,6 +1983,145 @@ paths:
           $ref: "#/components/responses/NotFound"
         500:
           $ref: "#/components/responses/ServerError"
+  /api/appointment-requests:
+    post:
+      tags:
+        - AppointmentRequests
+      summary: Create appointment request
+      description: Role PATIENT (own linked patient). Creates SUBMITTED request. Does not create Appointment until approved.
+      operationId: createAppointmentRequest
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [doctorId, requestedAt, reason]
+              properties:
+                doctorId:
+                  type: integer
+                requestedAt:
+                  type: string
+                  format: date-time
+                duration:
+                  type: integer
+                type:
+                  type: string
+                  enum: [IN_PERSON, VIDEO, PHONE]
+                reason:
+                  type: string
+                notes:
+                  type: string
+      responses:
+        201:
+          description: Created
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        409:
+          description: Duplicate or overlap conflict
+    get:
+      tags:
+        - AppointmentRequests
+      summary: List appointment requests
+      description: Roles ADMIN, DOCTOR, PATIENT (own only).
+      operationId: listAppointmentRequests
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [SUBMITTED, APPROVED, REJECTED, CANCELLED]
+        - name: doctorId
+          in: query
+          schema:
+            type: integer
+        - name: patientId
+          in: query
+          schema:
+            type: integer
+      responses:
+        200:
+          description: List
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+  /api/appointment-requests/{id}:
+    get:
+      tags:
+        - AppointmentRequests
+      summary: Get appointment request by id
+      operationId: getAppointmentRequestById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Detail
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+  /api/appointment-requests/{id}/status:
+    patch:
+      tags:
+        - AppointmentRequests
+      summary: Update appointment request status
+      description: |
+        SUBMITTED → APPROVED creates Appointment via existing createAppointment (SCHEDULED).
+        SUBMITTED → REJECTED requires rejectionReason.
+        SUBMITTED → CANCELLED by requester PATIENT or ADMIN.
+        Does not modify AppointmentStatus enum.
+      operationId: updateAppointmentRequestStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [APPROVED, REJECTED, CANCELLED]
+                rejectionReason:
+                  type: string
+      responses:
+        200:
+          description: Updated
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        409:
+          description: Slot conflict on approve
   /api/prescriptions/patient/{patientId}:
     get:
       tags:
@@ -2719,6 +2869,563 @@ paths:
           $ref: "#/components/responses/Forbidden"
         404:
           $ref: "#/components/responses/NotFound"
+        500:
+          $ref: "#/components/responses/ServerError"
+  /api/medications:
+    get:
+      tags: [Medications]
+      summary: List medications
+      description: "Roles: ADMIN, PHARMACIST. Filters: status, stockStatus, q."
+      operationId: listMedications
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [ACTIVE, INACTIVE]
+        - name: stockStatus
+          in: query
+          schema:
+            type: string
+            enum: [IN_STOCK, LOW_STOCK, OUT_OF_STOCK]
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        200:
+          description: Success
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Medications]
+      summary: Create medication
+      description: "Roles: ADMIN, PHARMACIST."
+      operationId: createMedication
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sku, name, unit]
+              properties:
+                sku: { type: string }
+                name: { type: string }
+                unit: { type: string }
+                quantityOnHand: { type: integer, minimum: 0 }
+                reorderLevel: { type: integer, minimum: 0 }
+                reorderQuantity: { type: integer, minimum: 0 }
+                status: { type: string, enum: [ACTIVE, INACTIVE] }
+      responses:
+        201:
+          description: Created
+        400:
+          $ref: "#/components/responses/ValidationError"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        409:
+          description: Duplicate SKU
+  /api/medications/{id}:
+    get:
+      tags: [Medications]
+      summary: Get medication
+      operationId: getMedicationById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        200:
+          description: Success
+        404:
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Medications]
+      summary: Update medication catalog fields
+      description: Does not change quantityOnHand.
+      operationId: updateMedication
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                unit: { type: string }
+                reorderLevel: { type: integer, minimum: 0 }
+                reorderQuantity: { type: integer, minimum: 0 }
+                status: { type: string, enum: [ACTIVE, INACTIVE] }
+      responses:
+        200:
+          description: Updated
+        404:
+          $ref: "#/components/responses/NotFound"
+  /api/medications/{id}/adjust:
+    post:
+      tags: [Medications]
+      summary: Adjust medication stock
+      description: "Roles: ADMIN, PHARMACIST. Reason required. Result qty cannot be negative."
+      operationId: adjustMedicationStock
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [delta, reason]
+              properties:
+                delta: { type: integer }
+                reason: { type: string, minLength: 3 }
+      responses:
+        200:
+          description: Adjusted
+        400:
+          description: Invalid delta / negative stock / inactive
+        409:
+          description: Concurrent update
+  /api/medications/{id}/movements:
+    get:
+      tags: [Medications]
+      summary: List stock movements
+      operationId: listMedicationMovements
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        200:
+          description: Success
+  /api/replenishment-requests:
+    get:
+      tags: [ReplenishmentRequests]
+      summary: List replenishment requests
+      operationId: listReplenishmentRequests
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [SUBMITTED, APPROVED, REJECTED, CANCELLED, RECEIVED]
+        - name: medicationId
+          in: query
+          schema: { type: integer }
+      responses:
+        200:
+          description: Success
+    post:
+      tags: [ReplenishmentRequests]
+      summary: Create replenishment request
+      operationId: createReplenishmentRequest
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [medicationId, requestedQuantity]
+              properties:
+                medicationId: { type: integer }
+                requestedQuantity: { type: integer, minimum: 1 }
+                notes: { type: string }
+      responses:
+        201:
+          description: Created
+        409:
+          description: Duplicate open request
+  /api/replenishment-requests/{id}:
+    get:
+      tags: [ReplenishmentRequests]
+      summary: Get replenishment request
+      operationId: getReplenishmentRequestById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        200:
+          description: Success
+        404:
+          $ref: "#/components/responses/NotFound"
+  /api/replenishment-requests/{id}/status:
+    patch:
+      tags: [ReplenishmentRequests]
+      summary: Update replenishment status
+      description: |
+        APPROVE/REJECT: ADMIN only.
+        CANCEL: ADMIN or requester from SUBMITTED.
+        RECEIVE: ADMIN/PHARMACIST from APPROVED; increases stock.
+      operationId: updateReplenishmentRequestStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [APPROVED, REJECTED, CANCELLED, RECEIVED]
+                rejectionReason: { type: string }
+                receivedQuantity: { type: integer, minimum: 1 }
+      responses:
+        200:
+          description: Updated
+        403:
+          $ref: "#/components/responses/Forbidden"
+        400:
+          description: Invalid transition
+  /api/lab-orders:
+    get:
+      tags: [LabOrders]
+      summary: List lab test orders
+      description: |
+        Roles: ADMIN, DOCTOR, PATIENT (own only).
+        Filters: status, patientId, doctorId.
+        PATIENT responses omit result content unless status is ACKNOWLEDGED.
+      operationId: listLabTestOrders
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - REQUESTED
+              - SAMPLE_COLLECTED
+              - PROCESSING
+              - RESULT_AVAILABLE
+              - ACKNOWLEDGED
+              - CANCELLED
+              - REJECTED
+        - name: patientId
+          in: query
+          schema: { type: integer }
+        - name: doctorId
+          in: query
+          schema: { type: integer }
+      responses:
+        200:
+          description: Success
+    post:
+      tags: [LabOrders]
+      summary: Create lab test order
+      description: |
+        Roles: ADMIN, DOCTOR.
+        Ordering doctor must be ACTIVE.
+        Optional appointmentId must match patient and doctor.
+      operationId: createLabTestOrder
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [patientId, doctorId, testName]
+              properties:
+                patientId: { type: integer }
+                doctorId: { type: integer }
+                testName: { type: string }
+                appointmentId: { type: integer }
+                notes: { type: string }
+                orderedAt: { type: string, format: date-time }
+      responses:
+        201:
+          description: Created
+        400:
+          description: Validation or inactive doctor / appointment mismatch
+  /api/lab-orders/{id}:
+    get:
+      tags: [LabOrders]
+      summary: Get lab test order
+      description: PATIENT sees result fields only when ACKNOWLEDGED.
+      operationId: getLabTestOrderById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        200:
+          description: Success
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+  /api/lab-orders/{id}/status:
+    patch:
+      tags: [LabOrders]
+      summary: Update lab order status
+      description: |
+        SAMPLE_COLLECTED / PROCESSING: ADMIN only.
+        CANCELLED: ADMIN or DOCTOR from REQUESTED or SAMPLE_COLLECTED.
+        REJECTED: ADMIN or DOCTOR from RESULT_AVAILABLE (rejectionReason required).
+        REJECTED → PROCESSING via status PROCESSING (ADMIN).
+      operationId: updateLabTestOrderStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [SAMPLE_COLLECTED, PROCESSING, CANCELLED, REJECTED]
+                rejectionReason: { type: string }
+      responses:
+        200:
+          description: Updated
+        400:
+          description: Invalid transition
+        403:
+          $ref: "#/components/responses/Forbidden"
+  /api/lab-orders/{id}/result:
+    post:
+      tags: [LabOrders]
+      summary: Upload or replace lab result
+      description: |
+        Role: ADMIN.
+        Allowed from PROCESSING or RESULT_AVAILABLE (replace).
+        Sets status to RESULT_AVAILABLE.
+        Multipart fields: resultSummary, resultFlag, optional document file.
+      operationId: uploadLabTestResult
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [resultSummary, resultFlag]
+              properties:
+                resultSummary: { type: string }
+                resultFlag:
+                  type: string
+                  enum: [NORMAL, ABNORMAL, CRITICAL]
+                document:
+                  type: string
+                  format: binary
+      responses:
+        200:
+          description: Result uploaded
+        400:
+          description: Invalid status or missing fields
+        403:
+          $ref: "#/components/responses/Forbidden"
+  /api/lab-orders/{id}/acknowledge:
+    post:
+      tags: [LabOrders]
+      summary: Acknowledge lab result
+      description: |
+        Roles: ADMIN, DOCTOR.
+        From RESULT_AVAILABLE → ACKNOWLEDGED.
+        Creates PatientDocument type "Lab Report" when a result file/summary is present.
+      operationId: acknowledgeLabTestOrder
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        200:
+          description: Acknowledged
+        400:
+          description: Invalid transition
+        403:
+          $ref: "#/components/responses/Forbidden"
+  /api/lab-orders/{id}/result-document/download:
+    get:
+      tags: [LabOrders]
+      summary: Download lab result file
+      description: |
+        Roles: ADMIN, DOCTOR, PATIENT.
+        PATIENT only when status is ACKNOWLEDGED.
+      operationId: downloadLabTestResult
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        200:
+          description: File download
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          description: File or order not found
+  /api/audit-events:
+    get:
+      tags:
+        - Audit
+      summary: List audit events
+      description: |
+        Roles: ADMIN, VIEWER, SUPPORT.
+        Append-only operational trail. No create/update/delete endpoints.
+        Sorted by occurredAt descending. Default limit 50, max 100.
+      operationId: listAuditEvents
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: actorUserId
+          in: query
+          schema:
+            type: integer
+        - name: action
+          in: query
+          schema:
+            type: string
+            enum:
+              - CREATE
+              - UPDATE
+              - STATUS_CHANGE
+              - APPROVE
+              - REJECT
+              - CANCEL
+              - DELETE
+        - name: entityType
+          in: query
+          schema:
+            type: string
+            enum:
+              - PATIENT
+              - APPOINTMENT
+              - APPOINTMENT_REQUEST
+              - PRESCRIPTION
+              - REFILL_REQUEST
+              - ORDER
+              - MEDICATION
+              - REPLENISHMENT_REQUEST
+              - LAB_TEST_ORDER
+        - name: entityId
+          in: query
+          schema:
+            type: integer
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AuditEvent"
+                  meta:
+                    type: object
+                    properties:
+                      limit:
+                        type: integer
+                      offset:
+                        type: integer
+                      total:
+                        type: integer
+        400:
+          $ref: "#/components/responses/ValidationError"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
         500:
           $ref: "#/components/responses/ServerError"
 components:
@@ -3867,3 +4574,39 @@ components:
             - PAID
             - FAILED
             - REFUNDED
+    AuditEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+        occurredAt:
+          type: string
+          format: date-time
+        actorUserId:
+          type: integer
+          nullable: true
+        actorRole:
+          type: string
+        action:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: integer
+        metadata:
+          type: object
+          nullable: true
+        actor:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: integer
+            firstName:
+              type: string
+            lastName:
+              type: string
+            email:
+              type: string
+            role:
+              type: string
