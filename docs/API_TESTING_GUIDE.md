@@ -156,6 +156,7 @@ API prefixes (from `server.ts`):
 - `/api/audit-events`
 - `/api/medications`
 - `/api/replenishment-requests`
+- `/api/lab-orders`
 
 ---
 
@@ -608,6 +609,21 @@ Document upload multer rejections (unsupported MIME / >10MB): **structured statu
 - [ ] Double receive → 400
 - [ ] PATIENT / DOCTOR cannot access medications → 403
 - [ ] Order create/status still does not change stock
+
+### Lab order APIs
+
+- [ ] ADMIN/DOCTOR create lab order with ACTIVE doctor → 201 REQUESTED
+- [ ] Create with INACTIVE/ON_LEAVE doctor → 400
+- [ ] ADMIN: REQUESTED → SAMPLE_COLLECTED → PROCESSING
+- [ ] DOCTOR cannot mark SAMPLE_COLLECTED → 403
+- [ ] ADMIN upload result → RESULT_AVAILABLE
+- [ ] PATIENT GET detail before ack → no resultSummary/resultFlag
+- [ ] PATIENT download before ack → 403
+- [ ] DOCTOR acknowledge → ACKNOWLEDGED; PatientDocument Lab Report created
+- [ ] PATIENT GET/download after ack → result visible
+- [ ] Acknowledge after ACKNOWLEDGED → 400
+- [ ] PHARMACIST access lab APIs → 403
+- [ ] Reject result → REJECTED; ADMIN return to PROCESSING; re-upload
 
 ---
 

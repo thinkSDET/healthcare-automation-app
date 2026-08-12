@@ -43,6 +43,7 @@ const ENTITY_TYPES = [
   "ORDER",
   "MEDICATION",
   "REPLENISHMENT_REQUEST",
+  "LAB_TEST_ORDER",
 ];
 
 const PAGE_SIZE = 50;

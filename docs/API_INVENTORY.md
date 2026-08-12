@@ -81,8 +81,17 @@ Quick reference for every backend endpoint discovered in the current codebase (`
 | POST | `/api/replenishment-requests` | Yes | ADMIN, PHARMACIST | Create replenishment request |
 | GET | `/api/replenishment-requests/:id` | Yes | ADMIN, PHARMACIST | Get replenishment request |
 | PATCH | `/api/replenishment-requests/:id/status` | Yes | ADMIN, PHARMACIST* | Approve/reject (ADMIN); cancel; receive (ADMIN/PHARMACIST) |
+| POST | `/api/lab-orders` | Yes | ADMIN, DOCTOR | Create lab test order (ordering doctor must be ACTIVE) |
+| GET | `/api/lab-orders` | Yes | ADMIN, DOCTOR, PATIENT* | List lab orders (filters: status, patientId, doctorId); PATIENT own only |
+| GET | `/api/lab-orders/:id` | Yes | ADMIN, DOCTOR, PATIENT* | Get lab order; PATIENT result fields only when ACKNOWLEDGED |
+| PATCH | `/api/lab-orders/:id/status` | Yes | ADMIN, DOCTOR† | Collection/processing (ADMIN); cancel; reject result |
+| POST | `/api/lab-orders/:id/result` | Yes | ADMIN | Upload/replace result (`multipart`: resultSummary, resultFlag, optional document) → RESULT_AVAILABLE |
+| POST | `/api/lab-orders/:id/acknowledge` | Yes | ADMIN, DOCTOR | Acknowledge result → ACKNOWLEDGED; attach Lab Report PatientDocument |
+| GET | `/api/lab-orders/:id/result-document/download` | Yes | ADMIN, DOCTOR, PATIENT* | Download result file; PATIENT only when ACKNOWLEDGED |
 
 \* **Replenishment status rules:** APPROVE/REJECT = ADMIN only; CANCEL = ADMIN or requester from SUBMITTED; RECEIVE = ADMIN/PHARMACIST from APPROVED.
+
+† **Lab status rules:** SAMPLE_COLLECTED / PROCESSING / REJECTED→PROCESSING = ADMIN only; CANCEL from REQUESTED/SAMPLE_COLLECTED = ADMIN or DOCTOR; REJECT from RESULT_AVAILABLE = ADMIN or DOCTOR (reason required).
 
 \* **PATIENT ownership:** when role is `PATIENT`, the patientId (path/body or resource’s patientId) must match the Patient linked to the JWT `userId`. Otherwise **403**.
 
@@ -90,15 +99,15 @@ Quick reference for every backend endpoint discovered in the current codebase (`
 
 | Role | Notes |
 |------|--------|
-| ADMIN | Full admin APIs; appointment create/update/cancel; refill/renewal review; audit read; inventory + replenishment approve |
-| DOCTOR | Clinical read/write within authorize lists; no appointment create; renewal approve |
+| ADMIN | Full admin APIs; appointment create/update/cancel; refill/renewal review; audit read; inventory + replenishment approve; lab ops (status + result upload) + acknowledge |
+| DOCTOR | Clinical read/write within authorize lists; no appointment create; renewal approve; create/view/cancel/ack/reject lab orders |
 | PHARMACIST | Prescriptions read/status; orders list/get/status/payment; refill request (not renewal) + refill approve; inventory view/adjust; replenishment create/receive |
-| PATIENT | Own patient record; own prescriptions (read); own refill/renewal requests; own orders; own appointment requests; ACTIVE doctors (read) |
+| PATIENT | Own patient record; own prescriptions (read); own refill/renewal requests; own orders; own appointment requests; own lab orders (result content after ACKNOWLEDGED); ACTIVE doctors (read) |
 | SUPPORT | Exists in `UserRole` / admin user create schema; **read-only audit** via `GET /api/audit-events` |
 | VIEWER | Exists in `UserRole` / admin user create schema; **read-only audit** via `GET /api/audit-events` |
 
 ## Totals
 
-- **Endpoints documented:** 73
+- **Endpoints documented:** 80
 - **Full OpenAPI:** [openapi.yaml](./openapi.yaml)
 - **Testing guide:** [API_TESTING_GUIDE.md](./API_TESTING_GUIDE.md)

@@ -27,6 +27,7 @@ function getPrimaryNav(role?: string): NavItem[] {
       { to: "/appointments", label: "Appointments" },
       { to: "/appointment-requests", label: "Appt Requests" },
       { to: "/refill-requests", label: "Refills" },
+      { to: "/lab-orders", label: "Lab Orders" },
       ...(normalized === "ADMIN"
         ? [
             { to: "/inventory", label: "Inventory" },
@@ -50,6 +51,7 @@ function getPrimaryNav(role?: string): NavItem[] {
       { to: "/my/profile", label: "My Profile" },
       { to: "/my/appointments", label: "My Appointments" },
       { to: "/my/prescriptions", label: "My Prescriptions" },
+      { to: "/my/lab-orders", label: "My Lab Results" },
       { to: "/my/orders", label: "My Orders" },
     ];
   }

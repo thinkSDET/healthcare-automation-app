@@ -43,6 +43,9 @@ model User {
   stockMovements              StockMovement[]
   replenishmentRequestsCreated  ReplenishmentRequest[] @relation("ReplenishmentRequestedBy")
   replenishmentRequestsReviewed ReplenishmentRequest[] @relation("ReplenishmentReviewedBy")
+  labTestOrdersCreated          LabTestOrder[] @relation("LabTestOrderCreatedBy")
+  labTestOrdersAcknowledged     LabTestOrder[] @relation("LabTestOrderAcknowledgedBy")
+  labTestOrdersResultUploaded   LabTestOrder[] @relation("LabTestOrderResultUploadedBy")
 }
 
 enum PatientStatus {
@@ -99,6 +102,7 @@ model Patient {
   orders        Order[]
   refillRequests PrescriptionRefillRequest[]
   appointmentRequests AppointmentRequest[]
+  labTestOrders LabTestOrder[]
 }
 
 enum DoctorStatus {
@@ -124,6 +128,7 @@ model Doctor {
   appointments Appointment[]
   prescriptions Prescription[]
   appointmentRequests AppointmentRequest[]
+  labTestOrders LabTestOrder[]
 }
 
 enum AppointmentStatus {
@@ -159,6 +164,7 @@ model Appointment {
   patient Patient @relation(fields: [patientId], references: [id])
   doctor  Doctor  @relation(fields: [doctorId], references: [id])
   appointmentRequest AppointmentRequest?
+  labTestOrders LabTestOrder[]
 
   @@index([patientId])
   @@index([doctorId])
@@ -261,6 +267,7 @@ model PatientDocument {
   updatedAt    DateTime @updatedAt
 
   patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  labTestOrderResult LabTestOrder? @relation("LabTestOrderResultDocument")
 
   @@index([patientId])
 }
@@ -513,4 +520,62 @@ model StockMovement {
   @@index([medicationId])
   @@index([createdAt])
   @@index([replenishmentRequestId])
+}
+
+enum LabTestOrderStatus {
+  REQUESTED
+  SAMPLE_COLLECTED
+  PROCESSING
+  RESULT_AVAILABLE
+  ACKNOWLEDGED
+  CANCELLED
+  REJECTED
+}
+
+enum LabResultFlag {
+  NORMAL
+  ABNORMAL
+  CRITICAL
+}
+
+model LabTestOrder {
+  id                       Int                @id @default(autoincrement())
+  orderNo                  String             @unique
+  patientId                Int
+  doctorId                 Int
+  appointmentId            Int?
+  testName                 String
+  status                   LabTestOrderStatus @default(REQUESTED)
+  orderedAt                DateTime           @default(now())
+  notes                    String?
+  createdByUserId          Int
+  resultSummary            String?
+  resultFlag               LabResultFlag?
+  resultOriginalName       String?
+  resultStoredName         String?
+  resultMimeType           String?
+  resultSize               Int?
+  resultFilePath           String?
+  resultUploadedAt         DateTime?
+  resultUploadedByUserId   Int?
+  resultDocumentId         Int?               @unique
+  acknowledgedByUserId     Int?
+  acknowledgedAt           DateTime?
+  rejectionReason          String?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+
+  patient              Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor               Doctor           @relation(fields: [doctorId], references: [id])
+  appointment          Appointment?     @relation(fields: [appointmentId], references: [id])
+  createdBy            User             @relation("LabTestOrderCreatedBy", fields: [createdByUserId], references: [id])
+  resultUploadedBy     User?            @relation("LabTestOrderResultUploadedBy", fields: [resultUploadedByUserId], references: [id])
+  acknowledgedBy       User?            @relation("LabTestOrderAcknowledgedBy", fields: [acknowledgedByUserId], references: [id])
+  resultDocument       PatientDocument? @relation("LabTestOrderResultDocument", fields: [resultDocumentId], references: [id])
+
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([status])
+  @@index([orderedAt])
+  @@index([patientId, status])
 }

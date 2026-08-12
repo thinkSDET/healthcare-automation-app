@@ -67,6 +67,8 @@ tags:
     description: Pharmacy medication catalog and stock adjustments
   - name: ReplenishmentRequests
     description: Medication replenishment request workflow
+  - name: LabOrders
+    description: Lab test order, result upload, and clinical acknowledgment
 paths:
   /api/health:
     get:
@@ -3123,6 +3125,208 @@ paths:
           $ref: "#/components/responses/Forbidden"
         400:
           description: Invalid transition
+  /api/lab-orders:
+    get:
+      tags: [LabOrders]
+      summary: List lab test orders
+      description: |
+        Roles: ADMIN, DOCTOR, PATIENT (own only).
+        Filters: status, patientId, doctorId.
+        PATIENT responses omit result content unless status is ACKNOWLEDGED.
+      operationId: listLabTestOrders
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - REQUESTED
+              - SAMPLE_COLLECTED
+              - PROCESSING
+              - RESULT_AVAILABLE
+              - ACKNOWLEDGED
+              - CANCELLED
+              - REJECTED
+        - name: patientId
+          in: query
+          schema: { type: integer }
+        - name: doctorId
+          in: query
+          schema: { type: integer }
+      responses:
+        200:
+          description: Success
+    post:
+      tags: [LabOrders]
+      summary: Create lab test order
+      description: |
+        Roles: ADMIN, DOCTOR.
+        Ordering doctor must be ACTIVE.
+        Optional appointmentId must match patient and doctor.
+      operationId: createLabTestOrder
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [patientId, doctorId, testName]
+              properties:
+                patientId: { type: integer }
+                doctorId: { type: integer }
+                testName: { type: string }
+                appointmentId: { type: integer }
+                notes: { type: string }
+                orderedAt: { type: string, format: date-time }
+      responses:
+        201:
+          description: Created
+        400:
+          description: Validation or inactive doctor / appointment mismatch
+  /api/lab-orders/{id}:
+    get:
+      tags: [LabOrders]
+      summary: Get lab test order
+      description: PATIENT sees result fields only when ACKNOWLEDGED.
+      operationId: getLabTestOrderById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        200:
+          description: Success
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+  /api/lab-orders/{id}/status:
+    patch:
+      tags: [LabOrders]
+      summary: Update lab order status
+      description: |
+        SAMPLE_COLLECTED / PROCESSING: ADMIN only.
+        CANCELLED: ADMIN or DOCTOR from REQUESTED or SAMPLE_COLLECTED.
+        REJECTED: ADMIN or DOCTOR from RESULT_AVAILABLE (rejectionReason required).
+        REJECTED → PROCESSING via status PROCESSING (ADMIN).
+      operationId: updateLabTestOrderStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [SAMPLE_COLLECTED, PROCESSING, CANCELLED, REJECTED]
+                rejectionReason: { type: string }
+      responses:
+        200:
+          description: Updated
+        400:
+          description: Invalid transition
+        403:
+          $ref: "#/components/responses/Forbidden"
+  /api/lab-orders/{id}/result:
+    post:
+      tags: [LabOrders]
+      summary: Upload or replace lab result
+      description: |
+        Role: ADMIN.
+        Allowed from PROCESSING or RESULT_AVAILABLE (replace).
+        Sets status to RESULT_AVAILABLE.
+        Multipart fields: resultSummary, resultFlag, optional document file.
+      operationId: uploadLabTestResult
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [resultSummary, resultFlag]
+              properties:
+                resultSummary: { type: string }
+                resultFlag:
+                  type: string
+                  enum: [NORMAL, ABNORMAL, CRITICAL]
+                document:
+                  type: string
+                  format: binary
+      responses:
+        200:
+          description: Result uploaded
+        400:
+          description: Invalid status or missing fields
+        403:
+          $ref: "#/components/responses/Forbidden"
+  /api/lab-orders/{id}/acknowledge:
+    post:
+      tags: [LabOrders]
+      summary: Acknowledge lab result
+      description: |
+        Roles: ADMIN, DOCTOR.
+        From RESULT_AVAILABLE → ACKNOWLEDGED.
+        Creates PatientDocument type "Lab Report" when a result file/summary is present.
+      operationId: acknowledgeLabTestOrder
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        200:
+          description: Acknowledged
+        400:
+          description: Invalid transition
+        403:
+          $ref: "#/components/responses/Forbidden"
+  /api/lab-orders/{id}/result-document/download:
+    get:
+      tags: [LabOrders]
+      summary: Download lab result file
+      description: |
+        Roles: ADMIN, DOCTOR, PATIENT.
+        PATIENT only when status is ACKNOWLEDGED.
+      operationId: downloadLabTestResult
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        200:
+          description: File download
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          description: File or order not found
   /api/audit-events:
     get:
       tags:
@@ -3165,6 +3369,7 @@ paths:
               - ORDER
               - MEDICATION
               - REPLENISHMENT_REQUEST
+              - LAB_TEST_ORDER
         - name: entityId
           in: query
           schema:

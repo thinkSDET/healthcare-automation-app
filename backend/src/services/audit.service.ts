@@ -18,7 +18,8 @@ export type AuditEntityType =
   | "REFILL_REQUEST"
   | "ORDER"
   | "MEDICATION"
-  | "REPLENISHMENT_REQUEST";
+  | "REPLENISHMENT_REQUEST"
+  | "LAB_TEST_ORDER";
 
 export type AuditContext = {
   actorUserId: number;
