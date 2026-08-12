@@ -1,31 +1,44 @@
 # Healthcare Automation API — OpenAPI 3.0.3
-# Generated from the current backend implementation.
-# Do not treat this as a design draft; paths/fields/roles match the code.
+# Reconciled against the current backend implementation (routes/controllers/services/middleware).
+# This file is a machine-readable CONTRACT of the API — not the API server itself.
+# Human docs: docs/README.md, docs/API_INVENTORY.md, docs/API_TESTING_GUIDE.md, docs/API_TEST_CASES.md
 
 openapi: 3.0.3
 info:
   title: Healthcare Automation API
   version: 1.0.0
   description: |
-    OpenAPI specification generated from the current backend implementation
-    (backend/src/routes, controllers, services, validators, middleware).
-    
+    OpenAPI 3.0.3 contract for the HealthOps Express backend.
+
+    **This YAML is not the running API.** It describes paths, methods, auth, and payloads
+    so tools (Swagger UI, Postman import, codegen) can understand the HTTP surface.
+    If this file disagrees with code under `backend/src`, trust the code.
+
+    Human documentation set:
+    - `docs/README.md` — entry point
+    - `docs/API_INVENTORY.md` — full endpoint inventory (80 operations)
+    - `docs/API_TESTING_GUIDE.md` — local setup and first calls
+    - `docs/API_TEST_CASES.md` — functional test catalog
+
     ## Authentication
     Most endpoints require header:
     `Authorization: Bearer <JWT>`
-    
+
     Obtain JWT via POST /api/auth/login.
     Token claims: userId (number), role (string), email (string).
     Default expiry: 1h. With rememberMe: 30d.
     Secret: process.env.JWT_SECRET or fallback "local-development-secret".
-    
+
     ## Roles (UserRole enum)
     ADMIN, DOCTOR, PHARMACIST, PATIENT, SUPPORT, VIEWER
-    
+
     SUPPORT and VIEWER exist in the schema and can be assigned via admin user APIs.
     They are authorized for read-only audit access via GET /api/audit-events
     (along with ADMIN). Other business routes do not authorize SUPPORT/VIEWER.
-    
+
+    ## Endpoint count
+    80 operations (GET 32, POST 23, PUT 6, PATCH 10, DELETE 9)
+
     ## Base URL
     http://localhost:4000 (PORT hardcoded in backend/src/server.ts)
     
@@ -2822,7 +2835,10 @@ paths:
       tags:
         - Orders
       summary: Update payment status
-      description: "Roles: ADMIN, PHARMACIST. Valid: PENDING, PAID, FAILED, REFUNDED."
+      description: |
+        Roles: ADMIN, PHARMACIST, PATIENT (own order).
+        Valid paymentStatus values: PENDING, PAID, FAILED, REFUNDED.
+        PATIENT may only set PAID or FAILED on their own order (controller-enforced).
       operationId: updatePaymentStatus
       security:
         - BearerAuth: 

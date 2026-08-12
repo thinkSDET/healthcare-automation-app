@@ -1,92 +1,87 @@
 # API Testing Guide
 
-Zero-to-test guide for QA engineers exercising the Healthcare Automation backend **without the frontend**.
+## What this guide is for
 
-All commands assume a shell opened in `backend/` unless noted.
+This guide helps someone who has **never seen this project** start the backend and call APIs locally (Postman, curl, Insomnia, etc.).
 
----
+You do **not** need the frontend for API testing.
 
-## A. Prerequisites
-
-### Node / npm
-
-- Project `backend/package.json` does **not** declare an `engines` field.
-- **Required Node version: Not defined in the current codebase.**
-- Local toolchain observed during documentation generation: Node `v24.x` with npm `11.x` works for `tsx` + Prisma 7, but that is not a formal project requirement.
-- Install dependencies:
-
-```bash
-cd backend
-npm install
-```
-
-### Database
-
-- Provider: **PostgreSQL** (`backend/prisma/schema.prisma`).
-- Connection: `DATABASE_URL` (required). If missing, `backend/src/config/prisma.ts` throws `DATABASE_URL is not defined`.
-- Exact connection string for your machine: **Not defined in the committed codebase** (configure locally via `backend/.env`).
-
-### Environment variables
-
-| Variable | Required | Source / default |
-|----------|----------|------------------|
-| `DATABASE_URL` | Yes | No default — must be set |
-| `JWT_SECRET` | No | Falls back to `local-development-secret` in auth middleware + auth service |
-| `ADMIN_EMAIL` | No | Used only by bootstrap script; default `admin@healthcare.local` |
-| `ADMIN_PASSWORD` | No | Used only by bootstrap script; default `Admin@12345` |
-
-There is **no** committed `.env.example` in the repository.
-
-### Other dependencies
-
-- Prisma 7 + `@prisma/adapter-pg` + `pg`
-- Express 5, Zod, bcryptjs, jsonwebtoken, multer, cors, dotenv
+If you only need endpoint lists and roles, see [API_INVENTORY.md](./API_INVENTORY.md).  
+If you need formal test scenarios, see [API_TEST_CASES.md](./API_TEST_CASES.md).
 
 ---
 
-## B. Start the backend
+## Prerequisites
 
-From `backend/package.json`:
+| Requirement | Notes |
+|-------------|--------|
+| **Node.js + npm** | Used by `backend/`. No `engines` field is declared in `package.json`; local Node 24.x + npm 11.x has been used successfully with Prisma 7 / `tsx`. |
+| **PostgreSQL** | Required. Schema provider is PostgreSQL. |
+| **Git clone of this repo** | Work from the repo root, then `backend/`. |
+
+### Environment variables (from code)
+
+| Variable | Required | Default / notes |
+|----------|----------|-----------------|
+| `DATABASE_URL` | **Yes** | No default — `backend/src/config/prisma.ts` throws if missing |
+| `JWT_SECRET` | No | Falls back to `local-development-secret` |
+| `ADMIN_EMAIL` | No | Used by admin bootstrap script; default `admin@healthcare.local` |
+| `ADMIN_PASSWORD` | No | Used by admin bootstrap script; default `Admin@12345` |
+
+There is **no** committed `.env.example`. Create `backend/.env` locally.
+
+### Scripts that actually exist (`backend/package.json`)
 
 | Script | Command | Purpose |
 |--------|---------|---------|
-| Dev | `npm run dev` | `tsx watch src/server.ts` |
+| Dev server | `npm run dev` | `tsx watch src/server.ts` |
 | Build | `npm run build` | `tsc` |
-| Prod | `npm start` | `node dist/server.js` (after build) |
+| Start (compiled) | `npm start` | `node dist/server.js` |
 
-Typical local QA flow:
-
-```bash
-cd backend
-npm install
-npm run dev
-```
-
-Server listens on **port 4000** (hardcoded in `backend/src/server.ts`):
-
-```text
-Healthcare API running on http://localhost:4000
-```
+Prisma is invoked via `npx prisma ...` (Prisma is a dependency). Config: `backend/prisma.config.ts`.
 
 ---
 
-## C. Database setup
+## Local setup (exact sequence)
 
-Prisma config: `backend/prisma.config.ts` (schema path `prisma/schema.prisma`, migrations in `prisma/migrations`, datasource URL from `DATABASE_URL`).
+### Step 1 — Open a terminal
 
-### 1. Configure database
+Use PowerShell, cmd, or bash.
 
-1. Create a PostgreSQL database.
-2. Set `DATABASE_URL` in `backend/.env`, for example:
+### Step 2 — Go to the backend folder
 
-```env
-DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/DBNAME?schema=public"
-JWT_SECRET="your-local-secret"
+```bash
+cd backend
 ```
 
-(Do not commit real credentials.)
+### Step 3 — Install dependencies
 
-### 2. Run migrations
+```bash
+npm install
+```
+
+### Step 4 — Configure environment
+
+Create `backend/.env` with at least:
+
+```env
+DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/healthops
+```
+
+Optional:
+
+```env
+JWT_SECRET=local-development-secret
+ADMIN_EMAIL=admin@healthcare.local
+ADMIN_PASSWORD=Admin@12345
+```
+
+### Step 5 — Prepare the database
+
+1. Ensure PostgreSQL is running.
+2. Create an empty database (name must match `DATABASE_URL`).
+
+### Step 6 — Run migrations
 
 From `backend/`:
 
@@ -94,540 +89,316 @@ From `backend/`:
 npx prisma migrate deploy
 ```
 
-For local iterative development, `npx prisma migrate dev` is also available via Prisma CLI (not wrapped in a custom npm script).
+(For local iterative development some teams use `npx prisma migrate dev`; `deploy` applies existing migrations.)
 
-### 3. Generate Prisma client
+### Step 7 — Generate Prisma client (if needed)
 
 ```bash
 npx prisma generate
 ```
 
-Client output path: `backend/src/generated/prisma` (per schema `generator`).
+Usually also runs as part of install/migrate workflows; run explicitly if imports fail.
 
-### 4. Seed data
-
-- **No Prisma seed script** is configured in `backend/package.json`.
-- **No seed file** is part of the application source for sample patients/doctors.
-
-### Optional: bootstrap an ADMIN user
-
-Script exists at `backend/src/scripts/create-admin.ts` but is **not** wired as an npm script. Run:
+### Step 8 — Start the backend
 
 ```bash
-npx tsx src/scripts/create-admin.ts
+npm run dev
 ```
 
-Defaults (overridable with `ADMIN_EMAIL` / `ADMIN_PASSWORD`):
-
-| Field | Default |
-|-------|---------|
-| Email | `admin@healthcare.local` |
-| Password | `Admin@12345` |
-| Name | System Administrator |
-| Role | ADMIN |
-
-If the email already exists, the script updates role/password/status to ADMIN/ACTIVE.
-
-Other role accounts (DOCTOR, PATIENT, PHARMACIST): **Not defined as fixed test accounts in the repository.** Create them via:
-
-- `POST /api/auth/register` (PATIENT / DOCTOR / PHARMACIST), or
-- `POST /api/users` as ADMIN (roles in validator: ADMIN, DOCTOR, PHARMACIST, SUPPORT, VIEWER — not PATIENT).
-
----
-
-## D. Base URL
+Expected console line:
 
 ```text
-http://localhost:4000
+Healthcare API running on http://localhost:4000
 ```
 
-API prefixes (from `server.ts`):
+Port **4000** is hardcoded in `backend/src/server.ts`.
 
-- `/api/health`
-- `/api/auth`
-- `/api/users`
-- `/api/patients`
-- `/api/doctors`
-- `/api/appointments`
-- `/api/appointment-requests`
-- `/api/prescriptions`
-- `/api/refill-requests`
-- `/api/orders`
-- `/api/audit-events`
-- `/api/medications`
-- `/api/replenishment-requests`
-- `/api/lab-orders`
-
----
-
-## E. Authentication
-
-### 1. How to login
-
-```bash
-curl -X POST http://localhost:4000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d "{\"email\":\"admin@healthcare.local\",\"password\":\"Admin@12345\",\"rememberMe\":false}"
-```
-
-### 2. Credentials / test accounts
-
-| Account | How obtained |
-|---------|----------------|
-| Admin defaults above | Only if you ran `create-admin.ts` (or set env overrides) |
-| Other roles | **Not defined in the current codebase** as seeded fixtures |
-
-Login also enforces:
-
-- Max **5** failed attempts → lock **15** minutes
-- Rejects `INACTIVE` / `LOCKED` users
-
-### 3. Obtain the JWT
-
-Success response shape:
-
-```json
-{
-  "success": true,
-  "message": "Login successful",
-  "data": {
-    "token": "<JWT>",
-    "user": {
-      "id": 1,
-      "email": "...",
-      "firstName": "...",
-      "lastName": "...",
-      "role": "ADMIN",
-      "patientId": null
-    },
-    "expiresIn": "1h"
-  }
-}
-```
-
-For PATIENT users, `data.user.patientId` is the linked Patient id (or `null` if none).
-
-### 4. Send the JWT
-
-```http
-Authorization: Bearer <TOKEN>
-```
-
-Missing/invalid prefix → **401** `"Authentication token is required"`  
-Bad/expired token → **401** `"Invalid or expired token"`
-
-### 5. Token expiration
-
-| Mode | `expiresIn` |
-|------|-------------|
-| Default (`rememberMe` false/omitted) | `1h` |
-| `rememberMe: true` | `30d` |
-
-JWT payload claims: `userId`, `role`, `email`.
-
----
-
-## F. Postman setup
-
-1. Create environment **Healthcare Local**.
-2. Variables:
-
-| Variable | Example | Notes |
-|----------|---------|--------|
-| `baseUrl` | `http://localhost:4000` | From server.ts |
-| `token` | *(empty)* | Set from login `data.token` |
-| `patientId` | *(empty)* | From create patient / login `patientId` |
-| `doctorId` | *(empty)* | From create doctor |
-| `appointmentId` | *(empty)* | From create appointment |
-| `prescriptionId` | *(empty)* | From create prescription |
-| `orderId` | *(empty)* | From create order |
-| `documentId` | *(empty)* | From document upload |
-| `dependentId` | *(empty)* | From create dependent |
-
-3. Collection auth: Type **Bearer Token**, value `{{token}}`.
-4. Login request Tests script example:
-
-```javascript
-const json = pm.response.json();
-if (json.data && json.data.token) {
-  pm.environment.set("token", json.data.token);
-  if (json.data.user && json.data.user.patientId != null) {
-    pm.environment.set("patientId", String(json.data.user.patientId));
-  }
-}
-```
-
-Import OpenAPI: File → Import → `docs/openapi.yaml`.
-
----
-
-## G. Insomnia setup
-
-1. Create environment with the same variables as Postman.
-2. Base URL: `{{ _.baseUrl }}` (or Insomnia equivalent).
-3. After login, set `token` from response.
-4. For authenticated requests, header:
-
-```http
-Authorization: Bearer {% response '...' %}
-```
-
-or static `Bearer {{ token }}`.
-
-5. Optionally import `docs/openapi.yaml` as a request collection.
-
----
-
-## H. Standalone API workflow
-
-Adjust IDs to your database. Sequence uses APIs that **exist today**.
-
-```text
-Health check
-    ↓
-Login (ADMIN) → save token
-    ↓
-Create doctor (ADMIN) → doctorId
-    ↓
-Create patient (ADMIN)  OR  Register PATIENT → patientId
-    ↓
-Create appointment (ADMIN) → appointmentId
-    ↓
-PATCH status CONFIRMED
-    ↓
-PATCH status CHECKED_IN
-    ↓
-PATCH status IN_CONSULTATION
-    ↓
-PATCH status COMPLETED
-    ↓
-Create prescription (ADMIN/DOCTOR) → prescriptionId
-    ↓
-Create order (ADMIN or owning PATIENT) → orderId
-    ↓
-PATCH order status / payment status (ADMIN/PHARMACIST)
-    ↓
-(Optional) Upload/list documents (ADMIN/DOCTOR upload)
-```
-
-### Copy/paste curl examples
-
-**Health**
+### Step 9 — Verify health
 
 ```bash
 curl http://localhost:4000/api/health
 ```
 
-**Login**
-
-```bash
-curl -X POST http://localhost:4000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d "{\"email\":\"admin@healthcare.local\",\"password\":\"Admin@12345\"}"
-```
-
-**Create doctor** (ADMIN)
-
-```bash
-curl -X POST http://localhost:4000/api/doctors \
-  -H "Authorization: Bearer <TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d "{\"doctorCode\":\"DOC-100\",\"firstName\":\"Priya\",\"lastName\":\"Nair\",\"specialization\":\"Cardiology\",\"licenseNumber\":\"LIC-7788\",\"email\":\"priya.nair@example.com\",\"phone\":\"9123456780\",\"experience\":12}"
-```
-
-**Create patient** (ADMIN/DOCTOR)
-
-```bash
-curl -X POST http://localhost:4000/api/patients \
-  -H "Authorization: Bearer <TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d "{\"medicalId\":\"PAT-90001\",\"firstName\":\"John\",\"lastName\":\"Smith\",\"dateOfBirth\":\"1985-03-20\",\"gender\":\"MALE\",\"phone\":\"9876543210\",\"email\":\"john.smith@example.com\"}"
-```
-
-**Get patient**
-
-```bash
-curl http://localhost:4000/api/patients/1 \
-  -H "Authorization: Bearer <TOKEN>"
-```
-
-**Create appointment** (ADMIN) — `appointmentAt` must be in the future (ISO datetime)
-
-```bash
-curl -X POST http://localhost:4000/api/appointments \
-  -H "Authorization: Bearer <TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d "{\"appointmentNo\":\"APT-20260811-001\",\"patientId\":1,\"doctorId\":1,\"appointmentAt\":\"2026-09-01T10:00:00.000Z\",\"duration\":30,\"type\":\"IN_PERSON\",\"reason\":\"Annual checkup\"}"
-```
-
-**Confirm → check-in → consult → complete**
-
-```bash
-curl -X PATCH http://localhost:4000/api/appointments/1/status \
-  -H "Authorization: Bearer <TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d "{\"status\":\"CONFIRMED\"}"
-
-curl -X PATCH http://localhost:4000/api/appointments/1/status \
-  -H "Authorization: Bearer <TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d "{\"status\":\"CHECKED_IN\"}"
-
-curl -X PATCH http://localhost:4000/api/appointments/1/status \
-  -H "Authorization: Bearer <TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d "{\"status\":\"IN_CONSULTATION\"}"
-
-curl -X PATCH http://localhost:4000/api/appointments/1/status \
-  -H "Authorization: Bearer <TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d "{\"status\":\"COMPLETED\"}"
-```
-
-**Create prescription** (ADMIN/DOCTOR)
-
-```bash
-curl -X POST http://localhost:4000/api/prescriptions \
-  -H "Authorization: Bearer <TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d "{\"patientId\":1,\"doctorId\":1,\"diagnosis\":\"Seasonal allergy\",\"items\":[{\"medicineName\":\"Cetirizine\",\"dosage\":\"10mg\",\"frequency\":\"Once daily\",\"duration\":\"7 days\",\"route\":\"Oral\"}]}"
-```
-
-**Create order** (ADMIN or owning PATIENT)
-
-```bash
-curl -X POST http://localhost:4000/api/orders \
-  -H "Authorization: Bearer <TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d "{\"patientId\":1,\"deliveryAddress\":\"12 Oak Street\",\"items\":[{\"productName\":\"Cetirizine 10mg\",\"quantity\":2,\"unitPrice\":45.5}]}"
-```
-
-**List orders for patient**
-
-```bash
-curl http://localhost:4000/api/orders/patient/1 \
-  -H "Authorization: Bearer <TOKEN>"
-```
-
-**Upload document** (ADMIN/DOCTOR) — field name must be `document`
-
-```bash
-curl -X POST http://localhost:4000/api/patients/1/documents \
-  -H "Authorization: Bearer <TOKEN>" \
-  -F "document=@./sample.pdf" \
-  -F "documentType=Lab Report"
-```
-
-**List / download documents**
-
-```bash
-curl http://localhost:4000/api/patients/1/documents \
-  -H "Authorization: Bearer <TOKEN>"
-
-curl -L http://localhost:4000/api/patients/1/documents/1/download \
-  -H "Authorization: Bearer <TOKEN>" \
-  -o downloaded.bin
-```
-
-### Appointment lifecycle (allowed transitions)
-
-| From | Allowed next |
-|------|----------------|
-| SCHEDULED | CONFIRMED, CANCELLED, NO_SHOW |
-| CONFIRMED | CHECKED_IN |
-| CHECKED_IN | IN_CONSULTATION |
-| IN_CONSULTATION | COMPLETED |
-| COMPLETED / CANCELLED / NO_SHOW | *(terminal)* |
-
-Role targets on `PATCH .../status`:
-
-- **ADMIN:** CONFIRMED, CHECKED_IN, IN_CONSULTATION, COMPLETED, CANCELLED, NO_SHOW  
-- **DOCTOR:** CONFIRMED, CHECKED_IN, IN_CONSULTATION, COMPLETED, NO_SHOW (not CANCELLED via this endpoint)  
-- **DELETE /api/appointments/:id** (ADMIN): only SCHEDULED → CANCELLED
-
----
-
-## Common error response shape
-
-Most JSON errors:
+Expected when DB is up:
 
 ```json
 {
-  "success": false,
-  "message": "..."
+  "status": "UP",
+  "database": "CONNECTED",
+  "message": "Healthcare API is running"
 }
 ```
 
-Zod validation (`validate` middleware):
+If `status` is `DOWN`, fix PostgreSQL / `DATABASE_URL` before continuing.
 
-```json
-{
-  "success": false,
-  "message": "Validation failed",
-  "errors": [
-    { "field": "email", "message": "Invalid email" }
-  ]
-}
+### Optional — Create / reset an ADMIN user
+
+From `backend/` (with DB configured):
+
+```bash
+npx tsx src/scripts/create-admin.ts
 ```
 
-| Status | Typical meaning in this API |
-|--------|-----------------------------|
-| 400 | Validation / business rule / invalid ID |
-| 401 | Missing/invalid token or bad login |
-| 403 | Role not allowed or patient ownership failed |
-| 404 | Resource not found |
-| 409 | Email exists; overlapping appointment |
-| 500 | Unhandled / infrastructure failure |
+Defaults: `admin@healthcare.local` / `Admin@12345` (overridable via env).
 
-Document upload multer rejections (unsupported MIME / >10MB): **structured status codes are not defined in a dedicated Express error handler in the current codebase** (controllers only handle post-multer success/failure paths).
+Other roles are **not** seeded by the repo. Create them via:
+
+- `POST /api/auth/register` (PATIENT, DOCTOR, PHARMACIST only), or  
+- `POST /api/users` as ADMIN (can assign ADMIN, DOCTOR, PHARMACIST, SUPPORT, VIEWER).
 
 ---
 
-## I. QA API test scenarios checklist
+## First API call (JWT walkthrough)
 
-### Authentication
+Authentication and authorization are different:
 
-- [ ] Valid login returns 200 + token
-- [ ] Invalid password returns 401
-- [ ] Missing email/password returns 400
-- [ ] Remember-me returns `expiresIn: "30d"`
-- [ ] Five failed logins lock account (15 minutes)
-- [ ] INACTIVE user cannot login
-- [ ] Forgot-password without revealing whether email exists
-- [ ] Reset-password with valid token
-- [ ] Reset-password with used/expired token → 400
-- [ ] Change-password with Bearer token
-- [ ] Logout with Bearer returns 200
+| Term | Meaning |
+|------|---------|
+| **Authentication** | Proving who you are (valid JWT) |
+| **Authorization** | Your **role** is allowed on that route |
+| **Ownership** | Extra checks that a PATIENT only touches their own patient/order/etc. |
 
-### Authorization / RBAC
+### 1. Start the backend
 
-- [ ] Missing `Authorization` → 401
-- [ ] Invalid token → 401
-- [ ] PATIENT calling `GET /api/patients` → 403
-- [ ] DOCTOR calling `POST /api/appointments` → 403
-- [ ] DOCTOR calling `DELETE /api/appointments/:id` → 403
-- [ ] PATIENT calling `POST /api/patients/:id/documents` → 403
-- [ ] PHARMACIST calling patient routes with `requirePatientAccess` → 403
-- [ ] SUPPORT/VIEWER on ADMIN-only routes → 403 (if such users exist)
-- [ ] Public register with `role: "ADMIN"` → 403
+See Step 8 above.
 
-### Ownership
+### 2. Open Postman (or any HTTP client)
 
-- [ ] PATIENT can GET own `/api/patients/:id`
-- [ ] PATIENT cannot GET another patientId → 403
-- [ ] PATIENT can list/create orders only for own patientId
-- [ ] PATIENT accessing another patient’s orders → 403
+### 3. Set base URL
 
-### CRUD / Validation
+```text
+http://localhost:4000
+```
 
-- [ ] Create patient missing required Zod fields → 400 with `errors[]`
-- [ ] Create doctor with invalid email → 400
-- [ ] Create appointment with past `appointmentAt` → 400
-- [ ] Create appointment with inactive doctor → 400
-- [ ] Invalid path id (`abc`) → 400 where implemented
-- [ ] Unknown resource id → 404 where implemented
+### 4. Call login
 
-### Appointment lifecycle
+`POST /api/auth/login`  
+Header: `Content-Type: application/json`  
+Body:
 
-- [ ] Valid transition SCHEDULED → CONFIRMED
-- [ ] Invalid skip (SCHEDULED → COMPLETED) → 400
-- [ ] DOCTOR attempting CANCELLED via status → 403
-- [ ] Overlapping appointment → 409
-- [ ] Edit appointment when CHECKED_IN → 400
-- [ ] Cancel non-SCHEDULED via DELETE → 400
-- [ ] Modify terminal appointment → 400
+```json
+{
+  "email": "admin@healthcare.local",
+  "password": "Admin@12345",
+  "rememberMe": false
+}
+```
 
-### Patient APIs
+### 5. Copy the token
 
-- [ ] List / create / update / deactivate
-- [ ] Dependents create requires firstName, lastName, relationship
-- [ ] Emergency contact requires names, relationship, phone
-- [ ] Medical profile upsert
+Success response includes:
 
-### Prescription APIs
+```json
+{
+  "success": true,
+  "data": {
+    "token": "<JWT>",
+    "user": { "id": 1, "role": "ADMIN", "patientId": null },
+    "expiresIn": "1h"
+  }
+}
+```
 
-- [ ] Create with empty items → 400
-- [ ] Item missing dosage/frequency/duration → 400
-- [ ] Status update with invalid enum → 400
-- [ ] PHARMACIST can GET and PATCH status; cannot POST/DELETE
+### 6. Add the Bearer token
 
-### Order APIs
+On later requests:
 
-- [ ] Create with empty items → 400
-- [ ] Invalid quantity/price → 400
-- [ ] Status / payment-status invalid enum → 400
-- [ ] PHARMACIST cannot POST create order (not in authorize list)
-- [ ] ADMIN can DELETE order
+```http
+Authorization: Bearer <JWT>
+```
 
-### Document APIs
+Missing `Bearer ` prefix → **401** `"Authentication token is required"`.  
+Bad/expired token → **401** `"Invalid or expired token"`.
 
-- [ ] Upload without file → 400
-- [ ] Upload without `documentType` → 400
-- [ ] Allowed MIME types succeed (pdf, jpeg, png, webp, txt, doc, docx)
-- [ ] Unsupported MIME rejected by multer filter
-- [ ] File larger than 10MB rejected by multer limit
-- [ ] Download / delete happy paths
+### 7. Call a simple authenticated GET
 
-### Negative / boundary
+Example:
 
-- [ ] Duplicate email on register → 409
-- [ ] Register PATIENT without DOB/gender/phone → 400
-- [ ] Health check when DB down → 500 DOWN payload
-- [ ] Concurrent overlapping bookings for same doctor/patient
-- [ ] PATIENT can list own prescriptions; cannot list another patient's
-- [ ] PHARMACIST cannot create RENEWAL request → 403
-- [ ] PHARMACIST cannot approve RENEWAL → 403
-- [ ] Duplicate SUBMITTED refill request → 409
-- [ ] Reject without rejectionReason → 400
-- [ ] create-order on non-APPROVED request → 400
-- [ ] Second create-order on same request → 409
-- [ ] Renewal approve does not change Prescription.status
-- [ ] PATIENT can request appointment; ADMIN/DOCTOR can approve → SCHEDULED appointment created
-- [ ] PATIENT appointment request reject requires reason
-- [ ] PATIENT can cancel SUBMITTED appointment request only
-- [ ] Approve fails when doctor/patient slot already booked (request stays SUBMITTED)
-- [ ] PATIENT can list ACTIVE doctors only; cannot create doctors
-- [ ] PATIENT cannot POST /api/appointments directly
+```http
+GET /api/patients
+Authorization: Bearer <ADMIN_TOKEN>
+```
 
-### Audit APIs
+### 8. Inspect the response
 
-- [ ] Unauthenticated GET `/api/audit-events` → 401
-- [ ] PATIENT / DOCTOR / PHARMACIST GET → 403
-- [ ] ADMIN / VIEWER / SUPPORT GET → 200
-- [ ] PUT/PATCH/DELETE `/api/audit-events/:id` → 404 (no write routes)
-- [ ] After appointment create or status change, event appears with actor/action/entity/timestamp
-- [ ] Filters (action, entityType, entityId, actorUserId) return consistent subsets
+Look for `success: true` and `data` (array or object).
 
-### Inventory / replenishment APIs
+### 9. Extract an ID
 
-- [ ] Create medication → stockStatus derived correctly
-- [ ] Adjust stock with reason → qty changes; movement recorded
-- [ ] Adjust causing negative stock → 400
-- [ ] Duplicate open replenishment for same medication → 409
-- [ ] PHARMACIST cannot APPROVE replenishment → 403
-- [ ] ADMIN approve → PHARMACIST receive → qty increases
-- [ ] Double receive → 400
-- [ ] PATIENT / DOCTOR cannot access medications → 403
-- [ ] Order create/status still does not change stock
+Example: copy `data[0].id` as `patientId`.
 
-### Lab order APIs
+### 10. Use that ID in the next API
 
-- [ ] ADMIN/DOCTOR create lab order with ACTIVE doctor → 201 REQUESTED
-- [ ] Create with INACTIVE/ON_LEAVE doctor → 400
-- [ ] ADMIN: REQUESTED → SAMPLE_COLLECTED → PROCESSING
-- [ ] DOCTOR cannot mark SAMPLE_COLLECTED → 403
-- [ ] ADMIN upload result → RESULT_AVAILABLE
-- [ ] PATIENT GET detail before ack → no resultSummary/resultFlag
-- [ ] PATIENT download before ack → 403
-- [ ] DOCTOR acknowledge → ACKNOWLEDGED; PatientDocument Lab Report created
-- [ ] PATIENT GET/download after ack → result visible
-- [ ] Acknowledge after ACKNOWLEDGED → 400
-- [ ] PHARMACIST access lab APIs → 403
-- [ ] Reject result → REJECTED; ADMIN return to PROCESSING; re-upload
+Example:
+
+```http
+GET /api/patients/{{patientId}}
+Authorization: Bearer <TOKEN>
+```
+
+---
+
+## Authentication details
+
+| Endpoint | Auth | Purpose |
+|----------|------|---------|
+| `POST /api/auth/register` | Public | Create PATIENT / DOCTOR / PHARMACIST user |
+| `POST /api/auth/login` | Public | Obtain JWT |
+| `POST /api/auth/forgot-password` | Public | Start reset |
+| `POST /api/auth/reset-password` | Public | Finish reset |
+| `POST /api/auth/change-password` | JWT | Change own password |
+| `POST /api/auth/logout` | JWT | Contract only (stateless JWT) |
+
+**Remember-me:** `rememberMe: true` → token lifetime `30d`; otherwise `1h`.
+
+**Account lockout:** repeated failed logins can lock the account (service rule).
+
+---
+
+## Postman variables (recommended)
+
+| Variable | Example source |
+|----------|----------------|
+| `baseUrl` | `http://localhost:4000` |
+| `token` | `data.token` from login |
+| `patientId` | From `GET /api/patients` or register/login `patientId` |
+| `doctorId` | From `GET /api/doctors` |
+| `appointmentId` | From create appointment / list |
+| `prescriptionId` | From create prescription / list |
+| `orderId` | From create order / list |
+| `medicationId` | From create medication / list |
+| `labOrderId` | From create lab order / list |
+| `refillRequestId` | From refill list |
+| `appointmentRequestId` | From appointment-request list |
+| `replenishmentRequestId` | From replenishment list |
+| `userId` | From `GET /api/users` (ADMIN) |
+| `documentId` | From documents list |
+
+Prefer **workflow-generated IDs** over hard-coded numbers.
+
+---
+
+## Role-by-role testing
+
+Roles in schema: `ADMIN`, `DOCTOR`, `PHARMACIST`, `PATIENT`, `SUPPORT`, `VIEWER`.
+
+### ADMIN
+
+- **Obtain:** bootstrap script, or create via another admin’s `POST /api/users`.
+- **Can test:** nearly all business APIs; audit; inventory approve; lab ops; appointment create.
+- **403 examples:** none for most staff routes (still need valid token).
+
+### DOCTOR
+
+- **Obtain:** `POST /api/auth/register` with `role: "DOCTOR"`, or admin create.
+- **Can test:** patients, prescriptions, appointment status, refill review, lab create/ack, doctors list.
+- **403 examples:** `POST /api/appointments`, medication APIs, audit, user CRUD, lab result upload.
+
+### PATIENT
+
+- **Obtain:** register with `role: "PATIENT"` (+ DOB, gender, phone).
+- **Can test:** own profile extensions, own Rx/orders/refills/appointment-requests/lab orders, ACTIVE doctors.
+- **403 examples:** other patients’ IDs, admin APIs, inventory, audit, create appointments, upload patient documents (staff only).
+
+### PHARMACIST
+
+- **Obtain:** register `role: "PHARMACIST"` or admin create.
+- **Can test:** prescriptions read/status, orders status/payment, refill (REFILL type), medications, replenishment.
+- **403 examples:** patients list, appointments, audit, lab APIs, user CRUD.
+
+### SUPPORT / VIEWER
+
+- **Obtain:** ADMIN `POST /api/users` with role `SUPPORT` or `VIEWER` (not via public register).
+- **Can test:** `GET /api/audit-events` (and authenticated auth endpoints like change-password/logout).
+- **403 examples:** almost all clinical/ops routes.
+
+---
+
+## Common workflow examples
+
+Use real paths. Create prerequisite IDs as you go.
+
+### A. Patient creation (staff)
+
+1. Login as ADMIN or DOCTOR  
+2. `POST /api/patients`  
+3. `GET /api/patients/:id`
+
+### B. Appointment lifecycle (staff)
+
+1. Need `patientId` + `doctorId`  
+2. ADMIN `POST /api/appointments`  
+3. ADMIN/DOCTOR `PATCH /api/appointments/:id/status` through lifecycle  
+4. Optional ADMIN `DELETE /api/appointments/:id` (SCHEDULED → CANCELLED)
+
+### C. Patient appointment request
+
+1. Login as PATIENT  
+2. `POST /api/appointment-requests`  
+3. Staff `PATCH /api/appointment-requests/:id/status` (approve/reject)
+
+### D. Prescription
+
+1. ADMIN/DOCTOR `POST /api/prescriptions` (patientId, doctorId, items)  
+2. `GET /api/prescriptions/patient/:patientId`  
+3. Optional `PATCH /api/prescriptions/:id/status`
+
+### E. Refill → order
+
+1. `POST /api/prescriptions/:id/refill-requests`  
+2. Staff `PATCH /api/refill-requests/:id/status` → APPROVED  
+3. ADMIN/PATIENT `POST /api/refill-requests/:id/create-order`
+
+### F. Order / payment
+
+1. ADMIN/PATIENT `POST /api/orders`  
+2. ADMIN/PHARMACIST `PATCH /api/orders/:id/status`  
+3. ADMIN/PHARMACIST/PATIENT `PATCH /api/orders/:id/payment-status`
+
+### G. Inventory / replenishment
+
+1. ADMIN/PHARMACIST `POST /api/medications`  
+2. `POST /api/medications/:id/adjust`  
+3. `POST /api/replenishment-requests`  
+4. ADMIN approve → staff receive (`PATCH .../status`)
+
+### H. Audit
+
+1. Perform any audited mutation (e.g. create appointment)  
+2. Login as ADMIN / VIEWER / SUPPORT  
+3. `GET /api/audit-events?entityType=APPOINTMENT`
+
+### I. Lab order
+
+1. ADMIN/DOCTOR `POST /api/lab-orders`  
+2. ADMIN status → SAMPLE_COLLECTED → PROCESSING  
+3. ADMIN `POST /api/lab-orders/:id/result` (multipart)  
+4. ADMIN/DOCTOR `POST /api/lab-orders/:id/acknowledge`  
+5. PATIENT `GET /api/lab-orders/:id` (result visible only after ack)
+
+---
+
+## Troubleshooting
+
+| Symptom | What to check |
+|---------|----------------|
+| **401** | Header present? Starts with `Bearer `? Token expired? Login again. |
+| **403** | Wrong role for route? PATIENT using another patient’s id? |
+| **404** | Wrong id? Resource deleted? Typo in path? |
+| **409** | Conflict (e.g. open replenishment already exists). |
+| **400 Validation failed** | Body/schema mismatch; read `errors[]`. |
+| **Invalid or expired token** | Clock skew / expiry / wrong `JWT_SECRET` between restarts if you minted tokens with a different secret. |
+| **`DATABASE_URL is not defined`** | Create `backend/.env`. |
+| **Health DOWN** | PostgreSQL running? URL correct? Migrations applied? |
+| **Connection refused :4000** | Backend not started; another process crashed; check terminal. |
+| **Cannot register ADMIN** | Expected — public register blocks ADMIN; use create-admin script or admin user API. |
+| **Multer / upload errors** | Field name must be `document`; check MIME type and 10MB limit. |
 
 ---
 
 ## Related docs
 
-- [API_INVENTORY.md](./API_INVENTORY.md) — endpoint table
-- [openapi.yaml](./openapi.yaml) — full OpenAPI 3.0.3 specification
+- [README.md](./README.md) — documentation map  
+- [API_INVENTORY.md](./API_INVENTORY.md) — full endpoint inventory  
+- [API_TEST_CASES.md](./API_TEST_CASES.md) — functional test catalog  
+- [openapi.yaml](./openapi.yaml) — OpenAPI contract  
