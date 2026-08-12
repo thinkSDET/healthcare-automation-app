@@ -303,6 +303,52 @@ function Dashboard() {
             </div>
           )}
 
+          {(isAdmin || isPharmacist) && (
+            <div
+              className="dashboard-card"
+              onClick={() =>
+                navigate("/inventory")
+              }
+            >
+              <div className="card-icon">
+                📦
+              </div>
+
+              <div>
+                <h3>
+                  Inventory
+                </h3>
+
+                <p>
+                  Medication stock levels and adjustments
+                </p>
+              </div>
+            </div>
+          )}
+
+          {(isAdmin || isPharmacist) && (
+            <div
+              className="dashboard-card"
+              onClick={() =>
+                navigate("/replenishment-requests")
+              }
+            >
+              <div className="card-icon">
+                📥
+              </div>
+
+              <div>
+                <h3>
+                  Replenishment
+                </h3>
+
+                <p>
+                  Request, approve, and receive stock
+                </p>
+              </div>
+            </div>
+          )}
+
           {canViewAudit && (
             <div
               className="dashboard-card"

@@ -34,6 +34,8 @@ import RefillRequestReview from "./pages/RefillRequestReview";
 import RequestAppointment from "./pages/RequestAppointment";
 import AppointmentRequestReview from "./pages/AppointmentRequestReview";
 import AuditLogs from "./pages/AuditLogs";
+import Inventory from "./pages/Inventory";
+import ReplenishmentRequests from "./pages/ReplenishmentRequests";
 import AppLayout from "./components/AppLayout";
 
 import "./App.css";
@@ -176,6 +178,34 @@ function App() {
             <Route
               path="/patients/:id/orders"
               element={<PatientOrders />}
+            />
+          </Route>
+        </Route>
+
+
+        {/* =========================
+            ADMIN + PHARMACIST (Inventory)
+           ========================= */}
+
+        <Route
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "ADMIN",
+                "PHARMACIST",
+              ]}
+            />
+          }
+        >
+          <Route element={<AppLayout />}>
+            <Route
+              path="/inventory"
+              element={<Inventory />}
+            />
+
+            <Route
+              path="/replenishment-requests"
+              element={<ReplenishmentRequests />}
             />
           </Route>
         </Route>

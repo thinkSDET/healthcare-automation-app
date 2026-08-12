@@ -154,6 +154,8 @@ API prefixes (from `server.ts`):
 - `/api/refill-requests`
 - `/api/orders`
 - `/api/audit-events`
+- `/api/medications`
+- `/api/replenishment-requests`
 
 ---
 
@@ -594,6 +596,18 @@ Document upload multer rejections (unsupported MIME / >10MB): **structured statu
 - [ ] PUT/PATCH/DELETE `/api/audit-events/:id` → 404 (no write routes)
 - [ ] After appointment create or status change, event appears with actor/action/entity/timestamp
 - [ ] Filters (action, entityType, entityId, actorUserId) return consistent subsets
+
+### Inventory / replenishment APIs
+
+- [ ] Create medication → stockStatus derived correctly
+- [ ] Adjust stock with reason → qty changes; movement recorded
+- [ ] Adjust causing negative stock → 400
+- [ ] Duplicate open replenishment for same medication → 409
+- [ ] PHARMACIST cannot APPROVE replenishment → 403
+- [ ] ADMIN approve → PHARMACIST receive → qty increases
+- [ ] Double receive → 400
+- [ ] PATIENT / DOCTOR cannot access medications → 403
+- [ ] Order create/status still does not change stock
 
 ---
 

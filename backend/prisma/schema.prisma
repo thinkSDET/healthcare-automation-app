@@ -40,6 +40,9 @@ model User {
   appointmentRequestsCreated  AppointmentRequest[] @relation("AppointmentRequestedBy")
   appointmentRequestsReviewed AppointmentRequest[] @relation("AppointmentReviewedBy")
   auditEvents                 AuditEvent[]
+  stockMovements              StockMovement[]
+  replenishmentRequestsCreated  ReplenishmentRequest[] @relation("ReplenishmentRequestedBy")
+  replenishmentRequestsReviewed ReplenishmentRequest[] @relation("ReplenishmentReviewedBy")
 }
 
 enum PatientStatus {
@@ -431,4 +434,83 @@ model AuditEvent {
   @@index([entityType, entityId])
   @@index([actorUserId])
   @@index([action])
+}
+
+enum MedicationStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Medication {
+  id               Int              @id @default(autoincrement())
+  sku              String           @unique
+  name             String
+  unit             String
+  quantityOnHand   Int              @default(0)
+  reorderLevel     Int              @default(0)
+  reorderQuantity  Int              @default(0)
+  status           MedicationStatus @default(ACTIVE)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  stockMovements         StockMovement[]
+  replenishmentRequests  ReplenishmentRequest[]
+
+  @@index([status])
+  @@index([name])
+  @@index([quantityOnHand])
+}
+
+enum ReplenishmentRequestStatus {
+  SUBMITTED
+  APPROVED
+  REJECTED
+  CANCELLED
+  RECEIVED
+}
+
+model ReplenishmentRequest {
+  id                Int                        @id @default(autoincrement())
+  requestNo         String                     @unique
+  medicationId      Int
+  requestedQuantity Int
+  status            ReplenishmentRequestStatus @default(SUBMITTED)
+  requestedByUserId Int
+  reviewedByUserId  Int?
+  rejectionReason   String?
+  notes             String?
+  receivedQuantity  Int?
+  reviewedAt        DateTime?
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+
+  medication  Medication      @relation(fields: [medicationId], references: [id])
+  requestedBy User            @relation("ReplenishmentRequestedBy", fields: [requestedByUserId], references: [id])
+  reviewedBy  User?           @relation("ReplenishmentReviewedBy", fields: [reviewedByUserId], references: [id])
+  movements   StockMovement[]
+
+  @@index([medicationId])
+  @@index([status])
+  @@index([medicationId, status])
+}
+
+model StockMovement {
+  id                     Int      @id @default(autoincrement())
+  medicationId           Int
+  movementType           String
+  quantityDelta          Int
+  quantityBefore         Int
+  quantityAfter          Int
+  reason                 String?
+  actorUserId            Int
+  replenishmentRequestId Int?
+  createdAt              DateTime @default(now())
+
+  medication           Medication            @relation(fields: [medicationId], references: [id])
+  actor                User                  @relation(fields: [actorUserId], references: [id])
+  replenishmentRequest ReplenishmentRequest? @relation(fields: [replenishmentRequestId], references: [id])
+
+  @@index([medicationId])
+  @@index([createdAt])
+  @@index([replenishmentRequestId])
 }

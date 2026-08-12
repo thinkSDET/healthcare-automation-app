@@ -12,6 +12,8 @@ import orderRoutes
 import refillRequestRoutes from "./routes/refill-request.routes";
 import appointmentRequestRoutes from "./routes/appointment-request.routes";
 import auditRoutes from "./routes/audit.routes";
+import medicationRoutes from "./routes/medication.routes";
+import replenishmentRequestRoutes from "./routes/replenishment-request.routes";
 
 
 const app = express();
@@ -47,6 +49,14 @@ app.use(
 app.use(
   "/api/audit-events",
   auditRoutes
+);
+app.use(
+  "/api/medications",
+  medicationRoutes
+);
+app.use(
+  "/api/replenishment-requests",
+  replenishmentRequestRoutes
 );
 
 // Health check

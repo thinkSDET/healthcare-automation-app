@@ -2979,3 +2979,83 @@ a.secondary-button {
   justify-content: center;
   margin-top: 4px;
 }
+
+/* Audit Logs — presentation helpers (reuse patients-page patterns) */
+
+.audit-filter-grid {
+  margin-top: 4px;
+}
+
+.audit-filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.audit-details-cell {
+  max-width: 280px;
+  vertical-align: top;
+}
+
+.audit-meta-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #344054;
+}
+
+.audit-meta-line + .audit-meta-line {
+  margin-top: 4px;
+}
+
+.audit-meta-key {
+  font-weight: 600;
+  color: #667085;
+}
+
+.audit-meta-key::after {
+  content: ":";
+}
+
+.audit-meta-value {
+  color: #172033;
+  word-break: break-word;
+}
+
+.audit-meta-empty {
+  color: #98a2b3;
+}
+
+.audit-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 4px;
+}
+
+.audit-pagination-label {
+  font-size: 14px;
+  color: #667085;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .audit-filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .audit-details-cell {
+    max-width: none;
+  }
+
+  .audit-pagination {
+    justify-content: center;
+  }
+}
+

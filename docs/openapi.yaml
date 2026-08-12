@@ -63,6 +63,10 @@ tags:
     description: Pharmacy/order APIs (fulfillment roles include PHARMACIST)
   - name: Audit
     description: Append-only clinical/operational audit trail (read-only)
+  - name: Medications
+    description: Pharmacy medication catalog and stock adjustments
+  - name: ReplenishmentRequests
+    description: Medication replenishment request workflow
 paths:
   /api/health:
     get:
@@ -2865,6 +2869,260 @@ paths:
           $ref: "#/components/responses/NotFound"
         500:
           $ref: "#/components/responses/ServerError"
+  /api/medications:
+    get:
+      tags: [Medications]
+      summary: List medications
+      description: "Roles: ADMIN, PHARMACIST. Filters: status, stockStatus, q."
+      operationId: listMedications
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [ACTIVE, INACTIVE]
+        - name: stockStatus
+          in: query
+          schema:
+            type: string
+            enum: [IN_STOCK, LOW_STOCK, OUT_OF_STOCK]
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        200:
+          description: Success
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Medications]
+      summary: Create medication
+      description: "Roles: ADMIN, PHARMACIST."
+      operationId: createMedication
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sku, name, unit]
+              properties:
+                sku: { type: string }
+                name: { type: string }
+                unit: { type: string }
+                quantityOnHand: { type: integer, minimum: 0 }
+                reorderLevel: { type: integer, minimum: 0 }
+                reorderQuantity: { type: integer, minimum: 0 }
+                status: { type: string, enum: [ACTIVE, INACTIVE] }
+      responses:
+        201:
+          description: Created
+        400:
+          $ref: "#/components/responses/ValidationError"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        409:
+          description: Duplicate SKU
+  /api/medications/{id}:
+    get:
+      tags: [Medications]
+      summary: Get medication
+      operationId: getMedicationById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        200:
+          description: Success
+        404:
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Medications]
+      summary: Update medication catalog fields
+      description: Does not change quantityOnHand.
+      operationId: updateMedication
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                unit: { type: string }
+                reorderLevel: { type: integer, minimum: 0 }
+                reorderQuantity: { type: integer, minimum: 0 }
+                status: { type: string, enum: [ACTIVE, INACTIVE] }
+      responses:
+        200:
+          description: Updated
+        404:
+          $ref: "#/components/responses/NotFound"
+  /api/medications/{id}/adjust:
+    post:
+      tags: [Medications]
+      summary: Adjust medication stock
+      description: "Roles: ADMIN, PHARMACIST. Reason required. Result qty cannot be negative."
+      operationId: adjustMedicationStock
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [delta, reason]
+              properties:
+                delta: { type: integer }
+                reason: { type: string, minLength: 3 }
+      responses:
+        200:
+          description: Adjusted
+        400:
+          description: Invalid delta / negative stock / inactive
+        409:
+          description: Concurrent update
+  /api/medications/{id}/movements:
+    get:
+      tags: [Medications]
+      summary: List stock movements
+      operationId: listMedicationMovements
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        200:
+          description: Success
+  /api/replenishment-requests:
+    get:
+      tags: [ReplenishmentRequests]
+      summary: List replenishment requests
+      operationId: listReplenishmentRequests
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [SUBMITTED, APPROVED, REJECTED, CANCELLED, RECEIVED]
+        - name: medicationId
+          in: query
+          schema: { type: integer }
+      responses:
+        200:
+          description: Success
+    post:
+      tags: [ReplenishmentRequests]
+      summary: Create replenishment request
+      operationId: createReplenishmentRequest
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [medicationId, requestedQuantity]
+              properties:
+                medicationId: { type: integer }
+                requestedQuantity: { type: integer, minimum: 1 }
+                notes: { type: string }
+      responses:
+        201:
+          description: Created
+        409:
+          description: Duplicate open request
+  /api/replenishment-requests/{id}:
+    get:
+      tags: [ReplenishmentRequests]
+      summary: Get replenishment request
+      operationId: getReplenishmentRequestById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        200:
+          description: Success
+        404:
+          $ref: "#/components/responses/NotFound"
+  /api/replenishment-requests/{id}/status:
+    patch:
+      tags: [ReplenishmentRequests]
+      summary: Update replenishment status
+      description: |
+        APPROVE/REJECT: ADMIN only.
+        CANCEL: ADMIN or requester from SUBMITTED.
+        RECEIVE: ADMIN/PHARMACIST from APPROVED; increases stock.
+      operationId: updateReplenishmentRequestStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [APPROVED, REJECTED, CANCELLED, RECEIVED]
+                rejectionReason: { type: string }
+                receivedQuantity: { type: integer, minimum: 1 }
+      responses:
+        200:
+          description: Updated
+        403:
+          $ref: "#/components/responses/Forbidden"
+        400:
+          description: Invalid transition
   /api/audit-events:
     get:
       tags:
@@ -2905,6 +3163,8 @@ paths:
               - PRESCRIPTION
               - REFILL_REQUEST
               - ORDER
+              - MEDICATION
+              - REPLENISHMENT_REQUEST
         - name: entityId
           in: query
           schema:

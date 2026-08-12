@@ -71,6 +71,18 @@ Quick reference for every backend endpoint discovered in the current codebase (`
 | PATCH | `/api/orders/:id/payment-status` | Yes | ADMIN, PHARMACIST, PATIENT* | Update payment status |
 | DELETE | `/api/orders/:id` | Yes | ADMIN | Delete order |
 | GET | `/api/audit-events` | Yes | ADMIN, VIEWER, SUPPORT | List append-only audit events (filters: actorUserId, action, entityType, entityId, from, to; pagination: limit, offset) |
+| GET | `/api/medications` | Yes | ADMIN, PHARMACIST | List medications (filters: status, stockStatus, q) |
+| POST | `/api/medications` | Yes | ADMIN, PHARMACIST | Create medication catalog entry |
+| GET | `/api/medications/:id` | Yes | ADMIN, PHARMACIST | Get medication + derived stockStatus |
+| PATCH | `/api/medications/:id` | Yes | ADMIN, PHARMACIST | Update catalog fields (not quantity) |
+| POST | `/api/medications/:id/adjust` | Yes | ADMIN, PHARMACIST | Adjust stock with required reason |
+| GET | `/api/medications/:id/movements` | Yes | ADMIN, PHARMACIST | Stock movement history (limit/offset) |
+| GET | `/api/replenishment-requests` | Yes | ADMIN, PHARMACIST | List replenishment requests (filters: status, medicationId) |
+| POST | `/api/replenishment-requests` | Yes | ADMIN, PHARMACIST | Create replenishment request |
+| GET | `/api/replenishment-requests/:id` | Yes | ADMIN, PHARMACIST | Get replenishment request |
+| PATCH | `/api/replenishment-requests/:id/status` | Yes | ADMIN, PHARMACIST* | Approve/reject (ADMIN); cancel; receive (ADMIN/PHARMACIST) |
+
+\* **Replenishment status rules:** APPROVE/REJECT = ADMIN only; CANCEL = ADMIN or requester from SUBMITTED; RECEIVE = ADMIN/PHARMACIST from APPROVED.
 
 \* **PATIENT ownership:** when role is `PATIENT`, the patientId (path/body or resource’s patientId) must match the Patient linked to the JWT `userId`. Otherwise **403**.
 
@@ -78,15 +90,15 @@ Quick reference for every backend endpoint discovered in the current codebase (`
 
 | Role | Notes |
 |------|--------|
-| ADMIN | Full admin APIs; appointment create/update/cancel; refill/renewal review; audit read |
+| ADMIN | Full admin APIs; appointment create/update/cancel; refill/renewal review; audit read; inventory + replenishment approve |
 | DOCTOR | Clinical read/write within authorize lists; no appointment create; renewal approve |
-| PHARMACIST | Prescriptions read/status; orders list/get/status/payment; refill request (not renewal) + refill approve |
+| PHARMACIST | Prescriptions read/status; orders list/get/status/payment; refill request (not renewal) + refill approve; inventory view/adjust; replenishment create/receive |
 | PATIENT | Own patient record; own prescriptions (read); own refill/renewal requests; own orders; own appointment requests; ACTIVE doctors (read) |
 | SUPPORT | Exists in `UserRole` / admin user create schema; **read-only audit** via `GET /api/audit-events` |
 | VIEWER | Exists in `UserRole` / admin user create schema; **read-only audit** via `GET /api/audit-events` |
 
 ## Totals
 
-- **Endpoints documented:** 63
+- **Endpoints documented:** 73
 - **Full OpenAPI:** [openapi.yaml](./openapi.yaml)
 - **Testing guide:** [API_TESTING_GUIDE.md](./API_TESTING_GUIDE.md)

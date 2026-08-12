@@ -16,7 +16,9 @@ export type AuditEntityType =
   | "APPOINTMENT_REQUEST"
   | "PRESCRIPTION"
   | "REFILL_REQUEST"
-  | "ORDER";
+  | "ORDER"
+  | "MEDICATION"
+  | "REPLENISHMENT_REQUEST";
 
 export type AuditContext = {
   actorUserId: number;

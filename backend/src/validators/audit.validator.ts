@@ -17,6 +17,8 @@ export const auditEntityTypeEnum = z.enum([
   "PRESCRIPTION",
   "REFILL_REQUEST",
   "ORDER",
+  "MEDICATION",
+  "REPLENISHMENT_REQUEST",
 ]);
 
 export const listAuditEventsQuerySchema = z.object({

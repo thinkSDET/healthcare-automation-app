@@ -28,7 +28,11 @@ function getPrimaryNav(role?: string): NavItem[] {
       { to: "/appointment-requests", label: "Appt Requests" },
       { to: "/refill-requests", label: "Refills" },
       ...(normalized === "ADMIN"
-        ? [{ to: "/audit-logs", label: "Audit Logs" }]
+        ? [
+            { to: "/inventory", label: "Inventory" },
+            { to: "/replenishment-requests", label: "Replenish" },
+            { to: "/audit-logs", label: "Audit Logs" },
+          ]
         : []),
     ];
   }
@@ -54,6 +58,8 @@ function getPrimaryNav(role?: string): NavItem[] {
     return [
       { to: "/dashboard", label: "Dashboard" },
       { to: "/pharmacy", label: "Pharmacy" },
+      { to: "/inventory", label: "Inventory" },
+      { to: "/replenishment-requests", label: "Replenish" },
       { to: "/refill-requests", label: "Refills" },
     ];
   }
