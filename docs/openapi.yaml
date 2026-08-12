@@ -54,6 +54,8 @@ tags:
     description: Scheduling and lifecycle
   - name: Prescriptions
     description: Prescription CRUD and status
+  - name: RefillRequests
+    description: Prescription refill and renewal request workflow
   - name: Orders
     description: Pharmacy/order APIs (fulfillment roles include PHARMACIST)
 paths:
@@ -1975,7 +1977,7 @@ paths:
       tags:
         - Prescriptions
       summary: List prescriptions for a patient
-      description: "Roles: ADMIN, DOCTOR, PHARMACIST. No patient-ownership check on this route."
+      description: "Roles: ADMIN, DOCTOR, PHARMACIST, PATIENT (own patient only)."
       operationId: getPatientPrescriptions
       security:
         - BearerAuth: 
@@ -2078,7 +2080,7 @@ paths:
       tags:
         - Prescriptions
       summary: Get prescription by ID
-      description: "Roles: ADMIN, DOCTOR, PHARMACIST."
+      description: "Roles: ADMIN, DOCTOR, PHARMACIST, PATIENT (own prescription only)."
       operationId: getPrescriptionById
       security:
         - BearerAuth: 
@@ -2169,8 +2171,7 @@ paths:
       description: "Roles: ADMIN, DOCTOR, PHARMACIST. Allowed status values: ACTIVE, COMPLETED, CANCELLED."
       operationId: updatePrescriptionStatus
       security:
-        - BearerAuth: 
-
+        - BearerAuth: []
       parameters:
         - name: id
           in: path
@@ -2215,6 +2216,202 @@ paths:
           $ref: "#/components/responses/NotFound"
         500:
           $ref: "#/components/responses/ServerError"
+  /api/prescriptions/{id}/refill-requests:
+    post:
+      tags:
+        - RefillRequests
+      summary: Create refill or renewal request
+      description: |
+        Roles: ADMIN, PHARMACIST, PATIENT (own prescription).
+        PHARMACIST may only create REFILL (not RENEWAL).
+        REFILL requires ACTIVE prescription. RENEWAL allows ACTIVE or COMPLETED.
+        At most one SUBMITTED request per prescription.
+      operationId: createRefillRequest
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [requestType]
+              properties:
+                requestType:
+                  type: string
+                  enum: [REFILL, RENEWAL]
+                notes:
+                  type: string
+      responses:
+        201:
+          description: Created
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        409:
+          description: Duplicate submitted request
+  /api/refill-requests:
+    get:
+      tags:
+        - RefillRequests
+      summary: List refill/renewal requests
+      description: Roles ADMIN, DOCTOR, PHARMACIST, PATIENT (own only). Query filters status, patientId, requestType.
+      operationId: listRefillRequests
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [SUBMITTED, APPROVED, REJECTED, CANCELLED, FULFILLED]
+        - name: requestType
+          in: query
+          schema:
+            type: string
+            enum: [REFILL, RENEWAL]
+        - name: patientId
+          in: query
+          schema:
+            type: integer
+      responses:
+        200:
+          description: List
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+  /api/refill-requests/{id}:
+    get:
+      tags:
+        - RefillRequests
+      summary: Get refill/renewal request by id
+      operationId: getRefillRequestById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Detail
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+  /api/refill-requests/{id}/status:
+    patch:
+      tags:
+        - RefillRequests
+      summary: Update refill request status
+      description: |
+        SUBMITTED → APPROVED/REJECTED/CANCELLED.
+        REFILL approve/reject: ADMIN, DOCTOR, PHARMACIST.
+        RENEWAL approve/reject: ADMIN, DOCTOR only.
+        CANCEL: requester or ADMIN.
+        Rejection requires rejectionReason. Does not change Prescription.status.
+      operationId: updateRefillRequestStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [APPROVED, REJECTED, CANCELLED]
+                rejectionReason:
+                  type: string
+      responses:
+        200:
+          description: Updated
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+  /api/refill-requests/{id}/create-order:
+    post:
+      tags:
+        - RefillRequests
+      summary: Create order from approved refill/renewal request
+      description: Roles ADMIN, PATIENT (own). Request must be APPROVED with no linked order. Sets status FULFILLED.
+      operationId: createOrderFromRefillRequest
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items]
+              properties:
+                deliveryAddress:
+                  type: string
+                notes:
+                  type: string
+                items:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required: [productName, quantity, unitPrice]
+                    properties:
+                      productName:
+                        type: string
+                      quantity:
+                        type: integer
+                      unitPrice:
+                        type: number
+      responses:
+        201:
+          description: Order created and request fulfilled
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        409:
+          description: Order already linked
   /api/orders/patient/{patientId}:
     get:
       tags:

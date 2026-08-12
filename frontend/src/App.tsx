@@ -29,6 +29,8 @@ import ShipmentTracking from "./pages/ShipmentTracking";
 import OrderPayment from "./pages/OrderPayment";
 import PaymentFormEmbed from "./pages/PaymentFormEmbed";
 import PharmacyWorkspace from "./pages/PharmacyWorkspace";
+import MyPrescriptions from "./pages/MyPrescriptions";
+import RefillRequestReview from "./pages/RefillRequestReview";
 import AppLayout from "./components/AppLayout";
 
 import "./App.css";
@@ -135,6 +137,11 @@ function App() {
               path="/patients/:id/prescriptions"
               element={<PatientPrescriptions />}
             />
+
+            <Route
+              path="/refill-requests"
+              element={<RefillRequestReview />}
+            />
           </Route>
         </Route>
 
@@ -210,6 +217,11 @@ function App() {
               path="/my/orders/:orderId/pay"
               element={<OrderPayment />}
             />
+
+            <Route
+              path="/my/prescriptions"
+              element={<MyPrescriptions />}
+            />
           </Route>
         </Route>
 
@@ -231,6 +243,10 @@ function App() {
             <Route
               path="/pharmacy"
               element={<PharmacyWorkspace />}
+            />
+            <Route
+              path="/refill-requests"
+              element={<RefillRequestReview />}
             />
           </Route>
         </Route>

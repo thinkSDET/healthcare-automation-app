@@ -25,6 +25,7 @@ function getPrimaryNav(role?: string): NavItem[] {
       { to: "/patients", label: "Patients" },
       { to: "/doctors", label: "Doctors" },
       { to: "/appointments", label: "Appointments" },
+      { to: "/refill-requests", label: "Refills" },
     ];
   }
 
@@ -33,6 +34,7 @@ function getPrimaryNav(role?: string): NavItem[] {
       { to: "/dashboard", label: "Dashboard" },
       { to: "/my/profile", label: "My Profile" },
       { to: "/my/appointments", label: "My Appointments" },
+      { to: "/my/prescriptions", label: "My Prescriptions" },
       { to: "/my/orders", label: "My Orders" },
     ];
   }
@@ -41,6 +43,7 @@ function getPrimaryNav(role?: string): NavItem[] {
     return [
       { to: "/dashboard", label: "Dashboard" },
       { to: "/pharmacy", label: "Pharmacy" },
+      { to: "/refill-requests", label: "Refills" },
     ];
   }
 

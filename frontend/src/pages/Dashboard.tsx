@@ -164,6 +164,29 @@ function Dashboard() {
             <div
               className="dashboard-card"
               onClick={() =>
+                navigate("/my/prescriptions")
+              }
+            >
+              <div className="card-icon">
+                💊
+              </div>
+
+              <div>
+                <h3>
+                  My Prescriptions
+                </h3>
+
+                <p>
+                  View prescriptions and request refill or renewal
+                </p>
+              </div>
+            </div>
+          )}
+
+          {isPatient && (
+            <div
+              className="dashboard-card"
+              onClick={() =>
                 navigate("/my/orders")
               }
             >
@@ -178,6 +201,29 @@ function Dashboard() {
 
                 <p>
                   View and create your orders
+                </p>
+              </div>
+            </div>
+          )}
+
+          {(isAdmin || isDoctor) && (
+            <div
+              className="dashboard-card"
+              onClick={() =>
+                navigate("/refill-requests")
+              }
+            >
+              <div className="card-icon">
+                🔁
+              </div>
+
+              <div>
+                <h3>
+                  Refill Requests
+                </h3>
+
+                <p>
+                  Review refill and renewal requests
                 </p>
               </div>
             </div>
@@ -206,6 +252,29 @@ function Dashboard() {
             </div>
           )}
 
+          {isPharmacist && (
+            <div
+              className="dashboard-card"
+              onClick={() =>
+                navigate("/refill-requests")
+              }
+            >
+              <div className="card-icon">
+                🔁
+              </div>
+
+              <div>
+                <h3>
+                  Refill Queue
+                </h3>
+
+                <p>
+                  Approve or reject refill requests
+                </p>
+              </div>
+            </div>
+          )}
+
         </div>
 
         <section className="dashboard-welcome">
@@ -222,10 +291,10 @@ function Dashboard() {
               "View patients, provider directory and appointments. Clinical prescription tools are available from patient records."}
 
             {isPatient &&
-              "Access your profile, appointments and pharmacy orders from your patient portal."}
+              "Access your profile, appointments, prescriptions and pharmacy orders from your patient portal."}
 
             {isPharmacist &&
-              "Look up prescriptions and orders by patient, order or prescription ID to update pharmacy status."}
+              "Look up prescriptions and orders, and review refill requests in the refill queue."}
 
           </p>
 

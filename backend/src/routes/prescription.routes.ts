@@ -11,9 +11,19 @@ import {
 } from "../controllers/prescription.controller";
 
 import {
+  createRefillRequest,
+} from "../controllers/refill-request.controller";
+
+import {
   authenticate,
   authorize,
 } from "../middleware/auth";
+
+import { validate } from "../middleware/validate";
+
+import {
+  createRefillRequestSchema,
+} from "../validators/refill-request.validator";
 
 const router =
   Router();
@@ -27,10 +37,23 @@ const router =
 router.get(
   "/patient/:patientId",
   authenticate,
-  authorize("ADMIN", "DOCTOR", "PHARMACIST"),
+  authorize("ADMIN", "DOCTOR", "PHARMACIST", "PATIENT"),
   getPatientPrescriptions
 );
 
+/*
+|--------------------------------------------------------------------------
+| Refill / Renewal Requests (nested create)
+|--------------------------------------------------------------------------
+*/
+
+router.post(
+  "/:id/refill-requests",
+  authenticate,
+  authorize("ADMIN", "PHARMACIST", "PATIENT"),
+  validate(createRefillRequestSchema),
+  createRefillRequest
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -41,7 +64,7 @@ router.get(
 router.get(
   "/:id",
   authenticate,
-  authorize("ADMIN", "DOCTOR", "PHARMACIST"),
+  authorize("ADMIN", "DOCTOR", "PHARMACIST", "PATIENT"),
   getPrescriptionById
 );
 

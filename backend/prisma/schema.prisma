@@ -35,6 +35,8 @@ model User {
   passwordResetTokens PasswordResetToken[]
   accountSecurity     AccountSecurity?
   patient             Patient?
+  refillRequestsCreated  PrescriptionRefillRequest[] @relation("RefillRequestedBy")
+  refillRequestsReviewed PrescriptionRefillRequest[] @relation("RefillReviewedBy")
 }
 
 enum PatientStatus {
@@ -89,6 +91,7 @@ model Patient {
   medicalProfile   PatientMedicalProfile?
   prescriptions Prescription[]
   orders        Order[]
+  refillRequests PrescriptionRefillRequest[]
 }
 
 enum DoctorStatus {
@@ -263,6 +266,7 @@ model Prescription {
   patient Patient             @relation(fields: [patientId], references: [id], onDelete: Cascade)
   doctor  Doctor              @relation(fields: [doctorId], references: [id])
   items   PrescriptionItem[]
+  refillRequests PrescriptionRefillRequest[]
 
   @@index([patientId])
   @@index([doctorId])
@@ -301,6 +305,7 @@ model Order {
 
   patient Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
   items   OrderItem[]
+  refillRequest PrescriptionRefillRequest?
 
   @@index([patientId])
   @@index([orderDate])
@@ -322,4 +327,46 @@ model OrderItem {
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
+}
+
+enum RefillRequestType {
+  REFILL
+  RENEWAL
+}
+
+enum RefillRequestStatus {
+  SUBMITTED
+  APPROVED
+  REJECTED
+  CANCELLED
+  FULFILLED
+}
+
+model PrescriptionRefillRequest {
+  id                Int                 @id @default(autoincrement())
+  requestNo         String              @unique
+  prescriptionId    Int
+  patientId         Int
+  requestType       RefillRequestType
+  status            RefillRequestStatus @default(SUBMITTED)
+  requestedByUserId Int
+  reviewedByUserId  Int?
+  rejectionReason   String?
+  notes             String?
+  orderId           Int?                @unique
+  reviewedAt        DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  prescription Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  patient      Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  requestedBy  User         @relation("RefillRequestedBy", fields: [requestedByUserId], references: [id])
+  reviewedBy   User?        @relation("RefillReviewedBy", fields: [reviewedByUserId], references: [id])
+  order        Order?       @relation(fields: [orderId], references: [id])
+
+  @@index([prescriptionId])
+  @@index([patientId])
+  @@index([status])
+  @@index([requestType])
+  @@index([prescriptionId, status])
 }

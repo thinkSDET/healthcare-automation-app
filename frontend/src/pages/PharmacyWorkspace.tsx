@@ -244,6 +244,36 @@ function PharmacyWorkspace() {
     }
   };
 
+  const requestRefill = async (prescriptionId: number) => {
+    try {
+      setError("");
+      setSuccess("");
+      const response = await fetch(
+        `http://localhost:4000/api/prescriptions/${prescriptionId}/refill-requests`,
+        {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({ requestType: "REFILL" }),
+        }
+      );
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message || "Failed to submit refill request"
+        );
+      }
+      setSuccess(
+        `Refill request ${result.data.requestNo} submitted.`
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to submit refill request"
+      );
+    }
+  };
+
   const updateOrderStatus = async (
     orderId: number,
     status: string
@@ -328,7 +358,14 @@ function PharmacyWorkspace() {
           <h1>Pharmacy Workspace</h1>
           <p>
             Look up prescriptions and orders by patient ID,
-            order ID, or prescription ID. No patient directory.
+            order ID, or prescription ID. No patient directory.{" "}
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => navigate("/refill-requests")}
+            >
+              Open refill queue
+            </button>
           </p>
         </div>
         <button
@@ -454,6 +491,7 @@ function PharmacyWorkspace() {
                           <th>Status</th>
                           <th>Prescribed</th>
                           <th>Update Status</th>
+                          <th>Refill</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -493,6 +531,16 @@ function PharmacyWorkspace() {
                                   </option>
                                 ))}
                               </select>
+                            </td>
+                            <td>
+                              <button
+                                type="button"
+                                className="secondary-button"
+                                disabled={rx.status !== "ACTIVE"}
+                                onClick={() => requestRefill(rx.id)}
+                              >
+                                Request refill
+                              </button>
                             </td>
                           </tr>
                         ))}
