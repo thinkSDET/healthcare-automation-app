@@ -1,5 +1,9 @@
 import { prisma } from "../config/prisma";
 import * as appointmentService from "./appointment.service";
+import {
+  safeRecordAuditEvent,
+  type AuditAction,
+} from "./audit.service";
 
 export type AppointmentRequestStatusValue =
   | "SUBMITTED"
@@ -206,7 +210,7 @@ export const createAppointmentRequest = async (input: {
 
   const requestNo = `AR-${Date.now()}`;
 
-  return prisma.appointmentRequest.create({
+  const created = await prisma.appointmentRequest.create({
     data: {
       requestNo,
       patientId: ownPatientId,
@@ -221,6 +225,21 @@ export const createAppointmentRequest = async (input: {
     },
     include: detailInclude,
   });
+
+  await safeRecordAuditEvent({
+    actorUserId: requestedByUserId,
+    actorRole: role,
+    action: "CREATE",
+    entityType: "APPOINTMENT_REQUEST",
+    entityId: created.id,
+    metadata: {
+      requestNo: created.requestNo,
+      patientId: created.patientId,
+      doctorId: created.doctorId,
+    },
+  });
+
+  return created;
 };
 
 export const listAppointmentRequests = async (filters: {
@@ -364,16 +383,22 @@ export const updateAppointmentRequestStatus = async (input: {
     }
 
     try {
-      const appointment = await appointmentService.createAppointment({
-        appointmentNo: `APT-${Date.now()}`,
-        patientId: existing.patientId,
-        doctorId: existing.doctorId,
-        appointmentAt: existing.requestedAt,
-        duration: existing.duration,
-        type: existing.type as "IN_PERSON" | "VIDEO" | "PHONE",
-        reason: existing.reason,
-        notes: existing.notes || undefined,
-      });
+      const appointment = await appointmentService.createAppointment(
+        {
+          appointmentNo: `APT-${Date.now()}`,
+          patientId: existing.patientId,
+          doctorId: existing.doctorId,
+          appointmentAt: existing.requestedAt,
+          duration: existing.duration,
+          type: existing.type as "IN_PERSON" | "VIDEO" | "PHONE",
+          reason: existing.reason,
+          notes: existing.notes || undefined,
+        },
+        {
+          actorUserId,
+          actorRole: role,
+        }
+      );
 
       await prisma.appointmentRequest.update({
         where: { id },
@@ -396,10 +421,24 @@ export const updateAppointmentRequestStatus = async (input: {
       throw error;
     }
 
-    return prisma.appointmentRequest.findUniqueOrThrow({
+    const approved = await prisma.appointmentRequest.findUniqueOrThrow({
       where: { id },
       include: detailInclude,
     });
+
+    await safeRecordAuditEvent({
+      actorUserId,
+      actorRole: role,
+      action: "APPROVE",
+      entityType: "APPOINTMENT_REQUEST",
+      entityId: approved.id,
+      metadata: {
+        requestNo: approved.requestNo,
+        appointmentId: approved.appointmentId,
+      },
+    });
+
+    return approved;
   }
 
   const updated = await prisma.appointmentRequest.updateMany({
@@ -421,8 +460,30 @@ export const updateAppointmentRequestStatus = async (input: {
     throw new Error("INVALID_STATUS_TRANSITION");
   }
 
-  return prisma.appointmentRequest.findUniqueOrThrow({
+  const result = await prisma.appointmentRequest.findUniqueOrThrow({
     where: { id },
     include: detailInclude,
   });
+
+  const action: AuditAction =
+    nextStatus === "REJECTED"
+      ? "REJECT"
+      : nextStatus === "CANCELLED"
+        ? "CANCEL"
+        : "STATUS_CHANGE";
+
+  await safeRecordAuditEvent({
+    actorUserId,
+    actorRole: role,
+    action,
+    entityType: "APPOINTMENT_REQUEST",
+    entityId: result.id,
+    metadata: {
+      requestNo: result.requestNo,
+      from: "SUBMITTED",
+      to: nextStatus,
+    },
+  });
+
+  return result;
 };

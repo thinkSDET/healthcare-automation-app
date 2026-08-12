@@ -39,6 +39,7 @@ model User {
   refillRequestsReviewed PrescriptionRefillRequest[] @relation("RefillReviewedBy")
   appointmentRequestsCreated  AppointmentRequest[] @relation("AppointmentRequestedBy")
   appointmentRequestsReviewed AppointmentRequest[] @relation("AppointmentReviewedBy")
+  auditEvents                 AuditEvent[]
 }
 
 enum PatientStatus {
@@ -413,4 +414,21 @@ model PrescriptionRefillRequest {
   @@index([status])
   @@index([requestType])
   @@index([prescriptionId, status])
+}
+
+model AuditEvent {
+  id           Int      @id @default(autoincrement())
+  occurredAt   DateTime @default(now())
+  actorUserId  Int?
+  actorRole    String
+  action       String
+  entityType   String
+  entityId     Int
+  metadata     Json?
+  actor        User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([occurredAt])
+  @@index([entityType, entityId])
+  @@index([actorUserId])
+  @@index([action])
 }

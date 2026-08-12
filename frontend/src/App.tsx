@@ -33,6 +33,7 @@ import MyPrescriptions from "./pages/MyPrescriptions";
 import RefillRequestReview from "./pages/RefillRequestReview";
 import RequestAppointment from "./pages/RequestAppointment";
 import AppointmentRequestReview from "./pages/AppointmentRequestReview";
+import AuditLogs from "./pages/AuditLogs";
 import AppLayout from "./components/AppLayout";
 
 import "./App.css";
@@ -259,6 +260,30 @@ function App() {
             <Route
               path="/refill-requests"
               element={<RefillRequestReview />}
+            />
+          </Route>
+        </Route>
+
+
+        {/* =========================
+            ADMIN + VIEWER + SUPPORT (Audit)
+           ========================= */}
+
+        <Route
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "ADMIN",
+                "VIEWER",
+                "SUPPORT",
+              ]}
+            />
+          }
+        >
+          <Route element={<AppLayout />}>
+            <Route
+              path="/audit-logs"
+              element={<AuditLogs />}
             />
           </Route>
         </Route>

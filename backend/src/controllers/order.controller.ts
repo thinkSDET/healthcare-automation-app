@@ -285,22 +285,30 @@ export const createOrder =
 
       const order =
         await orderService
-          .createOrder({
-            patientId:
-              requestedPatientId,
+          .createOrder(
+            {
+              patientId:
+                requestedPatientId,
 
-            orderDate,
+              orderDate,
 
-            status,
+              status,
 
-            paymentStatus,
+              paymentStatus,
 
-            deliveryAddress,
+              deliveryAddress,
 
-            notes,
+              notes,
 
-            items,
-          });
+              items,
+            },
+            req.user
+              ? {
+                  actorUserId: req.user.userId,
+                  actorRole: req.user.role,
+                }
+              : undefined
+          );
 
       return res.status(201).json({
         success: true,
@@ -415,7 +423,13 @@ export const updateOrderStatus =
         await orderService
           .updateOrderStatus(
             orderId,
-            status
+            status,
+            req.user
+              ? {
+                  actorUserId: req.user.userId,
+                  actorRole: req.user.role,
+                }
+              : undefined
           );
 
       return res.status(200).json({
@@ -553,7 +567,13 @@ export const updatePaymentStatus =
         await orderService
           .updatePaymentStatus(
             orderId,
-            paymentStatus
+            paymentStatus,
+            req.user
+              ? {
+                  actorUserId: req.user.userId,
+                  actorRole: req.user.role,
+                }
+              : undefined
           );
 
       return res.status(200).json({

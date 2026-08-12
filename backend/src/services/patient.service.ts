@@ -1,4 +1,8 @@
 import { prisma } from "../config/prisma";
+import {
+  safeRecordAuditEvent,
+  type AuditContext,
+} from "./audit.service";
 
 export const getPatients = async () => {
   return prisma.patient.findMany({
@@ -14,20 +18,38 @@ export const getPatientById = async (id: number) => {
   });
 };
 
-export const createPatient = async (data: {
-  medicalId: string;
-  firstName: string;
-  lastName: string;
-  dateOfBirth: Date;
-  gender: "MALE" | "FEMALE" | "OTHER";
-  email?: string;
-  phone: string;
-  address?: string;
-  bloodGroup?: string;
-}) => {
-  return prisma.patient.create({
+export const createPatient = async (
+  data: {
+    medicalId: string;
+    firstName: string;
+    lastName: string;
+    dateOfBirth: Date;
+    gender: "MALE" | "FEMALE" | "OTHER";
+    email?: string;
+    phone: string;
+    address?: string;
+    bloodGroup?: string;
+  },
+  auditContext?: AuditContext
+) => {
+  const created = await prisma.patient.create({
     data,
   });
+
+  if (auditContext) {
+    await safeRecordAuditEvent({
+      actorUserId: auditContext.actorUserId,
+      actorRole: auditContext.actorRole,
+      action: "CREATE",
+      entityType: "PATIENT",
+      entityId: created.id,
+      metadata: {
+        medicalId: created.medicalId,
+      },
+    });
+  }
+
+  return created;
 };
 
 export const updatePatient = async (
@@ -40,12 +62,29 @@ export const updatePatient = async (
     address?: string;
     bloodGroup?: string;
     status?: "ACTIVE" | "INACTIVE" | "DECEASED";
-  }
+  },
+  auditContext?: AuditContext
 ) => {
-  return prisma.patient.update({
+  const updated = await prisma.patient.update({
     where: { id },
     data,
   });
+
+  if (auditContext) {
+    await safeRecordAuditEvent({
+      actorUserId: auditContext.actorUserId,
+      actorRole: auditContext.actorRole,
+      action: "UPDATE",
+      entityType: "PATIENT",
+      entityId: updated.id,
+      metadata: {
+        medicalId: updated.medicalId,
+        updatedFields: Object.keys(data),
+      },
+    });
+  }
+
+  return updated;
 };
 
 export const deletePatient = async (id: number) => {
@@ -55,7 +94,8 @@ export const deletePatient = async (id: number) => {
 };
 
 export const deactivatePatient = async (
-  patientId: number
+  patientId: number,
+  auditContext?: AuditContext
 ) => {
   const patient =
     await prisma.patient.findUnique({
@@ -74,7 +114,7 @@ export const deactivatePatient = async (
     );
   }
 
-  return prisma.patient.update({
+  const updated = await prisma.patient.update({
     where: {
       id: patientId,
     },
@@ -82,6 +122,23 @@ export const deactivatePatient = async (
       status: "INACTIVE",
     },
   });
+
+  if (auditContext) {
+    await safeRecordAuditEvent({
+      actorUserId: auditContext.actorUserId,
+      actorRole: auditContext.actorRole,
+      action: "STATUS_CHANGE",
+      entityType: "PATIENT",
+      entityId: updated.id,
+      metadata: {
+        medicalId: updated.medicalId,
+        from: patient.status,
+        to: "INACTIVE",
+      },
+    });
+  }
+
+  return updated;
 };
 
 /*

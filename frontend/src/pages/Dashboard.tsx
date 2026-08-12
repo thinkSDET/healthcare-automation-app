@@ -20,6 +20,11 @@ function Dashboard() {
   const isPharmacist =
     role === "PHARMACIST";
 
+  const canViewAudit =
+    role === "ADMIN" ||
+    role === "VIEWER" ||
+    role === "SUPPORT";
+
   return (
     <div className="dashboard-page">
 
@@ -298,6 +303,29 @@ function Dashboard() {
             </div>
           )}
 
+          {canViewAudit && (
+            <div
+              className="dashboard-card"
+              onClick={() =>
+                navigate("/audit-logs")
+              }
+            >
+              <div className="card-icon">
+                📋
+              </div>
+
+              <div>
+                <h3>
+                  Audit Logs
+                </h3>
+
+                <p>
+                  Review clinical and operational mutation trail
+                </p>
+              </div>
+            </div>
+          )}
+
         </div>
 
         <section className="dashboard-welcome">
@@ -318,6 +346,9 @@ function Dashboard() {
 
             {isPharmacist &&
               "Look up prescriptions and orders, and review refill requests in the refill queue."}
+
+            {(role === "VIEWER" || role === "SUPPORT") &&
+              "Review the operational audit trail for important clinical and business changes."}
 
           </p>
 

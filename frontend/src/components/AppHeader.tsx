@@ -27,6 +27,16 @@ function getPrimaryNav(role?: string): NavItem[] {
       { to: "/appointments", label: "Appointments" },
       { to: "/appointment-requests", label: "Appt Requests" },
       { to: "/refill-requests", label: "Refills" },
+      ...(normalized === "ADMIN"
+        ? [{ to: "/audit-logs", label: "Audit Logs" }]
+        : []),
+    ];
+  }
+
+  if (normalized === "VIEWER" || normalized === "SUPPORT") {
+    return [
+      { to: "/dashboard", label: "Dashboard" },
+      { to: "/audit-logs", label: "Audit Logs" },
     ];
   }
 

@@ -100,11 +100,24 @@ export const createAppointment = async (
   res: Response
 ) => {
   try {
-    const appointment =
-      await appointmentService.createAppointment({
-        ...req.body,
-        appointmentAt: new Date(req.body.appointmentAt),
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
       });
+    }
+
+    const appointment =
+      await appointmentService.createAppointment(
+        {
+          ...req.body,
+          appointmentAt: new Date(req.body.appointmentAt),
+        },
+        {
+          actorUserId: req.user.userId,
+          actorRole: req.user.role,
+        }
+      );
 
     res.status(201).json({
       success: true,
@@ -137,6 +150,13 @@ export const updateAppointment = async (
       });
     }
 
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
     const data = {
       ...req.body,
       ...(req.body.appointmentAt && {
@@ -145,7 +165,10 @@ export const updateAppointment = async (
     };
 
     const appointment =
-      await appointmentService.updateAppointment(id, data);
+      await appointmentService.updateAppointment(id, data, {
+        actorUserId: req.user.userId,
+        actorRole: req.user.role,
+      });
 
     res.status(200).json({
       success: true,
@@ -189,7 +212,11 @@ export const updateAppointmentStatus = async (
       await appointmentService.updateAppointmentStatus(
         id,
         req.body.status as AppointmentStatusValue,
-        req.user.role
+        req.user.role,
+        {
+          actorUserId: req.user.userId,
+          actorRole: req.user.role,
+        }
       );
 
     res.status(200).json({
@@ -223,8 +250,18 @@ export const cancelAppointment = async (
       });
     }
 
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
     const appointment =
-      await appointmentService.cancelAppointment(id);
+      await appointmentService.cancelAppointment(id, {
+        actorUserId: req.user.userId,
+        actorRole: req.user.role,
+      });
 
     res.status(200).json({
       success: true,

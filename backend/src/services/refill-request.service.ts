@@ -1,4 +1,8 @@
 import { prisma } from "../config/prisma";
+import {
+  safeRecordAuditEvent,
+  type AuditAction,
+} from "./audit.service";
 import * as orderService from "./order.service";
 
 export type RefillRequestTypeValue = "REFILL" | "RENEWAL";
@@ -152,7 +156,7 @@ export const createRefillRequest = async (input: {
 
   const requestNo = `RR-${Date.now()}`;
 
-  return prisma.prescriptionRefillRequest.create({
+  const created = await prisma.prescriptionRefillRequest.create({
     data: {
       requestNo,
       prescriptionId,
@@ -164,6 +168,22 @@ export const createRefillRequest = async (input: {
     },
     include: detailInclude,
   });
+
+  await safeRecordAuditEvent({
+    actorUserId: requestedByUserId,
+    actorRole: role,
+    action: "CREATE",
+    entityType: "REFILL_REQUEST",
+    entityId: created.id,
+    metadata: {
+      requestNo: created.requestNo,
+      prescriptionId: created.prescriptionId,
+      requestType: created.requestType,
+      patientId: created.patientId,
+    },
+  });
+
+  return created;
 };
 
 export const listRefillRequests = async (filters: {
@@ -306,10 +326,33 @@ export const updateRefillRequestStatus = async (input: {
     throw new Error("INVALID_STATUS_TRANSITION");
   }
 
-  return prisma.prescriptionRefillRequest.findUniqueOrThrow({
+  const result = await prisma.prescriptionRefillRequest.findUniqueOrThrow({
     where: { id },
     include: detailInclude,
   });
+
+  const action: AuditAction =
+    nextStatus === "APPROVED"
+      ? "APPROVE"
+      : nextStatus === "REJECTED"
+        ? "REJECT"
+        : "CANCEL";
+
+  await safeRecordAuditEvent({
+    actorUserId,
+    actorRole: role,
+    action,
+    entityType: "REFILL_REQUEST",
+    entityId: result.id,
+    metadata: {
+      requestNo: result.requestNo,
+      requestType: result.requestType,
+      from: "SUBMITTED",
+      to: nextStatus,
+    },
+  });
+
+  return result;
 };
 
 export const createOrderFromRefillRequest = async (input: {
@@ -364,14 +407,20 @@ export const createOrderFromRefillRequest = async (input: {
     throw new Error("PATIENT_NOT_ACTIVE");
   }
 
-  const order = await orderService.createOrder({
-    patientId: request.patientId,
-    deliveryAddress,
-    notes:
-      notes ||
-      `Refill request ${request.requestNo} (${request.requestType})`,
-    items,
-  });
+  const order = await orderService.createOrder(
+    {
+      patientId: request.patientId,
+      deliveryAddress,
+      notes:
+        notes ||
+        `Refill request ${request.requestNo} (${request.requestType})`,
+      items,
+    },
+    {
+      actorUserId,
+      actorRole: role,
+    }
+  );
 
   try {
     const linked = await prisma.prescriptionRefillRequest.updateMany({
@@ -395,8 +444,24 @@ export const createOrderFromRefillRequest = async (input: {
     throw error;
   }
 
-  return prisma.prescriptionRefillRequest.findUniqueOrThrow({
+  const fulfilled = await prisma.prescriptionRefillRequest.findUniqueOrThrow({
     where: { id },
     include: detailInclude,
   });
+
+  await safeRecordAuditEvent({
+    actorUserId,
+    actorRole: role,
+    action: "STATUS_CHANGE",
+    entityType: "REFILL_REQUEST",
+    entityId: fulfilled.id,
+    metadata: {
+      requestNo: fulfilled.requestNo,
+      from: "APPROVED",
+      to: "FULFILLED",
+      orderId: order.id,
+    },
+  });
+
+  return fulfilled;
 };

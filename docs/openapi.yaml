@@ -22,8 +22,9 @@ info:
     ## Roles (UserRole enum)
     ADMIN, DOCTOR, PHARMACIST, PATIENT, SUPPORT, VIEWER
     
-    SUPPORT and VIEWER exist in the schema and can be assigned via admin user APIs,
-    but no current route authorize() list includes them for business resources.
+    SUPPORT and VIEWER exist in the schema and can be assigned via admin user APIs.
+    They are authorized for read-only audit access via GET /api/audit-events
+    (along with ADMIN). Other business routes do not authorize SUPPORT/VIEWER.
     
     ## Base URL
     http://localhost:4000 (PORT hardcoded in backend/src/server.ts)
@@ -60,6 +61,8 @@ tags:
     description: Prescription refill and renewal request workflow
   - name: Orders
     description: Pharmacy/order APIs (fulfillment roles include PHARMACIST)
+  - name: Audit
+    description: Append-only clinical/operational audit trail (read-only)
 paths:
   /api/health:
     get:
@@ -2862,6 +2865,104 @@ paths:
           $ref: "#/components/responses/NotFound"
         500:
           $ref: "#/components/responses/ServerError"
+  /api/audit-events:
+    get:
+      tags:
+        - Audit
+      summary: List audit events
+      description: |
+        Roles: ADMIN, VIEWER, SUPPORT.
+        Append-only operational trail. No create/update/delete endpoints.
+        Sorted by occurredAt descending. Default limit 50, max 100.
+      operationId: listAuditEvents
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: actorUserId
+          in: query
+          schema:
+            type: integer
+        - name: action
+          in: query
+          schema:
+            type: string
+            enum:
+              - CREATE
+              - UPDATE
+              - STATUS_CHANGE
+              - APPROVE
+              - REJECT
+              - CANCEL
+              - DELETE
+        - name: entityType
+          in: query
+          schema:
+            type: string
+            enum:
+              - PATIENT
+              - APPOINTMENT
+              - APPOINTMENT_REQUEST
+              - PRESCRIPTION
+              - REFILL_REQUEST
+              - ORDER
+        - name: entityId
+          in: query
+          schema:
+            type: integer
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AuditEvent"
+                  meta:
+                    type: object
+                    properties:
+                      limit:
+                        type: integer
+                      offset:
+                        type: integer
+                      total:
+                        type: integer
+        400:
+          $ref: "#/components/responses/ValidationError"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        500:
+          $ref: "#/components/responses/ServerError"
 components:
   securitySchemes:
     BearerAuth:
@@ -4008,3 +4109,39 @@ components:
             - PAID
             - FAILED
             - REFUNDED
+    AuditEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+        occurredAt:
+          type: string
+          format: date-time
+        actorUserId:
+          type: integer
+          nullable: true
+        actorRole:
+          type: string
+        action:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: integer
+        metadata:
+          type: object
+          nullable: true
+        actor:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: integer
+            firstName:
+              type: string
+            lastName:
+              type: string
+            email:
+              type: string
+            role:
+              type: string

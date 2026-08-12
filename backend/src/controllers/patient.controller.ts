@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 
+import type { AuthRequest } from "../middleware/auth";
 import * as patientService from "../services/patient.service";
 
 import * as patientDependentService from "../services/patient-dependent.service";
@@ -67,17 +68,30 @@ export const getPatientById = async (
 };
 
 export const createPatient = async (
-  req: Request,
+  req: AuthRequest,
   res: Response
 ) => {
   try {
-    const patient =
-      await patientService.createPatient({
-        ...req.body,
-        dateOfBirth: new Date(
-          req.body.dateOfBirth
-        ),
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
       });
+    }
+
+    const patient =
+      await patientService.createPatient(
+        {
+          ...req.body,
+          dateOfBirth: new Date(
+            req.body.dateOfBirth
+          ),
+        },
+        {
+          actorUserId: req.user.userId,
+          actorRole: req.user.role,
+        }
+      );
 
     res.status(201).json({
       success: true,
@@ -92,16 +106,27 @@ export const createPatient = async (
 };
 
 export const updatePatient = async (
-  req: Request,
+  req: AuthRequest,
   res: Response
 ) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
     const id = Number(req.params.id);
 
     const patient =
       await patientService.updatePatient(
         id,
-        req.body
+        req.body,
+        {
+          actorUserId: req.user.userId,
+          actorRole: req.user.role,
+        }
       );
 
     res.status(200).json({
@@ -135,10 +160,17 @@ export const deletePatient = async (
 };
 
 export const deactivatePatient = async (
-  req: any,
-  res: any
+  req: AuthRequest,
+  res: Response
 ) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
     const patientId = Number(
       req.params.id
     );
@@ -152,7 +184,11 @@ export const deactivatePatient = async (
 
     const patient =
       await patientService.deactivatePatient(
-        patientId
+        patientId,
+        {
+          actorUserId: req.user.userId,
+          actorRole: req.user.role,
+        }
       );
 
     return res.status(200).json({

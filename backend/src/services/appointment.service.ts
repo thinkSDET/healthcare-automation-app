@@ -1,4 +1,8 @@
 import { prisma } from "../config/prisma";
+import {
+  safeRecordAuditEvent,
+  type AuditContext,
+} from "./audit.service";
 
 export type AppointmentStatusValue =
   | "SCHEDULED"
@@ -104,16 +108,19 @@ export const getAppointmentById = async (id: number) => {
   });
 };
 
-export const createAppointment = async (data: {
-  appointmentNo: string;
-  patientId: number;
-  doctorId: number;
-  appointmentAt: Date;
-  duration?: number;
-  type?: "IN_PERSON" | "VIDEO" | "PHONE";
-  reason: string;
-  notes?: string;
-}) => {
+export const createAppointment = async (
+  data: {
+    appointmentNo: string;
+    patientId: number;
+    doctorId: number;
+    appointmentAt: Date;
+    duration?: number;
+    type?: "IN_PERSON" | "VIDEO" | "PHONE";
+    reason: string;
+    notes?: string;
+  },
+  auditContext?: AuditContext
+) => {
   const duration = data.duration ?? 30;
 
   if (duration <= 0) {
@@ -186,7 +193,7 @@ export const createAppointment = async (data: {
     throw new Error("Patient already has an overlapping appointment");
   }
 
-  return prisma.appointment.create({
+  const created = await prisma.appointment.create({
     data: {
       ...data,
       duration,
@@ -196,6 +203,23 @@ export const createAppointment = async (data: {
       doctor: true,
     },
   });
+
+  if (auditContext) {
+    await safeRecordAuditEvent({
+      actorUserId: auditContext.actorUserId,
+      actorRole: auditContext.actorRole,
+      action: "CREATE",
+      entityType: "APPOINTMENT",
+      entityId: created.id,
+      metadata: {
+        appointmentNo: created.appointmentNo,
+        patientId: created.patientId,
+        doctorId: created.doctorId,
+      },
+    });
+  }
+
+  return created;
 };
 
 export const updateAppointment = async (
@@ -206,7 +230,8 @@ export const updateAppointment = async (
     type?: "IN_PERSON" | "VIDEO" | "PHONE";
     reason?: string;
     notes?: string;
-  }
+  },
+  auditContext?: AuditContext
 ) => {
   const existingAppointment = await prisma.appointment.findUnique({
     where: { id },
@@ -285,7 +310,7 @@ export const updateAppointment = async (
     throw new Error("Patient already has an overlapping appointment");
   }
 
-  return prisma.appointment.update({
+  const updated = await prisma.appointment.update({
     where: { id },
     data: {
       ...data,
@@ -296,12 +321,28 @@ export const updateAppointment = async (
       doctor: true,
     },
   });
+
+  if (auditContext) {
+    await safeRecordAuditEvent({
+      actorUserId: auditContext.actorUserId,
+      actorRole: auditContext.actorRole,
+      action: "UPDATE",
+      entityType: "APPOINTMENT",
+      entityId: updated.id,
+      metadata: {
+        appointmentNo: updated.appointmentNo,
+      },
+    });
+  }
+
+  return updated;
 };
 
 export const updateAppointmentStatus = async (
   id: number,
   nextStatus: AppointmentStatusValue,
-  role: string
+  role: string,
+  auditContext?: AuditContext
 ) => {
   const existingAppointment = await prisma.appointment.findUnique({
     where: { id },
@@ -332,7 +373,7 @@ export const updateAppointmentStatus = async (
     );
   }
 
-  return prisma.appointment.update({
+  const updated = await prisma.appointment.update({
     where: { id },
     data: { status: nextStatus },
     include: {
@@ -340,9 +381,27 @@ export const updateAppointmentStatus = async (
       doctor: true,
     },
   });
+
+  await safeRecordAuditEvent({
+    actorUserId: auditContext?.actorUserId,
+    actorRole: auditContext?.actorRole ?? role,
+    action: nextStatus === "CANCELLED" ? "CANCEL" : "STATUS_CHANGE",
+    entityType: "APPOINTMENT",
+    entityId: updated.id,
+    metadata: {
+      appointmentNo: updated.appointmentNo,
+      from: currentStatus,
+      to: nextStatus,
+    },
+  });
+
+  return updated;
 };
 
-export const cancelAppointment = async (id: number) => {
+export const cancelAppointment = async (
+  id: number,
+  auditContext?: AuditContext
+) => {
   const existingAppointment = await prisma.appointment.findUnique({
     where: { id },
   });
@@ -355,7 +414,7 @@ export const cancelAppointment = async (id: number) => {
     throw new Error("Only scheduled appointments can be cancelled");
   }
 
-  return prisma.appointment.update({
+  const updated = await prisma.appointment.update({
     where: { id },
     data: {
       status: "CANCELLED",
@@ -365,4 +424,21 @@ export const cancelAppointment = async (id: number) => {
       doctor: true,
     },
   });
+
+  if (auditContext) {
+    await safeRecordAuditEvent({
+      actorUserId: auditContext.actorUserId,
+      actorRole: auditContext.actorRole,
+      action: "CANCEL",
+      entityType: "APPOINTMENT",
+      entityId: updated.id,
+      metadata: {
+        appointmentNo: updated.appointmentNo,
+        from: "SCHEDULED",
+        to: "CANCELLED",
+      },
+    });
+  }
+
+  return updated;
 };

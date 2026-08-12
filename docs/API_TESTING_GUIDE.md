@@ -153,6 +153,7 @@ API prefixes (from `server.ts`):
 - `/api/prescriptions`
 - `/api/refill-requests`
 - `/api/orders`
+- `/api/audit-events`
 
 ---
 
@@ -584,6 +585,15 @@ Document upload multer rejections (unsupported MIME / >10MB): **structured statu
 - [ ] Approve fails when doctor/patient slot already booked (request stays SUBMITTED)
 - [ ] PATIENT can list ACTIVE doctors only; cannot create doctors
 - [ ] PATIENT cannot POST /api/appointments directly
+
+### Audit APIs
+
+- [ ] Unauthenticated GET `/api/audit-events` → 401
+- [ ] PATIENT / DOCTOR / PHARMACIST GET → 403
+- [ ] ADMIN / VIEWER / SUPPORT GET → 200
+- [ ] PUT/PATCH/DELETE `/api/audit-events/:id` → 404 (no write routes)
+- [ ] After appointment create or status change, event appears with actor/action/entity/timestamp
+- [ ] Filters (action, entityType, entityId, actorUserId) return consistent subsets
 
 ---
 
