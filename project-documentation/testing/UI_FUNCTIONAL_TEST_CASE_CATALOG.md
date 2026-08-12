@@ -1735,55 +1735,318 @@ Each case uses:
 
 ## 31. Cross-Module E2E Workflows
 
-### E2E-001 — Appointment request to completion
-- **Type:** Workflow | **Priority:** P0 | **Roles:** PATIENT → ADMIN/DOCTOR  
-- **Depends:** AUTH-006, DR-002, APREQ-001  
-- **Steps:** Patient submits request → staff approves → appointment appears → Confirm → Check in → Start → Complete  
-- **Expected:** Full lifecycle succeeds; patient sees completed appointment in My Appointments  
-- **Automation Priority:** Critical | **Suites:** Smoke, Sanity, Regression, Critical Workflow  
+This section is the **orchestration layer**. Steps reference module-level cases via `Depends` rather than repeating field-level detail. Each case proves a distinct business outcome across modules and/or roles.
 
-### E2E-002 — Prescription refill to paid order
-- **Type:** Workflow | **Priority:** P0 | **Roles:** DOCTOR/ADMIN → PATIENT → PHARMACIST  
-- **Depends:** PAT-003, DR-002, RX-002  
-- **Steps:** Create ACTIVE Rx → patient refill → staff approve → patient create-order → patient pay success → pharmacist advances order to SHIPPED → patient tracks  
-- **Expected:** Request FULFILLED; payment PAID; tracking visible  
-- **Automation Priority:** Critical | **Suites:** Smoke, Sanity, Regression, Critical Workflow  
+### E2E-001 — Patient Appointment Request → Approval → Consultation Completion
 
-### E2E-003 — Admin order fulfillment without refill
-- **Type:** Workflow | **Priority:** P1 | **Roles:** ADMIN → PATIENT → PHARMACIST  
-- **Steps:** Admin creates order → patient pays → pharmacy updates statuses → track  
-- **Expected:** End-to-end order commerce path works  
-- **Automation Priority:** High | **Suites:** Regression, Critical Workflow  
+- **Type:** Workflow  
+- **Priority:** P0  
+- **Roles:** PATIENT → ADMIN/DOCTOR  
+- **Preconditions:** Linked PatientA account; ACTIVE DoctorR registry record; staff user can review requests  
+- **Depends:** AUTH-006, DR-002, APREQ-001, APREQ-005, APPT-008, APREQ-011  
+- **Workflow Steps:**  
+  1. Patient submits appointment request (doctor, future slot, reason).  
+  2. Staff opens Appointment Requests and approves.  
+  3. Verify linked appointment exists (SCHEDULED).  
+  4. Advance appointment: Confirm → Check in → Start consultation → Complete.  
+  5. Patient opens My Appointments and confirms the completed visit is visible.  
+- **Expected Result:** Request APPROVED; appointment reaches COMPLETED; patient portal reflects the outcome.  
+- **Automation Priority:** Critical  
+- **Suites:** Smoke, Sanity, Regression, Critical Workflow  
 
-### E2E-004 — Inventory replenishment cycle
-- **Type:** Workflow | **Priority:** P0 | **Roles:** PHARMACIST → ADMIN → PHARMACIST/ADMIN  
-- **Steps:** Create med low stock → request replenishment → admin approve → receive qty → verify on-hand increased  
-- **Expected:** Stock and request statuses correct  
-- **Automation Priority:** Critical | **Suites:** Smoke, Sanity, Regression, Critical Workflow  
+### E2E-002 — Appointment Request → Rejection → Patient Visibility
 
-### E2E-005 — Lab order to patient visibility
-- **Type:** Workflow | **Priority:** P0 | **Roles:** DOCTOR/ADMIN → ADMIN → DOCTOR → PATIENT  
-- **Steps:** Create lab → collect → processing → upload result+file → acknowledge → patient views/downloads  
-- **Expected:** Pre-ack hidden; post-ack visible  
-- **Automation Priority:** Critical | **Suites:** Smoke, Sanity, Regression, Critical Workflow  
+- **Type:** Workflow  
+- **Priority:** P0  
+- **Roles:** PATIENT → ADMIN/DOCTOR  
+- **Preconditions:** PatientA; ACTIVE DoctorR  
+- **Depends:** APREQ-001, APREQ-006, APREQ-007, APREQ-011  
+- **Workflow Steps:**  
+  1. Patient submits a valid appointment request.  
+  2. Staff rejects with a non-empty rejection reason.  
+  3. Patient opens My Appointments / requests section.  
+  4. Staff/patient confirm no new appointment was created for that request.  
+- **Expected Result:** Request is REJECTED with reason visible to the patient; no appointment row is created from the rejected request.  
+- **Automation Priority:** Critical  
+- **Suites:** Sanity, Regression, Critical Workflow, Negative  
 
-### E2E-006 — Audit trail across mutations
-- **Type:** Workflow | **Priority:** P1 | **Role:** ADMIN (+ VIEWER read)  
-- **Steps:** Perform patient create, appointment status change, Rx create → open audit → filter entities  
-- **Expected:** Events present for actions  
-- **Automation Priority:** High | **Suites:** Sanity, Regression, Critical Workflow  
+### E2E-003 — Appointment Rejection → New Request / Resubmission
 
-### E2E-007 — Pharmacy-assisted refill
-- **Type:** Workflow | **Priority:** P1 | **Roles:** PHARMACIST (+ ADMIN/DOCTOR if renewal)  
-- **Steps:** Pharmacy lookup patient → request refill on ACTIVE → approve as pharmacist → patient fulfills order  
-- **Expected:** Path completes for REFILL type  
-- **Automation Priority:** High | **Suites:** Regression, Critical Workflow  
+- **Type:** Workflow  
+- **Priority:** P1  
+- **Roles:** PATIENT → ADMIN/DOCTOR  
+- **Preconditions:** Prior REJECTED request for PatientA (from E2E-002 or equivalent)  
+- **Depends:** E2E-002, APREQ-001, APREQ-005  
+- **Workflow Steps:**  
+  1. After rejection, patient submits a **new** request (different valid datetime and/or doctor).  
+  2. Staff approves the new request.  
+  3. Verify a new appointment is created and linked only to the new request.  
+- **Expected Result:** Resubmission is supported as a new SUBMITTED request; approval creates an appointment; the earlier REJECTED request remains historical.  
+- **Automation Priority:** High  
+- **Suites:** Sanity, Regression, Critical Workflow  
 
-### E2E-008 — Deactivated patient blocks new clinical scheduling (UI error)
-- **Type:** Negative / Workflow | **Priority:** P1 | **Role:** ADMIN  
-- **Steps:** Deactivate patient → attempt new appointment / request as linked patient  
-- **Expected:** Operations fail with clear errors where enforced  
-- **Automation Priority:** High | **Suites:** Regression, Negative  
+### E2E-004 — Direct Admin Appointment → Full Lifecycle
+
+- **Type:** Workflow  
+- **Priority:** P0  
+- **Roles:** ADMIN (create) → ADMIN/DOCTOR (status)  
+- **Preconditions:** ACTIVE patient + ACTIVE DoctorR  
+- **Depends:** APPT-003, APPT-007, APPT-008  
+- **Workflow Steps:**  
+  1. Admin creates appointment directly via `/appointments/new` (not via request).  
+  2. Open details and advance Confirm → Check in → Start consultation → Complete.  
+- **Expected Result:** Direct-booking path works independently of appointment requests; status ends COMPLETED.  
+- **Automation Priority:** Critical  
+- **Suites:** Smoke, Sanity, Regression, Critical Workflow  
+
+### E2E-005 — Prescription → Refill → Approval → Order → Payment → Pharmacy
+
+- **Type:** Workflow  
+- **Priority:** P0  
+- **Roles:** ADMIN/DOCTOR → PATIENT → ADMIN/DOCTOR/PHARMACIST → PATIENT → PHARMACIST  
+- **Preconditions:** Patient record linked to PatientA; ACTIVE DoctorR  
+- **Depends:** PAT-003, DR-002, RX-002, REFILL-001, REFILL-005, REFILL-008, PAY-002, PHARM-007, ORD-010, PORTAL-006  
+- **Workflow Steps:**  
+  1. Staff creates ACTIVE prescription with items for the patient.  
+  2. Patient requests refill.  
+  3. Authorized staff approves refill.  
+  4. Patient creates order from approved request (fulfillment).  
+  5. Patient completes successful demo payment.  
+  6. Pharmacist advances order status through processing to SHIPPED (or DELIVERED).  
+  7. Patient opens Track Shipment where status allows.  
+- **Expected Result:** Refill becomes FULFILLED; payment PAID; pharmacy status progression succeeds; tracking UI available for eligible statuses.  
+- **Automation Priority:** Critical  
+- **Suites:** Smoke, Sanity, Regression, Critical Workflow  
+
+### E2E-006 — Prescription → Renewal → Doctor Approval → Order Path
+
+- **Type:** Workflow  
+- **Priority:** P0  
+- **Roles:** ADMIN/DOCTOR → PATIENT → DOCTOR/ADMIN → PATIENT  
+- **Preconditions:** Eligible prescription (ACTIVE or COMPLETED per renewal rules); PatientA  
+- **Depends:** RX-002, RX-005 (optional COMPLETED), REFILL-002, REFILL-005, REFILL-006, REFILL-008  
+- **Workflow Steps:**  
+  1. Ensure prescription is eligible for renewal.  
+  2. Patient requests **renewal** (not refill).  
+  3. Confirm pharmacist UI cannot approve renewal; Doctor/Admin reviews and approves.  
+  4. Patient sees APPROVED renewal and creates order if UI allows.  
+  5. Optionally complete payment to prove renewals can enter commerce.  
+- **Expected Result:** Renewal is distinct from refill; pharmacist cannot approve; doctor/admin approval works; patient can proceed to order after APPROVED.  
+- **Automation Priority:** Critical  
+- **Suites:** Sanity, Regression, Critical Workflow  
+
+### E2E-007 — Pharmacist-Initiated Refill → Approval → Patient Order
+
+- **Type:** Workflow  
+- **Priority:** P1  
+- **Roles:** PHARMACIST → (self or ADMIN/DOCTOR) → PATIENT  
+- **Preconditions:** ACTIVE prescription for a known patient id  
+- **Depends:** PHARM-002, REFILL-010, REFILL-006, REFILL-005, REFILL-008  
+- **Workflow Steps:**  
+  1. Pharmacist looks up patient in Pharmacy Workspace.  
+  2. Requests refill on an ACTIVE prescription.  
+  3. Pharmacist (or other authorized role) approves the REFILL request.  
+  4. Patient creates order from the approved request and continues payment if desired.  
+- **Expected Result:** Pharmacist can initiate REFILL only; approval and patient order fulfillment complete the business path.  
+- **Automation Priority:** High  
+- **Suites:** Sanity, Regression, Critical Workflow  
+
+### E2E-008 — Direct Admin Order → Payment → Pharmacy → Tracking
+
+- **Type:** Workflow  
+- **Priority:** P0  
+- **Roles:** ADMIN → PATIENT → PHARMACIST  
+- **Preconditions:** Patient with portal account; admin can open patient orders  
+- **Depends:** ORD-001, ORD-002, ORD-011, PAY-002, PHARM-007, ORD-010, PORTAL-006  
+- **Workflow Steps:**  
+  1. Admin creates order with line items on patient orders page.  
+  2. Patient opens My Orders → Make Payment → successful payment.  
+  3. Pharmacist updates order statuses (CONFIRMED/PROCESSING/SHIPPED as applicable).  
+  4. Patient uses Track Shipment when status is PROCESSING/SHIPPED/DELIVERED.  
+- **Expected Result:** Non-refill order journey completes: create → pay → pharmacy progress → tracking.  
+- **Automation Priority:** Critical  
+- **Suites:** Smoke, Sanity, Regression, Critical Workflow  
+
+### E2E-009 — Payment Failure → Retry → Successful Payment
+
+- **Type:** Workflow  
+- **Priority:** P0  
+- **Roles:** PATIENT  
+- **Preconditions:** Unpaid order owned by PatientA (from ORD-002 / E2E-008 / refill order)  
+- **Depends:** ORD-011, PAY-001, PAY-003, PAY-002, PAY-005  
+- **Workflow Steps:**  
+  1. Patient opens pay page for unpaid order.  
+  2. Submit demo payment with card ending in `0000` (decline rule).  
+  3. Verify failed/declined state and order not treated as successfully paid.  
+  4. Retry with a valid non-`0000` card.  
+  5. Verify success persistence and final PAID state; pay CTA no longer offers a new charge.  
+- **Expected Result:** Failure path is visible and recoverable; retry yields PAID without leaving the order stuck.  
+- **Automation Priority:** Critical  
+- **Suites:** Sanity, Regression, Critical Workflow, Negative  
+
+### E2E-010 — Inventory Low Stock → Replenishment → Receive
+
+- **Type:** Workflow  
+- **Priority:** P0  
+- **Roles:** PHARMACIST → ADMIN → PHARMACIST/ADMIN  
+- **Preconditions:** ADMIN/PHARMACIST accounts  
+- **Depends:** INV-002, INV-005, INV-008, REPL-002, REPL-007  
+- **Workflow Steps:**  
+  1. Create medication with low on-hand relative to reorder level (or adjust down).  
+  2. Pharmacist identifies low stock via inventory filters and creates replenishment request.  
+  3. Admin approves request.  
+  4. Authorized user receives stock with quantity.  
+  5. Verify on-hand quantity increased and request RECEIVED; stock status no longer “low” when above reorder.  
+- **Expected Result:** Replenishment cycle restores stock; request and inventory states align.  
+- **Automation Priority:** Critical  
+- **Suites:** Smoke, Sanity, Regression, Critical Workflow  
+
+### E2E-011 — Inventory Adjustment → Stock Movement Outcome → Audit Trail
+
+- **Type:** Workflow  
+- **Priority:** P1  
+- **Roles:** PHARMACIST → ADMIN/VIEWER (audit read)  
+- **Preconditions:** Existing ACTIVE medication  
+- **Depends:** INV-006, AUD-001, AUD-003, AUD-006  
+- **Workflow Steps:**  
+  1. Pharmacist adjusts stock with a clear reason and non-zero delta.  
+  2. Verify on-hand quantity changed in Inventory UI.  
+  3. If movements are visible in UI, confirm a movement entry; otherwise confirm quantity change is the UI evidence of movement persistence.  
+  4. Open Audit Logs; filter to MEDICATION / related action for that entity.  
+- **Expected Result:** Stock change is reflected in inventory UI and an audit event is recorded for the mutation.  
+- **Automation Priority:** High  
+- **Suites:** Sanity, Regression, Critical Workflow  
+
+### E2E-012 — Patient Update → Audit Trail
+
+- **Type:** Workflow  
+- **Priority:** P1  
+- **Roles:** ADMIN or DOCTOR → ADMIN/VIEWER  
+- **Preconditions:** Existing patient  
+- **Depends:** PDET-002, AUD-001, AUD-003, AUD-006  
+- **Workflow Steps:**  
+  1. Staff updates patient demographics and saves.  
+  2. Reload patient details and confirm values.  
+  3. Open Audit Logs; filter PATIENT entity / UPDATE (or equivalent action labels used by the app).  
+- **Expected Result:** UI shows updated patient data and a corresponding audit event for the change.  
+- **Automation Priority:** High  
+- **Suites:** Sanity, Regression, Critical Workflow  
+
+### E2E-013 — Appointment Status Change → Audit Trail
+
+- **Type:** Workflow  
+- **Priority:** P1  
+- **Roles:** ADMIN/DOCTOR → ADMIN/VIEWER  
+- **Preconditions:** Non-terminal appointment  
+- **Depends:** APPT-008 (or single transition), AUD-003, AUD-006  
+- **Workflow Steps:**  
+  1. Perform a valid appointment status transition in Appointment Details.  
+  2. Confirm new status on the appointment UI.  
+  3. Open Audit Logs; locate APPOINTMENT STATUS_CHANGE (or equivalent) for that entity id.  
+  4. Verify actor/role and from→to metadata when shown.  
+- **Expected Result:** Functional status change and audit entry both observable in the UI.  
+- **Automation Priority:** High  
+- **Suites:** Sanity, Regression, Critical Workflow  
+
+### E2E-014 — Prescription / Refill Action → Audit Trail
+
+- **Type:** Workflow  
+- **Priority:** P1  
+- **Roles:** ADMIN/DOCTOR/PATIENT (as applicable) → ADMIN/VIEWER  
+- **Preconditions:** Patient + doctor available for Rx; or existing ACTIVE Rx for refill  
+- **Depends:** RX-002 and/or REFILL-001 + REFILL-005, AUD-003, AUD-006  
+- **Workflow Steps:**  
+  1. Perform an audited clinical/pharmacy action in UI (create prescription **or** approve refill).  
+  2. Confirm the business UI outcome (Rx listed / request APPROVED).  
+  3. Open Audit Logs; filter PRESCRIPTION or REFILL_REQUEST entity type.  
+- **Expected Result:** Business action succeeds and produces a visible audit event for that entity.  
+- **Automation Priority:** High  
+- **Suites:** Sanity, Regression, Critical Workflow  
+
+### E2E-015 — Lab Order → Processing → Result → Acknowledgment → Patient Visibility
+
+- **Type:** Workflow  
+- **Priority:** P0  
+- **Roles:** ADMIN/DOCTOR → ADMIN → ADMIN/DOCTOR → PATIENT  
+- **Preconditions:** ACTIVE patient + ACTIVE DoctorR  
+- **Depends:** LAB-002, LAB-006, LAB-008, LAB-010, LAB-014, LAB-016  
+- **Workflow Steps:**  
+  1. Staff creates lab order.  
+  2. Admin advances SAMPLE_COLLECTED → PROCESSING.  
+  3. Admin uploads result (summary, flag, optional file).  
+  4. Doctor/Admin acknowledges.  
+  5. Patient opens My Lab Results / details and views summary; downloads file if present.  
+- **Expected Result:** Full lab happy path; patient can consume acknowledged results.  
+- **Automation Priority:** Critical  
+- **Suites:** Smoke, Sanity, Regression, Critical Workflow  
+
+### E2E-016 — Lab Result Privacy Before Acknowledgment
+
+- **Type:** Workflow  
+- **Priority:** P0  
+- **Roles:** ADMIN/DOCTOR → PATIENT → DOCTOR/ADMIN → PATIENT  
+- **Preconditions:** Lab order created for PatientA  
+- **Depends:** LAB-002, LAB-006, LAB-008, LAB-015, LAB-010, LAB-016  
+- **Workflow Steps:**  
+  1. Process lab to PROCESSING and upload result **without** acknowledging.  
+  2. As patient, open the lab order details.  
+  3. Verify result summary/flag/file are hidden (waiting/ack messaging).  
+  4. As doctor/admin, acknowledge.  
+  5. Patient refreshes details and confirms result content (and download if applicable) becomes visible.  
+- **Expected Result:** Privacy gate holds until ACKNOWLEDGED; acknowledgment unlocks patient visibility.  
+- **Automation Priority:** Critical  
+- **Suites:** Smoke, Sanity, Regression, Critical Workflow, Negative  
+
+### E2E-017 — Document Upload → Patient Portal Access
+
+- **Type:** Workflow  
+- **Priority:** P1  
+- **Roles:** ADMIN/DOCTOR → PATIENT  
+- **Preconditions:** PatientA with linked patient record  
+- **Depends:** DOC-001, DOC-007, PORTAL-002  
+- **Workflow Steps:**  
+  1. Staff uploads a document on Patient Details.  
+  2. Patient opens `/my/profile` documents section.  
+  3. Patient downloads the document.  
+- **Expected Result:** Staff-uploaded document is listed for the owning patient and downloads successfully; patient still cannot upload/delete.  
+- **Automation Priority:** High  
+- **Suites:** Sanity, Regression, Critical Workflow  
+
+### E2E-018 — Multi-Role Clinical Operations Journey
+
+- **Type:** Workflow  
+- **Priority:** P0  
+- **Roles:** ADMIN → DOCTOR → PATIENT → PHARMACIST  
+- **Preconditions:** Fresh or dedicated patient/doctor fixtures for an isolated run  
+- **Depends:** PAT-003, DR-002, APREQ-001, APREQ-005, APPT-008, RX-002, REFILL-001, REFILL-005, REFILL-008, PAY-002, PHARM-007, LAB-002, LAB-008, LAB-010, LAB-016  
+- **Workflow Steps:**  
+  1. **ADMIN:** Create/ensure patient + doctor registry; optionally seed profile data.  
+  2. **PATIENT:** Request appointment.  
+  3. **DOCTOR/ADMIN:** Approve request; complete consultation lifecycle.  
+  4. **DOCTOR/ADMIN:** Create ACTIVE prescription from patient record.  
+  5. **PATIENT:** Request refill.  
+  6. **DOCTOR/ADMIN or PHARMACIST (REFILL):** Approve.  
+  7. **PATIENT:** Create order from approval and pay successfully.  
+  8. **PHARMACIST:** Process order statuses.  
+  9. **DOCTOR/ADMIN + ADMIN:** Create lab order, upload result, acknowledge.  
+  10. **PATIENT:** Confirm lab result visibility after acknowledgment.  
+- **Expected Result:** One coherent healthcare operations journey across admin, clinical, patient, and pharmacy roles with each handoff succeeding.  
+- **Automation Priority:** Critical  
+- **Suites:** Smoke, Sanity, Regression, Critical Workflow  
+
+### E2E-019 — Deactivated Patient Blocks New Clinical Scheduling
+
+- **Type:** Negative / Workflow  
+- **Priority:** P1  
+- **Roles:** ADMIN → PATIENT (attempt) / ADMIN (direct book attempt)  
+- **Preconditions:** Active patient that can be deactivated  
+- **Depends:** PDET-004, APPT-003, APREQ-001  
+- **Workflow Steps:**  
+  1. Staff deactivates patient.  
+  2. Attempt admin direct appointment create and/or patient appointment request against that patient.  
+- **Expected Result:** UI surfaces clear business errors; new scheduling does not succeed for the inactive patient where enforced.  
+- **Automation Priority:** High  
+- **Suites:** Regression, Negative, Critical Workflow  
 
 ---
 
@@ -1846,9 +2109,9 @@ Each case uses:
 
 Smallest proof the app works end-to-end:
 
-`AUTH-001, AUTH-006, AUTH-012, AUTH-016, DASH-001, DASH-003, DASH-004, PAT-001, PAT-003, PAT-011, PAT-012, PDET-001, PDET-002, DOC-001, DOC-004, DR-001, DR-002, DR-009, DR-012, APPT-001, APPT-003, APPT-007, APPT-008, APPT-015, APREQ-001, APREQ-004, APREQ-005, APREQ-009, RX-001, RX-002, REFILL-001, REFILL-005, REFILL-008, ORD-001, ORD-002, ORD-008, ORD-011, PAY-001, PAY-002, PAY-006, PAY-007, PHARM-001, PHARM-002, PHARM-009, INV-001, INV-002, INV-006, INV-009, REPL-001, REPL-002, REPL-007, AUD-001, AUD-002, AUD-007, LAB-001, LAB-002, LAB-005, LAB-008, LAB-010, LAB-014, LAB-015, LAB-016, LAB-017, PORTAL-001, NAV-001, NAV-003, NAV-004, NAV-008, RBAC-001, RBAC-002, RBAC-003, RBAC-004, RBAC-005, E2E-001, E2E-002, E2E-004, E2E-005, BRW-002, BRW-003`
+`AUTH-001, AUTH-006, AUTH-012, AUTH-016, DASH-001, DASH-003, DASH-004, PAT-001, PAT-003, PAT-011, PAT-012, PDET-001, PDET-002, DOC-001, DOC-004, DR-001, DR-002, DR-009, DR-012, APPT-001, APPT-003, APPT-007, APPT-008, APPT-015, APREQ-001, APREQ-004, APREQ-005, APREQ-009, RX-001, RX-002, REFILL-001, REFILL-005, REFILL-008, ORD-001, ORD-002, ORD-008, ORD-011, PAY-001, PAY-002, PAY-006, PAY-007, PHARM-001, PHARM-002, PHARM-009, INV-001, INV-002, INV-006, INV-009, REPL-001, REPL-002, REPL-007, AUD-001, AUD-002, AUD-007, LAB-001, LAB-002, LAB-005, LAB-008, LAB-010, LAB-014, LAB-015, LAB-016, LAB-017, PORTAL-001, NAV-001, NAV-003, NAV-004, NAV-008, RBAC-001, RBAC-002, RBAC-003, RBAC-004, RBAC-005, E2E-001, E2E-004, E2E-005, E2E-008, E2E-010, E2E-015, E2E-016, E2E-018, BRW-002, BRW-003`
 
-**Smoke count:** 86
+**Smoke count:** 90
 
 ---
 
@@ -1858,9 +2121,9 @@ Important paths after changes (subset + key negatives):
 
 All Smoke IDs **plus**:
 
-`AUTH-004, AUTH-008, AUTH-010, AUTH-014, DASH-002, DASH-005, PAT-006, DEP-001, EMG-001, MEDP-001, DOC-007, DR-005, DR-006, APPT-010, APREQ-011, RX-005, REFILL-006, ORD-004, ORD-009, PAY-003, PHARM-006, PHARM-007, INV-005, INV-008, REPL-003, AUD-003, AUD-006, LAB-006, PORTAL-002, PORTAL-006, E2E-006, E2E-007`
+`AUTH-004, AUTH-008, AUTH-010, AUTH-014, DASH-002, DASH-005, PAT-006, DEP-001, EMG-001, MEDP-001, DOC-007, DR-005, DR-006, APPT-010, APREQ-011, RX-005, REFILL-006, ORD-004, ORD-009, PAY-003, PHARM-006, PHARM-007, INV-005, INV-008, REPL-003, AUD-003, AUD-006, LAB-006, PORTAL-002, PORTAL-006, E2E-002, E2E-003, E2E-006, E2E-007, E2E-009, E2E-011, E2E-012, E2E-013, E2E-014, E2E-017`
 
-**Sanity count:** 86 + 32 = **118** (unique IDs)
+**Sanity count:** 90 + 40 = **130** (unique IDs)
 
 ---
 
@@ -1874,9 +2137,9 @@ All Smoke IDs **plus**:
 
 ## 36. Negative / Security Suite Mapping
 
-`AUTH-002, AUTH-003, AUTH-007, AUTH-009, AUTH-013, AUTH-015, AUTH-017, PAT-004, PAT-005, PAT-012, PDET-005, PDET-007, DEP-002, DEP-004, EMG-002, DOC-002, DOC-003, DOC-008, DR-003, DR-004, DR-009, DR-011, DR-012, APPT-004, APPT-005, APPT-006, APPT-011, APPT-013, APPT-014, APPT-015, APREQ-002, APREQ-006, APREQ-009, APREQ-010, RX-003, RX-009, REFILL-003, REFILL-006, REFILL-007, REFILL-011, ORD-003, ORD-007, PAY-003, PAY-004, PAY-006, PAY-007, PHARM-003, PHARM-008, PHARM-009, INV-003, INV-004, INV-007, INV-009, REPL-004, REPL-005, REPL-009, AUD-007, LAB-003, LAB-007, LAB-009, LAB-011, LAB-015, LAB-017, PORTAL-007, NAV-003, NAV-004, NAV-008, RBAC-001 through RBAC-010, E2E-008, BRW-001`
+`AUTH-002, AUTH-003, AUTH-007, AUTH-009, AUTH-013, AUTH-015, AUTH-017, PAT-004, PAT-005, PAT-012, PDET-005, PDET-007, DEP-002, DEP-004, EMG-002, DOC-002, DOC-003, DOC-008, DR-003, DR-004, DR-009, DR-011, DR-012, APPT-004, APPT-005, APPT-006, APPT-011, APPT-013, APPT-014, APPT-015, APREQ-002, APREQ-006, APREQ-009, APREQ-010, RX-003, RX-009, REFILL-003, REFILL-006, REFILL-007, REFILL-011, ORD-003, ORD-007, PAY-003, PAY-004, PAY-006, PAY-007, PHARM-003, PHARM-008, PHARM-009, INV-003, INV-004, INV-007, INV-009, REPL-004, REPL-005, REPL-009, AUD-007, LAB-003, LAB-007, LAB-009, LAB-011, LAB-015, LAB-017, PORTAL-007, NAV-003, NAV-004, NAV-008, RBAC-001 through RBAC-010, E2E-002, E2E-009, E2E-016, E2E-019, BRW-001`
 
-**Negative/RBAC/Ownership-focused count:** 78
+**Negative/RBAC/Ownership-focused count:** 81
 
 ---
 
@@ -1907,7 +2170,7 @@ All Smoke IDs **plus**:
 | Portal | Profile/nav/tracking | PORTAL-001–007 | Yes |
 | Nav | Guards/redirects/nav matrix | NAV-001–009 | Yes |
 | RBAC | Role/ownership matrix | RBAC-001–010 | Yes |
-| E2E | Cross-module | E2E-001–008 | Yes |
+| E2E | Cross-module business journeys | E2E-001–019 | Yes |
 | Browser | Tabs/dialogs/iframe/downloads | BRW-001–008 | Yes |
 
 ### Intentionally limited / notes
@@ -1929,24 +2192,53 @@ All Smoke IDs **plus**:
 | Metric | Value |
 |--------|-------|
 | Modules / areas with UI cases | 26 sections with cases (Auth→Browser) |
-| Total test cases | **243** |
-| Cross-module E2E workflows | **8** (`E2E-001`–`E2E-008`) |
-| Smoke suite IDs | **86** |
-| Sanity suite IDs | **118** |
-| Regression suite IDs | **243** (all) |
-| Negative/RBAC/ownership-focused IDs | **78** |
-| Critical Workflow suite | `E2E-001`–`E2E-007`, plus embedded workflow-tagged module cases (`APPT-008`, `REFILL-008`, `PAY-002`, `LAB-015/016`, `REPL-007`, …) |
+| Total test cases | **254** (was 243; +11 net from E2E expansion 8→19) |
+| Cross-module E2E workflows | **19** (`E2E-001`–`E2E-019`) |
+| Smoke suite IDs | **90** |
+| Sanity suite IDs | **130** |
+| Regression suite IDs | **254** (all) |
+| Negative/RBAC/ownership-focused IDs | **81** |
+| Critical Workflow suite | `E2E-001`–`E2E-019` (business journeys), plus module workflow-tagged cases |
+
+### E2E business-area coverage
+
+| Business Area | E2E Coverage | E2E IDs |
+|---------------|--------------|---------|
+| Multi-role / auth handoffs | Yes | E2E-018 |
+| Patient lifecycle (update + deactivate impact) | Yes | E2E-012, E2E-019 |
+| Appointment request (approve) | Yes | E2E-001, E2E-003, E2E-018 |
+| Appointment request (reject / resubmit) | Yes | E2E-002, E2E-003 |
+| Appointment lifecycle (direct book) | Yes | E2E-004 |
+| Prescription | Yes | E2E-005, E2E-006, E2E-014, E2E-018 |
+| Refill | Yes | E2E-005, E2E-007, E2E-014, E2E-018 |
+| Renewal | Yes | E2E-006 |
+| Order (refill-linked and direct) | Yes | E2E-005, E2E-008 |
+| Payment success | Yes | E2E-005, E2E-008, E2E-018 |
+| Payment failure / retry | Yes | E2E-009 |
+| Pharmacy processing / tracking | Yes | E2E-005, E2E-007, E2E-008 |
+| Inventory | Yes | E2E-010, E2E-011 |
+| Replenishment | Yes | E2E-010 |
+| Audit trail | Yes | E2E-011, E2E-012, E2E-013, E2E-014 |
+| Lab order / processing / result | Yes | E2E-015, E2E-016, E2E-018 |
+| Lab acknowledgment + patient visibility | Yes | E2E-015, E2E-016 |
+| Lab privacy before acknowledgment | Yes | E2E-016 |
+| Documents (staff upload → patient download) | Yes | E2E-017 |
+| Cross-role clinical journey | Yes | E2E-018 |
 
 ### Dependency sketch (high level)
 
 ```text
-AUTH-001/006
-  → PAT-003 → PDET/DEP/EMG/MEDP/DOC
-  → DR-002 → APPT-003 / APREQ-001 → E2E-001
-  → RX-002 → REFILL-001 → REFILL-005 → REFILL-008 → PAY-002 → E2E-002
-  → INV-002 → INV-008 → REPL-002 → REPL-007 → E2E-004
-  → LAB-002 → LAB-006 → LAB-008 → LAB-010 → LAB-016 → E2E-005
-  → AUD-006 / E2E-006
+AUTH / PAT / DR
+  → APREQ → E2E-001 / E2E-002 / E2E-003
+  → APPT direct → E2E-004
+  → RX → REFILL → ORD/PAY/PHARM → E2E-005 / E2E-006 / E2E-007
+  → ORD direct → PAY → PHARM → E2E-008 / E2E-009
+  → INV → REPL → E2E-010 / E2E-011
+  → mutations → AUD → E2E-011..014
+  → LAB → E2E-015 / E2E-016
+  → DOC → PORTAL → E2E-017
+  → combined roles → E2E-018
+  → deactivate → E2E-019
 ```
 
 ### Confirmations
@@ -1956,6 +2248,7 @@ AUTH-001/006
 - **No automation code** created.
 - Roadmap-only features excluded.
 - Every implemented major UI module above has explicit coverage; exclusions called out in §37.
+- E2E section expanded to 19 distinct business journeys (baseline E2E-001–018 + E2E-019 deactivate scheduling).
 
 ---
 

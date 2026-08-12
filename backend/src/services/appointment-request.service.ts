@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 import { prisma } from "../config/prisma";
 import * as appointmentService from "./appointment.service";
 import {

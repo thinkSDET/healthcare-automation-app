@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";

@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 import type { Response } from "express";
 import type { AuthRequest } from "../middleware/auth";
 import * as auditService from "../services/audit.service";

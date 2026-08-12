@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";

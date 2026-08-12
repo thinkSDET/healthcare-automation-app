@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../generated/prisma/client";

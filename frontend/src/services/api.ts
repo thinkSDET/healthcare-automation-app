@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 import axios from "axios";
 import { getAuthToken } from "../context/AuthContext";
 

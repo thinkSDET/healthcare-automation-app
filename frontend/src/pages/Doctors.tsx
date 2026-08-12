@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import ContextualBackLink from "../components/ContextualBackLink";

@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 

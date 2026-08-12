@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 import { Response, NextFunction } from "express";
 import { prisma } from "../config/prisma";
 import { AuthRequest } from "./auth";

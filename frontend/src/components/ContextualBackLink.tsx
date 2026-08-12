@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 import { Link } from "react-router-dom";
 
 type ContextualBackLinkProps = {

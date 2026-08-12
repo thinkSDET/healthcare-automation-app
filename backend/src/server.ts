@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 import express from "express";
 import { prisma } from "./config/prisma";
 import userRoutes from "./routes/user.routes";

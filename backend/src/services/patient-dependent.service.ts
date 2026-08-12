@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 import { prisma } from "../config/prisma";
 
 export const getDependents = async (

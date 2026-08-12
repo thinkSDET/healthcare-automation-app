@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 import { Outlet } from "react-router-dom";
 
 import AppHeader from "./AppHeader";

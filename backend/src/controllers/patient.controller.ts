@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 import { Request, Response } from "express";
 
 import type { AuthRequest } from "../middleware/auth";

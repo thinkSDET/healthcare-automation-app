@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 import { Response } from "express";
 import path from "path";
 import fs from "fs";

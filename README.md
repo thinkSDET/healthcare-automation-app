@@ -137,3 +137,7 @@ If API docs and code disagree, **the backend implementation wins**.
 ## Current Status
 
 HealthOps is an implemented local full-stack application covering auth, clinical operations, pharmacy/inventory, lab orders, and audit. Payments and shipment tracking are application-managed demos (status/UI), not external payment or carrier integrations. Password reset is development-oriented (token logged / returned; no email delivery service). Doctor **registry** records are separate from `User` accounts with role `DOCTOR`.
+
+---
+
+Copyright (c) 2026 thinkSDET. All rights reserved.

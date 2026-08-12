@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 import multer from "multer";
 import path from "path";
 import fs from "fs";

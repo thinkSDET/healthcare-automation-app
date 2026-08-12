@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 import { z } from "zod";
 
 export const createUserSchema = z.object({

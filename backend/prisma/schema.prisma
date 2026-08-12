@@ -1,3 +1,4 @@
+// Copyright (c) 2026 thinkSDET. All rights reserved.
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
