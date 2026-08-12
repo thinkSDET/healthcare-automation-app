@@ -25,6 +25,7 @@ function getPrimaryNav(role?: string): NavItem[] {
       { to: "/patients", label: "Patients" },
       { to: "/doctors", label: "Doctors" },
       { to: "/appointments", label: "Appointments" },
+      { to: "/appointment-requests", label: "Appt Requests" },
       { to: "/refill-requests", label: "Refills" },
     ];
   }

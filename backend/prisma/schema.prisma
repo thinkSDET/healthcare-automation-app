@@ -37,6 +37,8 @@ model User {
   patient             Patient?
   refillRequestsCreated  PrescriptionRefillRequest[] @relation("RefillRequestedBy")
   refillRequestsReviewed PrescriptionRefillRequest[] @relation("RefillReviewedBy")
+  appointmentRequestsCreated  AppointmentRequest[] @relation("AppointmentRequestedBy")
+  appointmentRequestsReviewed AppointmentRequest[] @relation("AppointmentReviewedBy")
 }
 
 enum PatientStatus {
@@ -92,6 +94,7 @@ model Patient {
   prescriptions Prescription[]
   orders        Order[]
   refillRequests PrescriptionRefillRequest[]
+  appointmentRequests AppointmentRequest[]
 }
 
 enum DoctorStatus {
@@ -116,6 +119,7 @@ model Doctor {
 
   appointments Appointment[]
   prescriptions Prescription[]
+  appointmentRequests AppointmentRequest[]
 }
 
 enum AppointmentStatus {
@@ -150,10 +154,50 @@ model Appointment {
 
   patient Patient @relation(fields: [patientId], references: [id])
   doctor  Doctor  @relation(fields: [doctorId], references: [id])
+  appointmentRequest AppointmentRequest?
 
   @@index([patientId])
   @@index([doctorId])
   @@index([appointmentAt])
+}
+
+enum AppointmentRequestStatus {
+  SUBMITTED
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model AppointmentRequest {
+  id                Int                      @id @default(autoincrement())
+  requestNo         String                   @unique
+  patientId         Int
+  doctorId          Int
+  requestedAt       DateTime
+  duration          Int                      @default(30)
+  type              AppointmentType          @default(IN_PERSON)
+  reason            String
+  notes             String?
+  status            AppointmentRequestStatus @default(SUBMITTED)
+  requestedByUserId Int
+  reviewedByUserId  Int?
+  rejectionReason   String?
+  reviewedAt        DateTime?
+  appointmentId     Int?                     @unique
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+
+  patient     Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor      Doctor       @relation(fields: [doctorId], references: [id])
+  requestedBy User         @relation("AppointmentRequestedBy", fields: [requestedByUserId], references: [id])
+  reviewedBy  User?        @relation("AppointmentReviewedBy", fields: [reviewedByUserId], references: [id])
+  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([status])
+  @@index([requestedAt])
+  @@index([patientId, doctorId, requestedAt, status])
 }
 
 model PasswordResetToken {

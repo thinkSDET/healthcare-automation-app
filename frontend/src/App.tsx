@@ -31,6 +31,8 @@ import PaymentFormEmbed from "./pages/PaymentFormEmbed";
 import PharmacyWorkspace from "./pages/PharmacyWorkspace";
 import MyPrescriptions from "./pages/MyPrescriptions";
 import RefillRequestReview from "./pages/RefillRequestReview";
+import RequestAppointment from "./pages/RequestAppointment";
+import AppointmentRequestReview from "./pages/AppointmentRequestReview";
 import AppLayout from "./components/AppLayout";
 
 import "./App.css";
@@ -142,6 +144,11 @@ function App() {
               path="/refill-requests"
               element={<RefillRequestReview />}
             />
+
+            <Route
+              path="/appointment-requests"
+              element={<AppointmentRequestReview />}
+            />
           </Route>
         </Route>
 
@@ -201,6 +208,11 @@ function App() {
             <Route
               path="/my/appointments"
               element={<MyAppointments />}
+            />
+
+            <Route
+              path="/my/appointments/request"
+              element={<RequestAppointment />}
             />
 
             <Route

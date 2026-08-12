@@ -149,6 +149,7 @@ API prefixes (from `server.ts`):
 - `/api/patients`
 - `/api/doctors`
 - `/api/appointments`
+- `/api/appointment-requests`
 - `/api/prescriptions`
 - `/api/refill-requests`
 - `/api/orders`
@@ -577,6 +578,12 @@ Document upload multer rejections (unsupported MIME / >10MB): **structured statu
 - [ ] create-order on non-APPROVED request → 400
 - [ ] Second create-order on same request → 409
 - [ ] Renewal approve does not change Prescription.status
+- [ ] PATIENT can request appointment; ADMIN/DOCTOR can approve → SCHEDULED appointment created
+- [ ] PATIENT appointment request reject requires reason
+- [ ] PATIENT can cancel SUBMITTED appointment request only
+- [ ] Approve fails when doctor/patient slot already booked (request stays SUBMITTED)
+- [ ] PATIENT can list ACTIVE doctors only; cannot create doctors
+- [ ] PATIENT cannot POST /api/appointments directly
 
 ---
 

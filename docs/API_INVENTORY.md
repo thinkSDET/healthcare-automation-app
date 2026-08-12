@@ -39,8 +39,8 @@ Quick reference for every backend endpoint discovered in the current codebase (`
 | GET | `/api/patients/:id/medical-profile` | Yes | ADMIN, DOCTOR, or owning PATIENT | Get medical profile |
 | PUT | `/api/patients/:id/medical-profile` | Yes | ADMIN, DOCTOR, or owning PATIENT | Upsert medical profile |
 | GET | `/api/patients/:id/appointments` | Yes | ADMIN, DOCTOR, or owning PATIENT | Patient appointment history |
-| GET | `/api/doctors` | Yes | ADMIN, DOCTOR | List doctors |
-| GET | `/api/doctors/:id` | Yes | ADMIN, DOCTOR | Get doctor |
+| GET | `/api/doctors` | Yes | ADMIN, DOCTOR, PATIENT* | List doctors (PATIENT sees ACTIVE only) |
+| GET | `/api/doctors/:id` | Yes | ADMIN, DOCTOR, PATIENT* | Get doctor (PATIENT: ACTIVE only) |
 | POST | `/api/doctors` | Yes | ADMIN | Create doctor |
 | PUT | `/api/doctors/:id` | Yes | ADMIN | Update doctor |
 | DELETE | `/api/doctors/:id` | Yes | ADMIN | Delete doctor |
@@ -50,6 +50,10 @@ Quick reference for every backend endpoint discovered in the current codebase (`
 | PUT | `/api/appointments/:id` | Yes | ADMIN | Update schedule/details (not status) |
 | PATCH | `/api/appointments/:id/status` | Yes | ADMIN, DOCTOR | Lifecycle status transition |
 | DELETE | `/api/appointments/:id` | Yes | ADMIN | Cancel if SCHEDULED → CANCELLED |
+| POST | `/api/appointment-requests` | Yes | PATIENT* | Create appointment request |
+| GET | `/api/appointment-requests` | Yes | ADMIN, DOCTOR, PATIENT* | List appointment requests |
+| GET | `/api/appointment-requests/:id` | Yes | ADMIN, DOCTOR, PATIENT* | Get appointment request |
+| PATCH | `/api/appointment-requests/:id/status` | Yes | ADMIN, DOCTOR, PATIENT* | Approve/reject/cancel (role rules apply) |
 | GET | `/api/prescriptions/patient/:patientId` | Yes | ADMIN, DOCTOR, PHARMACIST, PATIENT* | List prescriptions for patient |
 | GET | `/api/prescriptions/:id` | Yes | ADMIN, DOCTOR, PHARMACIST, PATIENT* | Get prescription |
 | POST | `/api/prescriptions` | Yes | ADMIN, DOCTOR | Create prescription |
@@ -76,12 +80,12 @@ Quick reference for every backend endpoint discovered in the current codebase (`
 | ADMIN | Full admin APIs; appointment create/update/cancel; refill/renewal review |
 | DOCTOR | Clinical read/write within authorize lists; no appointment create; renewal approve |
 | PHARMACIST | Prescriptions read/status; orders list/get/status/payment; refill request (not renewal) + refill approve |
-| PATIENT | Own patient record; own prescriptions (read); own refill/renewal requests; own orders |
+| PATIENT | Own patient record; own prescriptions (read); own refill/renewal requests; own orders; own appointment requests; ACTIVE doctors (read) |
 | SUPPORT | Exists in `UserRole` / admin user create schema; **no route currently authorizes SUPPORT** |
 | VIEWER | Exists in `UserRole` / admin user create schema; **no route currently authorizes VIEWER** |
 
 ## Totals
 
-- **Endpoints documented:** 58
+- **Endpoints documented:** 62
 - **Full OpenAPI:** [openapi.yaml](./openapi.yaml)
 - **Testing guide:** [API_TESTING_GUIDE.md](./API_TESTING_GUIDE.md)

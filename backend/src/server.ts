@@ -10,6 +10,7 @@ import prescriptionRoutes from "./routes/prescription.routes";
 import orderRoutes
   from "./routes/order.routes";
 import refillRequestRoutes from "./routes/refill-request.routes";
+import appointmentRequestRoutes from "./routes/appointment-request.routes";
 
 
 const app = express();
@@ -37,6 +38,10 @@ app.use(
 app.use(
   "/api/refill-requests",
   refillRequestRoutes
+);
+app.use(
+  "/api/appointment-requests",
+  appointmentRequestRoutes
 );
 
 // Health check

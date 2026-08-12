@@ -154,7 +154,30 @@ function Dashboard() {
                 </h3>
 
                 <p>
-                  View your appointment history
+                  View appointments and request visits for staff approval
+                </p>
+              </div>
+            </div>
+          )}
+
+          {(isAdmin || isDoctor) && (
+            <div
+              className="dashboard-card"
+              onClick={() =>
+                navigate("/appointment-requests")
+              }
+            >
+              <div className="card-icon">
+                🗓️
+              </div>
+
+              <div>
+                <h3>
+                  Appointment Requests
+                </h3>
+
+                <p>
+                  Review and approve patient appointment requests
                 </p>
               </div>
             </div>

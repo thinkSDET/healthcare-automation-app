@@ -52,6 +52,8 @@ tags:
     description: Doctor directory CRUD
   - name: Appointments
     description: Scheduling and lifecycle
+  - name: AppointmentRequests
+    description: Patient appointment request and staff approval workflow
   - name: Prescriptions
     description: Prescription CRUD and status
   - name: RefillRequests
@@ -1472,7 +1474,7 @@ paths:
       tags:
         - Doctors
       summary: List doctors
-      description: "Roles: ADMIN, DOCTOR."
+      description: "Roles: ADMIN, DOCTOR, PATIENT. PATIENT receives ACTIVE doctors only."
       operationId: getDoctors
       security:
         - BearerAuth: 
@@ -1972,6 +1974,145 @@ paths:
           $ref: "#/components/responses/NotFound"
         500:
           $ref: "#/components/responses/ServerError"
+  /api/appointment-requests:
+    post:
+      tags:
+        - AppointmentRequests
+      summary: Create appointment request
+      description: Role PATIENT (own linked patient). Creates SUBMITTED request. Does not create Appointment until approved.
+      operationId: createAppointmentRequest
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [doctorId, requestedAt, reason]
+              properties:
+                doctorId:
+                  type: integer
+                requestedAt:
+                  type: string
+                  format: date-time
+                duration:
+                  type: integer
+                type:
+                  type: string
+                  enum: [IN_PERSON, VIDEO, PHONE]
+                reason:
+                  type: string
+                notes:
+                  type: string
+      responses:
+        201:
+          description: Created
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        409:
+          description: Duplicate or overlap conflict
+    get:
+      tags:
+        - AppointmentRequests
+      summary: List appointment requests
+      description: Roles ADMIN, DOCTOR, PATIENT (own only).
+      operationId: listAppointmentRequests
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [SUBMITTED, APPROVED, REJECTED, CANCELLED]
+        - name: doctorId
+          in: query
+          schema:
+            type: integer
+        - name: patientId
+          in: query
+          schema:
+            type: integer
+      responses:
+        200:
+          description: List
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+  /api/appointment-requests/{id}:
+    get:
+      tags:
+        - AppointmentRequests
+      summary: Get appointment request by id
+      operationId: getAppointmentRequestById
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Detail
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+  /api/appointment-requests/{id}/status:
+    patch:
+      tags:
+        - AppointmentRequests
+      summary: Update appointment request status
+      description: |
+        SUBMITTED → APPROVED creates Appointment via existing createAppointment (SCHEDULED).
+        SUBMITTED → REJECTED requires rejectionReason.
+        SUBMITTED → CANCELLED by requester PATIENT or ADMIN.
+        Does not modify AppointmentStatus enum.
+      operationId: updateAppointmentRequestStatus
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [APPROVED, REJECTED, CANCELLED]
+                rejectionReason:
+                  type: string
+      responses:
+        200:
+          description: Updated
+        400:
+          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/responses/NotFound"
+        409:
+          description: Slot conflict on approve
   /api/prescriptions/patient/{patientId}:
     get:
       tags:
