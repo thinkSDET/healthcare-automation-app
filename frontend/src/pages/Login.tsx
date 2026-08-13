@@ -157,11 +157,13 @@ function Login() {
 
           <div className="form-group">
 
-            <label>
+            <label htmlFor="email">
               Email address
             </label>
 
             <input
+              id="email"
+              name="email"
               type="email"
               placeholder="Enter your email"
               value={email}
@@ -179,11 +181,13 @@ function Login() {
 
           <div className="form-group">
 
-            <label>
+            <label htmlFor="password">
               Password
             </label>
 
             <input
+              id="password"
+              name="password"
               type="password"
               placeholder="Enter your password"
               value={password}
@@ -204,6 +208,8 @@ function Login() {
             <label className="remember-me">
 
               <input
+                id="rememberMe"
+                name="rememberMe"
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(e) =>
@@ -220,6 +226,7 @@ function Login() {
             </label>
 
             <button
+              id="forgotPassword"
               type="button"
               className="forgot-link"
               onClick={() =>
@@ -236,6 +243,7 @@ function Login() {
           {/* Login */}
 
           <button
+            id="loginSubmit"
             type="submit"
             className="login-button"
             disabled={loading}
@@ -256,6 +264,7 @@ function Login() {
           </span>
 
           <button
+            id="createAccount"
             type="button"
             className="link-button"
             onClick={() =>
