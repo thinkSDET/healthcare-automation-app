@@ -151,11 +151,43 @@ export const deletePatient = async (
   try {
     const id = Number(req.params.id);
 
+    if (Number.isNaN(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid patient ID",
+      });
+    }
+
     await patientService.deletePatient(id);
 
-    res.status(204).send();
-  } catch {
-    res.status(500).json({
+    return res.status(200).json({
+      success: true,
+      message: "Patient deleted successfully",
+    });
+  } catch (error) {
+    console.error("DELETE PATIENT ERROR:", error);
+
+    if (
+      error instanceof Error &&
+      error.message === "PATIENT_NOT_FOUND"
+    ) {
+      return res.status(404).json({
+        success: false,
+        message: "Patient not found",
+      });
+    }
+
+    if (
+      error instanceof Error &&
+      error.message === "PATIENT_MUST_BE_INACTIVE"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Only inactive patients can be deleted",
+      });
+    }
+
+    return res.status(500).json({
       success: false,
       message: "Failed to delete patient",
     });
