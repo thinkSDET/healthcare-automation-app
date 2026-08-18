@@ -91,9 +91,40 @@ export const updatePatient = async (
 };
 
 export const deletePatient = async (id: number) => {
-  return prisma.patient.delete({
+  const patient = await prisma.patient.findUnique({
     where: { id },
   });
+
+  if (!patient) {
+    throw new Error("PATIENT_NOT_FOUND");
+  }
+
+  if (patient.status !== "INACTIVE") {
+    throw new Error("PATIENT_MUST_BE_INACTIVE");
+  }
+
+  // Some patient relations are not configured with database-level cascade
+  // deletes (for example appointments). Remove those records first so the
+  // patient delete does not fail on foreign-key constraints.
+  await prisma.$transaction(async (tx) => {
+    await tx.appointmentRequest.deleteMany({
+      where: { patientId: id },
+    });
+
+    await tx.labTestOrder.deleteMany({
+      where: { patientId: id },
+    });
+
+    await tx.appointment.deleteMany({
+      where: { patientId: id },
+    });
+
+    await tx.patient.delete({
+      where: { id },
+    });
+  });
+
+  return patient;
 };
 
 export const deactivatePatient = async (

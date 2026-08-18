@@ -131,7 +131,9 @@ function PatientDetails() {
   const [editing, setEditing] =
     useState(false);
 
-    const [deactivating, setDeactivating] = useState(false);
+  const [deactivating, setDeactivating] = useState(false);
+
+  const [deleting, setDeleting] = useState(false);
 
   const [formData, setFormData] = useState({
     medicalId: "",
@@ -501,6 +503,56 @@ function PatientDetails() {
     setDeactivating(false);
   }
 };
+
+  const handleDeletePatient = async () => {
+    if (!patient || patient.status !== "INACTIVE") {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Are you sure you want to permanently delete ${patient.firstName} ${patient.lastName}? This action cannot be undone.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      setError("");
+      setSuccess("");
+
+      const response = await fetch(
+        `http://localhost:4000/api/patients/${patient.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message || "Failed to delete patient"
+        );
+      }
+
+      navigate("/patients");
+    } catch (error) {
+      console.error("Failed to delete patient:", error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to delete patient"
+      );
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const formatDate = (
     date?: string
@@ -3479,6 +3531,19 @@ function PatientDetails() {
                         : "Deactivate Patient"}
                     </button>
                   </>
+                )}
+
+                {patient.status === "INACTIVE" && (
+                  <button
+                    type="button"
+                    className="danger-button"
+                    onClick={handleDeletePatient}
+                    disabled={deleting}
+                  >
+                    {deleting
+                      ? "Deleting..."
+                      : "Delete Patient"}
+                  </button>
                 )}
 
               </div>
