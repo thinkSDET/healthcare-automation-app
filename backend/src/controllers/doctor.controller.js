@@ -34,11 +34,13 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteDoctor = exports.updateDoctor = exports.createDoctor = exports.getDoctorById = exports.getDoctors = void 0;
-const express_1 = require("express");
 const doctorService = __importStar(require("../services/doctor.service"));
-const getDoctors = async (_req, res) => {
+const getDoctors = async (req, res) => {
     try {
-        const doctors = await doctorService.getDoctors();
+        const role = req.user?.role?.toUpperCase();
+        const doctors = await doctorService.getDoctors({
+            activeOnly: role === "PATIENT",
+        });
         res.status(200).json({
             success: true,
             data: doctors
@@ -55,8 +57,15 @@ exports.getDoctors = getDoctors;
 const getDoctorById = async (req, res) => {
     try {
         const id = Number(req.params.id);
+        const role = req.user?.role?.toUpperCase();
         const doctor = await doctorService.getDoctorById(id);
         if (!doctor) {
+            return res.status(404).json({
+                success: false,
+                message: "Doctor not found"
+            });
+        }
+        if (role === "PATIENT" && doctor.status !== "ACTIVE") {
             return res.status(404).json({
                 success: false,
                 message: "Doctor not found"

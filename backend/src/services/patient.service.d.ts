@@ -1,3 +1,4 @@
+import { type AuditContext } from "./audit.service";
 export declare const getPatients: () => Promise<{
     id: number;
     userId: number | null;
@@ -40,7 +41,7 @@ export declare const createPatient: (data: {
     phone: string;
     address?: string;
     bloodGroup?: string;
-}) => Promise<{
+}, auditContext?: AuditContext) => Promise<{
     id: number;
     userId: number | null;
     medicalId: string;
@@ -64,7 +65,7 @@ export declare const updatePatient: (id: number, data: {
     address?: string;
     bloodGroup?: string;
     status?: "ACTIVE" | "INACTIVE" | "DECEASED";
-}) => Promise<{
+}, auditContext?: AuditContext) => Promise<{
     id: number;
     userId: number | null;
     medicalId: string;
@@ -96,7 +97,7 @@ export declare const deletePatient: (id: number) => Promise<{
     createdAt: Date;
     updatedAt: Date;
 }>;
-export declare const deactivatePatient: (patientId: number) => Promise<{
+export declare const deactivatePatient: (patientId: number, auditContext?: AuditContext) => Promise<{
     id: number;
     userId: number | null;
     medicalId: string;

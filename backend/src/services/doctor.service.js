@@ -1,9 +1,15 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteDoctor = exports.updateDoctor = exports.createDoctor = exports.getDoctorById = exports.getDoctors = void 0;
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 const prisma_1 = require("../config/prisma");
-const getDoctors = async () => {
+const getDoctors = async (options) => {
     return prisma_1.prisma.doctor.findMany({
+        where: options?.activeOnly
+            ? { status: "ACTIVE" }
+            : undefined,
         orderBy: {
             createdAt: "desc"
         }

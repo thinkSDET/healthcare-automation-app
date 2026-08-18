@@ -34,8 +34,38 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deletePrescription = exports.updatePrescriptionStatus = exports.createPrescription = exports.getPrescriptionById = exports.getPatientPrescriptions = void 0;
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 const express_1 = require("express");
+const prisma_1 = require("../config/prisma");
 const prescriptionService = __importStar(require("../services/prescription.service"));
+const getOwnPatientId = async (userId) => {
+    const patient = await prisma_1.prisma.patient.findUnique({
+        where: { userId },
+        select: { id: true },
+    });
+    return patient?.id ?? null;
+};
+const assertPatientOwnsPatientId = async (req, patientId) => {
+    if (req.user?.role?.toUpperCase() !== "PATIENT") {
+        return null;
+    }
+    const ownPatientId = await getOwnPatientId(req.user.userId);
+    if (!ownPatientId) {
+        return {
+            status: 403,
+            message: "No patient record is linked to this account",
+        };
+    }
+    if (ownPatientId !== patientId) {
+        return {
+            status: 403,
+            message: "You do not have permission to access prescriptions for this patient",
+        };
+    }
+    return null;
+};
 /*
 |--------------------------------------------------------------------------
 | Get Patient Prescriptions
@@ -48,6 +78,13 @@ const getPatientPrescriptions = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: "Invalid patient ID",
+            });
+        }
+        const ownershipError = await assertPatientOwnsPatientId(req, patientId);
+        if (ownershipError) {
+            return res.status(ownershipError.status).json({
+                success: false,
+                message: ownershipError.message,
             });
         }
         const prescriptions = await prescriptionService
@@ -90,6 +127,13 @@ const getPrescriptionById = async (req, res) => {
         }
         const prescription = await prescriptionService
             .getPrescriptionById(prescriptionId);
+        const ownershipError = await assertPatientOwnsPatientId(req, prescription.patientId);
+        if (ownershipError) {
+            return res.status(ownershipError.status).json({
+                success: false,
+                message: ownershipError.message,
+            });
+        }
         return res.status(200).json({
             success: true,
             data: prescription,
@@ -119,6 +163,12 @@ exports.getPrescriptionById = getPrescriptionById;
 */
 const createPrescription = async (req, res) => {
     try {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: "Authentication required",
+            });
+        }
         const { patientId, doctorId, prescribedAt, diagnosis, notes, status, items, } = req.body;
         if (!patientId ||
             !doctorId) {
@@ -143,6 +193,9 @@ const createPrescription = async (req, res) => {
             notes,
             status,
             items,
+        }, {
+            actorUserId: req.user.userId,
+            actorRole: req.user.role,
         });
         return res.status(201).json({
             success: true,
@@ -190,6 +243,12 @@ exports.createPrescription = createPrescription;
 */
 const updatePrescriptionStatus = async (req, res) => {
     try {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: "Authentication required",
+            });
+        }
         const prescriptionId = Number(req.params.id);
         const { status, } = req.body;
         if (Number.isNaN(prescriptionId)) {
@@ -209,7 +268,10 @@ const updatePrescriptionStatus = async (req, res) => {
             });
         }
         const prescription = await prescriptionService
-            .updatePrescriptionStatus(prescriptionId, status);
+            .updatePrescriptionStatus(prescriptionId, status, {
+            actorUserId: req.user.userId,
+            actorRole: req.user.role,
+        });
         return res.status(200).json({
             success: true,
             message: "Prescription status updated successfully",
@@ -240,6 +302,12 @@ exports.updatePrescriptionStatus = updatePrescriptionStatus;
 */
 const deletePrescription = async (req, res) => {
     try {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: "Authentication required",
+            });
+        }
         const prescriptionId = Number(req.params.id);
         if (Number.isNaN(prescriptionId)) {
             return res.status(400).json({
@@ -248,7 +316,10 @@ const deletePrescription = async (req, res) => {
             });
         }
         const result = await prescriptionService
-            .deletePrescription(prescriptionId);
+            .deletePrescription(prescriptionId, {
+            actorUserId: req.user.userId,
+            actorRole: req.user.role,
+        });
         return res.status(200).json({
             success: true,
             ...result,

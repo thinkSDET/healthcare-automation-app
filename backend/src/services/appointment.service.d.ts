@@ -1,3 +1,4 @@
+import { type AuditContext } from "./audit.service";
 export type AppointmentStatusValue = "SCHEDULED" | "CONFIRMED" | "CHECKED_IN" | "IN_CONSULTATION" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
 export declare const getAppointments: () => Promise<({
     doctor: {
@@ -98,7 +99,7 @@ export declare const createAppointment: (data: {
     type?: "IN_PERSON" | "VIDEO" | "PHONE";
     reason: string;
     notes?: string;
-}) => Promise<{
+}, auditContext?: AuditContext) => Promise<{
     doctor: {
         id: number;
         doctorCode: string;
@@ -149,7 +150,7 @@ export declare const updateAppointment: (id: number, data: {
     type?: "IN_PERSON" | "VIDEO" | "PHONE";
     reason?: string;
     notes?: string;
-}) => Promise<{
+}, auditContext?: AuditContext) => Promise<{
     doctor: {
         id: number;
         doctorCode: string;
@@ -194,7 +195,7 @@ export declare const updateAppointment: (id: number, data: {
     createdAt: Date;
     updatedAt: Date;
 }>;
-export declare const updateAppointmentStatus: (id: number, nextStatus: AppointmentStatusValue, role: string) => Promise<{
+export declare const updateAppointmentStatus: (id: number, nextStatus: AppointmentStatusValue, role: string, auditContext?: AuditContext) => Promise<{
     doctor: {
         id: number;
         doctorCode: string;
@@ -239,7 +240,7 @@ export declare const updateAppointmentStatus: (id: number, nextStatus: Appointme
     createdAt: Date;
     updatedAt: Date;
 }>;
-export declare const cancelAppointment: (id: number) => Promise<{
+export declare const cancelAppointment: (id: number, auditContext?: AuditContext) => Promise<{
     doctor: {
         id: number;
         doctorCode: string;

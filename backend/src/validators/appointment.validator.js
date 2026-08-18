@@ -1,6 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateAppointmentStatusSchema = exports.updateAppointmentSchema = exports.createAppointmentSchema = exports.appointmentStatusEnum = void 0;
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 const zod_1 = require("zod");
 exports.appointmentStatusEnum = zod_1.z.enum([
     "SCHEDULED",

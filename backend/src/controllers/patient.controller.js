@@ -34,6 +34,9 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getPatientAppointments = exports.savePatientMedicalProfile = exports.getPatientMedicalProfile = exports.deletePatientEmergencyContact = exports.savePatientEmergencyContact = exports.getPatientEmergencyContact = exports.deletePatientDependent = exports.createPatientDependent = exports.getPatientDependents = exports.deactivatePatient = exports.deletePatient = exports.updatePatient = exports.createPatient = exports.getPatientById = exports.getPatients = void 0;
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 const express_1 = require("express");
 const patientService = __importStar(require("../services/patient.service"));
 const patientDependentService = __importStar(require("../services/patient-dependent.service"));
@@ -89,9 +92,18 @@ const getPatientById = async (req, res) => {
 exports.getPatientById = getPatientById;
 const createPatient = async (req, res) => {
     try {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: "Authentication required",
+            });
+        }
         const patient = await patientService.createPatient({
             ...req.body,
             dateOfBirth: new Date(req.body.dateOfBirth),
+        }, {
+            actorUserId: req.user.userId,
+            actorRole: req.user.role,
         });
         res.status(201).json({
             success: true,
@@ -108,8 +120,17 @@ const createPatient = async (req, res) => {
 exports.createPatient = createPatient;
 const updatePatient = async (req, res) => {
     try {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: "Authentication required",
+            });
+        }
         const id = Number(req.params.id);
-        const patient = await patientService.updatePatient(id, req.body);
+        const patient = await patientService.updatePatient(id, req.body, {
+            actorUserId: req.user.userId,
+            actorRole: req.user.role,
+        });
         res.status(200).json({
             success: true,
             data: patient,
@@ -126,11 +147,35 @@ exports.updatePatient = updatePatient;
 const deletePatient = async (req, res) => {
     try {
         const id = Number(req.params.id);
+        if (Number.isNaN(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid patient ID",
+            });
+        }
         await patientService.deletePatient(id);
-        res.status(204).send();
+        return res.status(200).json({
+            success: true,
+            message: "Patient deleted successfully",
+        });
     }
-    catch {
-        res.status(500).json({
+    catch (error) {
+        console.error("DELETE PATIENT ERROR:", error);
+        if (error instanceof Error &&
+            error.message === "PATIENT_NOT_FOUND") {
+            return res.status(404).json({
+                success: false,
+                message: "Patient not found",
+            });
+        }
+        if (error instanceof Error &&
+            error.message === "PATIENT_MUST_BE_INACTIVE") {
+            return res.status(400).json({
+                success: false,
+                message: "Only inactive patients can be deleted",
+            });
+        }
+        return res.status(500).json({
             success: false,
             message: "Failed to delete patient",
         });
@@ -139,6 +184,12 @@ const deletePatient = async (req, res) => {
 exports.deletePatient = deletePatient;
 const deactivatePatient = async (req, res) => {
     try {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: "Authentication required",
+            });
+        }
         const patientId = Number(req.params.id);
         if (Number.isNaN(patientId)) {
             return res.status(400).json({
@@ -146,7 +197,10 @@ const deactivatePatient = async (req, res) => {
                 message: "Invalid patient ID",
             });
         }
-        const patient = await patientService.deactivatePatient(patientId);
+        const patient = await patientService.deactivatePatient(patientId, {
+            actorUserId: req.user.userId,
+            actorRole: req.user.role,
+        });
         return res.status(200).json({
             success: true,
             message: "Patient deactivated successfully",

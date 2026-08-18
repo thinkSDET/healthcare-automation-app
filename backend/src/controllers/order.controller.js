@@ -118,15 +118,15 @@ exports.getPatientOrders = getPatientOrders;
 */
 const getOrderById = async (req, res) => {
     try {
-        const orderId = Number(req.params.id);
-        if (Number.isNaN(orderId)) {
+        const identifier = String(req.params.id ?? "").trim();
+        if (!identifier) {
             return res.status(400).json({
                 success: false,
                 message: "Invalid order ID",
             });
         }
         const order = await orderService
-            .getOrderById(orderId);
+            .getOrderByIdentifier(identifier);
         const ownershipError = await assertPatientOwnsPatientId(req, order.patientId);
         if (ownershipError) {
             return res.status(ownershipError.status).json({
@@ -194,7 +194,12 @@ const createOrder = async (req, res) => {
             deliveryAddress,
             notes,
             items,
-        });
+        }, req.user
+            ? {
+                actorUserId: req.user.userId,
+                actorRole: req.user.role,
+            }
+            : undefined);
         return res.status(201).json({
             success: true,
             message: "Order created successfully",
@@ -259,7 +264,12 @@ const updateOrderStatus = async (req, res) => {
             });
         }
         const order = await orderService
-            .updateOrderStatus(orderId, status);
+            .updateOrderStatus(orderId, status, req.user
+            ? {
+                actorUserId: req.user.userId,
+                actorRole: req.user.role,
+            }
+            : undefined);
         return res.status(200).json({
             success: true,
             message: "Order status updated successfully",
@@ -310,8 +320,37 @@ const updatePaymentStatus = async (req, res) => {
                 message: "Invalid payment status",
             });
         }
+        /*
+         * PATIENT may only set PAID or FAILED on their own order.
+         * ADMIN / PHARMACIST keep full payment-status access.
+         */
+        if (req.user?.role === "PATIENT") {
+            const patientAllowed = [
+                "PAID",
+                "FAILED",
+            ];
+            if (!patientAllowed.includes(paymentStatus)) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Patients may only set payment status to PAID or FAILED",
+                });
+            }
+            const existingOrder = await orderService.getOrderById(orderId);
+            const ownershipError = await assertPatientOwnsPatientId(req, existingOrder.patientId);
+            if (ownershipError) {
+                return res.status(ownershipError.status).json({
+                    success: false,
+                    message: ownershipError.message,
+                });
+            }
+        }
         const order = await orderService
-            .updatePaymentStatus(orderId, paymentStatus);
+            .updatePaymentStatus(orderId, paymentStatus, req.user
+            ? {
+                actorUserId: req.user.userId,
+                actorRole: req.user.role,
+            }
+            : undefined);
         return res.status(200).json({
             success: true,
             message: "Payment status updated successfully",

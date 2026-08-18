@@ -1,3 +1,4 @@
+import { type AuditContext } from "./audit.service";
 interface PrescriptionItemInput {
     medicineName: string;
     dosage: string;
@@ -88,7 +89,7 @@ export declare const getPrescriptionById: (prescriptionId: number) => Promise<{
     createdAt: Date;
     updatedAt: Date;
 }>;
-export declare const createPrescription: (data: CreatePrescriptionInput) => Promise<{
+export declare const createPrescription: (data: CreatePrescriptionInput, auditContext?: AuditContext) => Promise<{
     doctor: {
         doctorCode: string;
         firstName: string;
@@ -126,7 +127,7 @@ export declare const createPrescription: (data: CreatePrescriptionInput) => Prom
     createdAt: Date;
     updatedAt: Date;
 }>;
-export declare const updatePrescriptionStatus: (prescriptionId: number, status: "ACTIVE" | "COMPLETED" | "CANCELLED") => Promise<{
+export declare const updatePrescriptionStatus: (prescriptionId: number, status: "ACTIVE" | "COMPLETED" | "CANCELLED", auditContext?: AuditContext) => Promise<{
     doctor: {
         doctorCode: string;
         firstName: string;
@@ -158,7 +159,7 @@ export declare const updatePrescriptionStatus: (prescriptionId: number, status: 
     createdAt: Date;
     updatedAt: Date;
 }>;
-export declare const deletePrescription: (prescriptionId: number) => Promise<{
+export declare const deletePrescription: (prescriptionId: number, auditContext?: AuditContext) => Promise<{
     message: string;
 }>;
 export {};

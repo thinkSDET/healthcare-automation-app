@@ -1,7 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getPatientAppointments = exports.upsertPatientMedicalProfile = exports.getPatientMedicalProfile = exports.deletePatientEmergencyContact = exports.upsertPatientEmergencyContact = exports.getPatientEmergencyContact = exports.deactivatePatient = exports.deletePatient = exports.updatePatient = exports.createPatient = exports.getPatientById = exports.getPatients = void 0;
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 const prisma_1 = require("../config/prisma");
+const audit_service_1 = require("./audit.service");
 const getPatients = async () => {
     return prisma_1.prisma.patient.findMany({
         orderBy: {
@@ -16,26 +20,82 @@ const getPatientById = async (id) => {
     });
 };
 exports.getPatientById = getPatientById;
-const createPatient = async (data) => {
-    return prisma_1.prisma.patient.create({
+const createPatient = async (data, auditContext) => {
+    const created = await prisma_1.prisma.patient.create({
         data,
     });
+    if (auditContext) {
+        await (0, audit_service_1.safeRecordAuditEvent)({
+            actorUserId: auditContext.actorUserId,
+            actorRole: auditContext.actorRole,
+            action: "CREATE",
+            entityType: "PATIENT",
+            entityId: created.id,
+            metadata: {
+                medicalId: created.medicalId,
+            },
+        });
+    }
+    return created;
 };
 exports.createPatient = createPatient;
-const updatePatient = async (id, data) => {
-    return prisma_1.prisma.patient.update({
+const updatePatient = async (id, data, auditContext) => {
+    const updated = await prisma_1.prisma.patient.update({
         where: { id },
         data,
     });
+    if (auditContext) {
+        await (0, audit_service_1.safeRecordAuditEvent)({
+            actorUserId: auditContext.actorUserId,
+            actorRole: auditContext.actorRole,
+            action: "UPDATE",
+            entityType: "PATIENT",
+            entityId: updated.id,
+            metadata: {
+                medicalId: updated.medicalId,
+                updatedFields: Object.keys(data),
+            },
+        });
+    }
+    return updated;
 };
 exports.updatePatient = updatePatient;
 const deletePatient = async (id) => {
-    return prisma_1.prisma.patient.delete({
+    const patient = await prisma_1.prisma.patient.findUnique({
         where: { id },
     });
+    if (!patient) {
+        throw new Error("PATIENT_NOT_FOUND");
+    }
+    if (patient.status !== "INACTIVE") {
+        throw new Error("PATIENT_MUST_BE_INACTIVE");
+    }
+    // Some patient relations are not configured with database-level cascade
+    // deletes (for example appointments). Remove those records first so the
+    // patient delete does not fail on foreign-key constraints.
+    await prisma_1.prisma.$transaction(async (tx) => {
+        await tx.appointmentRequest.deleteMany({
+            where: { patientId: id },
+        });
+        await tx.labTestOrder.deleteMany({
+            where: { patientId: id },
+        });
+        await tx.appointment.deleteMany({
+            where: { patientId: id },
+        });
+        await tx.patient.delete({
+            where: { id },
+        });
+        if (patient.userId !== null) {
+            await tx.user.delete({
+                where: { id: patient.userId },
+            });
+        }
+    });
+    return patient;
 };
 exports.deletePatient = deletePatient;
-const deactivatePatient = async (patientId) => {
+const deactivatePatient = async (patientId, auditContext) => {
     const patient = await prisma_1.prisma.patient.findUnique({
         where: {
             id: patientId,
@@ -47,7 +107,7 @@ const deactivatePatient = async (patientId) => {
     if (patient.status === "INACTIVE") {
         throw new Error("PATIENT_ALREADY_INACTIVE");
     }
-    return prisma_1.prisma.patient.update({
+    const updated = await prisma_1.prisma.patient.update({
         where: {
             id: patientId,
         },
@@ -55,6 +115,21 @@ const deactivatePatient = async (patientId) => {
             status: "INACTIVE",
         },
     });
+    if (auditContext) {
+        await (0, audit_service_1.safeRecordAuditEvent)({
+            actorUserId: auditContext.actorUserId,
+            actorRole: auditContext.actorRole,
+            action: "STATUS_CHANGE",
+            entityType: "PATIENT",
+            entityId: updated.id,
+            metadata: {
+                medicalId: updated.medicalId,
+                from: patient.status,
+                to: "INACTIVE",
+            },
+        });
+    }
+    return updated;
 };
 exports.deactivatePatient = deactivatePatient;
 /*

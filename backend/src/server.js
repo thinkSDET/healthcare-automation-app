@@ -3,6 +3,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 const express_1 = __importDefault(require("express"));
 const prisma_1 = require("./config/prisma");
 const user_routes_1 = __importDefault(require("./routes/user.routes"));
@@ -13,6 +16,12 @@ const appointment_routes_1 = __importDefault(require("./routes/appointment.route
 const cors_1 = __importDefault(require("cors"));
 const prescription_routes_1 = __importDefault(require("./routes/prescription.routes"));
 const order_routes_1 = __importDefault(require("./routes/order.routes"));
+const refill_request_routes_1 = __importDefault(require("./routes/refill-request.routes"));
+const appointment_request_routes_1 = __importDefault(require("./routes/appointment-request.routes"));
+const audit_routes_1 = __importDefault(require("./routes/audit.routes"));
+const medication_routes_1 = __importDefault(require("./routes/medication.routes"));
+const replenishment_request_routes_1 = __importDefault(require("./routes/replenishment-request.routes"));
+const lab_order_routes_1 = __importDefault(require("./routes/lab-order.routes"));
 const app = (0, express_1.default)();
 const PORT = 4000;
 // Middleware
@@ -26,6 +35,12 @@ app.use("/api/doctors", doctor_routes_1.default);
 app.use("/api/appointments", appointment_routes_1.default);
 app.use("/api/prescriptions", prescription_routes_1.default);
 app.use("/api/orders", order_routes_1.default);
+app.use("/api/refill-requests", refill_request_routes_1.default);
+app.use("/api/appointment-requests", appointment_request_routes_1.default);
+app.use("/api/audit-events", audit_routes_1.default);
+app.use("/api/medications", medication_routes_1.default);
+app.use("/api/replenishment-requests", replenishment_request_routes_1.default);
+app.use("/api/lab-orders", lab_order_routes_1.default);
 // Health check
 app.get("/api/health", async (_req, res) => {
     try {

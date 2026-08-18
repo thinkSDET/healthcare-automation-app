@@ -1,6 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateUserSchema = exports.createUserSchema = void 0;
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 const zod_1 = require("zod");
 exports.createUserSchema = zod_1.z.object({
     firstName: zod_1.z.string().min(2).max(50),

@@ -1,7 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deletePrescription = exports.updatePrescriptionStatus = exports.createPrescription = exports.getPrescriptionById = exports.getPatientPrescriptions = void 0;
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 const prisma_1 = require("../config/prisma");
+const audit_service_1 = require("./audit.service");
 /*
 |--------------------------------------------------------------------------
 | Get Patient Prescriptions
@@ -83,7 +87,7 @@ exports.getPrescriptionById = getPrescriptionById;
 | Create Prescription
 |--------------------------------------------------------------------------
 */
-const createPrescription = async (data) => {
+const createPrescription = async (data, auditContext) => {
     const patient = await prisma_1.prisma.patient.findUnique({
         where: {
             id: data.patientId,
@@ -113,7 +117,7 @@ const createPrescription = async (data) => {
         }
     }
     const prescriptionNo = `RX-${Date.now()}`;
-    return prisma_1.prisma.prescription.create({
+    const created = await prisma_1.prisma.prescription.create({
         data: {
             prescriptionNo,
             patientId: data.patientId,
@@ -161,6 +165,21 @@ const createPrescription = async (data) => {
             items: true,
         },
     });
+    if (auditContext) {
+        await (0, audit_service_1.safeRecordAuditEvent)({
+            actorUserId: auditContext.actorUserId,
+            actorRole: auditContext.actorRole,
+            action: "CREATE",
+            entityType: "PRESCRIPTION",
+            entityId: created.id,
+            metadata: {
+                prescriptionNo: created.prescriptionNo,
+                patientId: created.patientId,
+                doctorId: created.doctorId,
+            },
+        });
+    }
+    return created;
 };
 exports.createPrescription = createPrescription;
 /*
@@ -168,7 +187,7 @@ exports.createPrescription = createPrescription;
 | Update Prescription Status
 |--------------------------------------------------------------------------
 */
-const updatePrescriptionStatus = async (prescriptionId, status) => {
+const updatePrescriptionStatus = async (prescriptionId, status, auditContext) => {
     const prescription = await prisma_1.prisma.prescription.findUnique({
         where: {
             id: prescriptionId,
@@ -177,7 +196,7 @@ const updatePrescriptionStatus = async (prescriptionId, status) => {
     if (!prescription) {
         throw new Error("PRESCRIPTION_NOT_FOUND");
     }
-    return prisma_1.prisma.prescription.update({
+    const updated = await prisma_1.prisma.prescription.update({
         where: {
             id: prescriptionId,
         },
@@ -197,6 +216,21 @@ const updatePrescriptionStatus = async (prescriptionId, status) => {
             },
         },
     });
+    if (auditContext) {
+        await (0, audit_service_1.safeRecordAuditEvent)({
+            actorUserId: auditContext.actorUserId,
+            actorRole: auditContext.actorRole,
+            action: "STATUS_CHANGE",
+            entityType: "PRESCRIPTION",
+            entityId: updated.id,
+            metadata: {
+                prescriptionNo: updated.prescriptionNo,
+                from: prescription.status,
+                to: status,
+            },
+        });
+    }
+    return updated;
 };
 exports.updatePrescriptionStatus = updatePrescriptionStatus;
 /*
@@ -204,7 +238,7 @@ exports.updatePrescriptionStatus = updatePrescriptionStatus;
 | Delete Prescription
 |--------------------------------------------------------------------------
 */
-const deletePrescription = async (prescriptionId) => {
+const deletePrescription = async (prescriptionId, auditContext) => {
     const prescription = await prisma_1.prisma.prescription.findUnique({
         where: {
             id: prescriptionId,
@@ -218,6 +252,19 @@ const deletePrescription = async (prescriptionId) => {
             id: prescriptionId,
         },
     });
+    if (auditContext) {
+        await (0, audit_service_1.safeRecordAuditEvent)({
+            actorUserId: auditContext.actorUserId,
+            actorRole: auditContext.actorRole,
+            action: "DELETE",
+            entityType: "PRESCRIPTION",
+            entityId: prescriptionId,
+            metadata: {
+                prescriptionNo: prescription.prescriptionNo,
+                patientId: prescription.patientId,
+            },
+        });
+    }
     return {
         message: "Prescription deleted successfully",
     };
