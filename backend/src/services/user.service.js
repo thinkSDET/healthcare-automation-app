@@ -1,6 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteUser = exports.updateUser = exports.createUser = exports.getUserById = exports.getUsers = void 0;
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 const prisma_1 = require("../config/prisma");
 const getUsers = async () => {
     return prisma_1.prisma.user.findMany({

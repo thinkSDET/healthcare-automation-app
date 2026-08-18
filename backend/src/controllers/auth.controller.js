@@ -34,6 +34,9 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.changePasswordController = exports.resetPasswordController = exports.forgotPasswordController = exports.login = exports.register = void 0;
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 const express_1 = require("express");
 const authService = __importStar(require("../services/auth.service"));
 const register = async (req, res) => {

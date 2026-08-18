@@ -1,6 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteDocument = exports.getDocumentById = exports.createDocument = exports.getDocuments = void 0;
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 const prisma_1 = require("../config/prisma");
 const getDocuments = async (patientId) => {
     const patient = await prisma_1.prisma.patient.findUnique({

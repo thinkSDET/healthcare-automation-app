@@ -1,7 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteOrder = exports.updatePaymentStatus = exports.updateOrderStatus = exports.createOrder = exports.getOrderById = exports.getPatientOrders = void 0;
+exports.deleteOrder = exports.updatePaymentStatus = exports.updateOrderStatus = exports.createOrder = exports.getOrderByIdentifier = exports.getOrderByOrderNo = exports.getOrderById = exports.getPatientOrders = void 0;
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 const prisma_1 = require("../config/prisma");
+const audit_service_1 = require("./audit.service");
 /*
 |--------------------------------------------------------------------------
 | Get Patient Orders
@@ -34,24 +38,25 @@ exports.getPatientOrders = getPatientOrders;
 | Get Order By ID
 |--------------------------------------------------------------------------
 */
+const orderDetailInclude = {
+    patient: {
+        select: {
+            id: true,
+            medicalId: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            email: true,
+        },
+    },
+    items: true,
+};
 const getOrderById = async (orderId) => {
     const order = await prisma_1.prisma.order.findUnique({
         where: {
             id: orderId,
         },
-        include: {
-            patient: {
-                select: {
-                    id: true,
-                    medicalId: true,
-                    firstName: true,
-                    lastName: true,
-                    phone: true,
-                    email: true,
-                },
-            },
-            items: true,
-        },
+        include: orderDetailInclude,
     });
     if (!order) {
         throw new Error("ORDER_NOT_FOUND");
@@ -61,10 +66,75 @@ const getOrderById = async (orderId) => {
 exports.getOrderById = getOrderById;
 /*
 |--------------------------------------------------------------------------
+| Get Order By Public Order Number
+|--------------------------------------------------------------------------
+*/
+const getOrderByOrderNo = async (orderNo) => {
+    const normalized = orderNo.trim();
+    if (!normalized) {
+        throw new Error("ORDER_NOT_FOUND");
+    }
+    let order = await prisma_1.prisma.order.findUnique({
+        where: {
+            orderNo: normalized,
+        },
+        include: orderDetailInclude,
+    });
+    /*
+     * Pharmacists sometimes paste only the
+     * timestamp digits from ORD-{timestamp}.
+     * Those values are not internal ids
+     * (too large for Int PK), so retry with
+     * the ORD- prefix.
+     */
+    if (!order &&
+        /^\d+$/.test(normalized)) {
+        order =
+            await prisma_1.prisma.order.findUnique({
+                where: {
+                    orderNo: `ORD-${normalized}`,
+                },
+                include: orderDetailInclude,
+            });
+    }
+    if (!order) {
+        throw new Error("ORDER_NOT_FOUND");
+    }
+    return order;
+};
+exports.getOrderByOrderNo = getOrderByOrderNo;
+/*
+|--------------------------------------------------------------------------
+| Get Order By Path Identifier (id or orderNo)
+|--------------------------------------------------------------------------
+*/
+/**
+ * Resolve GET /api/orders/:id identifier.
+ * - Digits within Prisma Int range → internal Order.id
+ * - Otherwise → public orderNo (e.g. ORD-...)
+ */
+const getOrderByIdentifier = async (identifier) => {
+    const raw = String(identifier || "").trim();
+    if (!raw) {
+        throw new Error("ORDER_NOT_FOUND");
+    }
+    const PRISMA_INT_MAX = 2147483647;
+    const isInternalId = /^\d+$/.test(raw) &&
+        Number.isSafeInteger(Number(raw)) &&
+        Number(raw) >= 1 &&
+        Number(raw) <= PRISMA_INT_MAX;
+    if (isInternalId) {
+        return (0, exports.getOrderById)(Number(raw));
+    }
+    return (0, exports.getOrderByOrderNo)(raw);
+};
+exports.getOrderByIdentifier = getOrderByIdentifier;
+/*
+|--------------------------------------------------------------------------
 | Create Order
 |--------------------------------------------------------------------------
 */
-const createOrder = async (data) => {
+const createOrder = async (data, auditContext) => {
     const patient = await prisma_1.prisma.patient.findUnique({
         where: {
             id: data.patientId,
@@ -89,7 +159,7 @@ const createOrder = async (data) => {
         item.quantity *
             Number(item.unitPrice), 0);
     const orderNo = `ORD-${Date.now()}`;
-    return prisma_1.prisma.order.create({
+    const created = await prisma_1.prisma.order.create({
         data: {
             orderNo,
             patientId: data.patientId,
@@ -127,6 +197,20 @@ const createOrder = async (data) => {
             },
         },
     });
+    if (auditContext) {
+        await (0, audit_service_1.safeRecordAuditEvent)({
+            actorUserId: auditContext.actorUserId,
+            actorRole: auditContext.actorRole,
+            action: "CREATE",
+            entityType: "ORDER",
+            entityId: created.id,
+            metadata: {
+                orderNo: created.orderNo,
+                patientId: created.patientId,
+            },
+        });
+    }
+    return created;
 };
 exports.createOrder = createOrder;
 /*
@@ -134,7 +218,7 @@ exports.createOrder = createOrder;
 | Update Order Status
 |--------------------------------------------------------------------------
 */
-const updateOrderStatus = async (orderId, status) => {
+const updateOrderStatus = async (orderId, status, auditContext) => {
     const order = await prisma_1.prisma.order.findUnique({
         where: {
             id: orderId,
@@ -143,7 +227,7 @@ const updateOrderStatus = async (orderId, status) => {
     if (!order) {
         throw new Error("ORDER_NOT_FOUND");
     }
-    return prisma_1.prisma.order.update({
+    const updated = await prisma_1.prisma.order.update({
         where: {
             id: orderId,
         },
@@ -154,6 +238,22 @@ const updateOrderStatus = async (orderId, status) => {
             items: true,
         },
     });
+    if (auditContext) {
+        await (0, audit_service_1.safeRecordAuditEvent)({
+            actorUserId: auditContext.actorUserId,
+            actorRole: auditContext.actorRole,
+            action: "STATUS_CHANGE",
+            entityType: "ORDER",
+            entityId: updated.id,
+            metadata: {
+                orderNo: updated.orderNo,
+                field: "status",
+                from: order.status,
+                to: status,
+            },
+        });
+    }
+    return updated;
 };
 exports.updateOrderStatus = updateOrderStatus;
 /*
@@ -161,7 +261,7 @@ exports.updateOrderStatus = updateOrderStatus;
 | Update Payment Status
 |--------------------------------------------------------------------------
 */
-const updatePaymentStatus = async (orderId, paymentStatus) => {
+const updatePaymentStatus = async (orderId, paymentStatus, auditContext) => {
     const order = await prisma_1.prisma.order.findUnique({
         where: {
             id: orderId,
@@ -170,7 +270,7 @@ const updatePaymentStatus = async (orderId, paymentStatus) => {
     if (!order) {
         throw new Error("ORDER_NOT_FOUND");
     }
-    return prisma_1.prisma.order.update({
+    const updated = await prisma_1.prisma.order.update({
         where: {
             id: orderId,
         },
@@ -181,6 +281,22 @@ const updatePaymentStatus = async (orderId, paymentStatus) => {
             items: true,
         },
     });
+    if (auditContext) {
+        await (0, audit_service_1.safeRecordAuditEvent)({
+            actorUserId: auditContext.actorUserId,
+            actorRole: auditContext.actorRole,
+            action: "STATUS_CHANGE",
+            entityType: "ORDER",
+            entityId: updated.id,
+            metadata: {
+                orderNo: updated.orderNo,
+                field: "paymentStatus",
+                from: order.paymentStatus,
+                to: paymentStatus,
+            },
+        });
+    }
+    return updated;
 };
 exports.updatePaymentStatus = updatePaymentStatus;
 /*

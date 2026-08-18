@@ -1,6 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.requirePatientAccess = void 0;
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 const express_1 = require("express");
 const prisma_1 = require("../config/prisma");
 const auth_1 = require("./auth");

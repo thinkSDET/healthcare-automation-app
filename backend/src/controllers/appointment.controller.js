@@ -34,8 +34,6 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.cancelAppointment = exports.updateAppointmentStatus = exports.updateAppointment = exports.createAppointment = exports.getAppointmentById = exports.getAppointments = void 0;
-const express_1 = require("express");
-const auth_1 = require("../middleware/auth");
 const appointmentService = __importStar(require("../services/appointment.service"));
 const mapAppointmentError = (error) => {
     const message = error instanceof Error
@@ -110,9 +108,18 @@ const getAppointmentById = async (req, res) => {
 exports.getAppointmentById = getAppointmentById;
 const createAppointment = async (req, res) => {
     try {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: "Authentication required",
+            });
+        }
         const appointment = await appointmentService.createAppointment({
             ...req.body,
             appointmentAt: new Date(req.body.appointmentAt),
+        }, {
+            actorUserId: req.user.userId,
+            actorRole: req.user.role,
         });
         res.status(201).json({
             success: true,
@@ -139,13 +146,22 @@ const updateAppointment = async (req, res) => {
                 message: "Invalid appointment ID",
             });
         }
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: "Authentication required",
+            });
+        }
         const data = {
             ...req.body,
             ...(req.body.appointmentAt && {
                 appointmentAt: new Date(req.body.appointmentAt),
             }),
         };
-        const appointment = await appointmentService.updateAppointment(id, data);
+        const appointment = await appointmentService.updateAppointment(id, data, {
+            actorUserId: req.user.userId,
+            actorRole: req.user.role,
+        });
         res.status(200).json({
             success: true,
             data: appointment,
@@ -177,7 +193,10 @@ const updateAppointmentStatus = async (req, res) => {
                 message: "Authentication required",
             });
         }
-        const appointment = await appointmentService.updateAppointmentStatus(id, req.body.status, req.user.role);
+        const appointment = await appointmentService.updateAppointmentStatus(id, req.body.status, req.user.role, {
+            actorUserId: req.user.userId,
+            actorRole: req.user.role,
+        });
         res.status(200).json({
             success: true,
             data: appointment,
@@ -203,7 +222,16 @@ const cancelAppointment = async (req, res) => {
                 message: "Invalid appointment ID",
             });
         }
-        const appointment = await appointmentService.cancelAppointment(id);
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: "Authentication required",
+            });
+        }
+        const appointment = await appointmentService.cancelAppointment(id, {
+            actorUserId: req.user.userId,
+            actorRole: req.user.role,
+        });
         res.status(200).json({
             success: true,
             data: appointment,

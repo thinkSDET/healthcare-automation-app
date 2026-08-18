@@ -122,6 +122,12 @@ export const deletePatient = async (id: number) => {
     await tx.patient.delete({
       where: { id },
     });
+
+    if (patient.userId !== null) {
+      await tx.user.delete({
+        where: { id: patient.userId },
+      });
+    }
   });
 
   return patient;

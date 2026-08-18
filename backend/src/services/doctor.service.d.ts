@@ -1,4 +1,6 @@
-export declare const getDoctors: () => Promise<{
+export declare const getDoctors: (options?: {
+    activeOnly?: boolean;
+}) => Promise<{
     id: number;
     doctorCode: string;
     firstName: string;

@@ -1,6 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.updatePatientSchema = exports.createPatientSchema = void 0;
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 const zod_1 = require("zod");
 exports.createPatientSchema = zod_1.z.object({
     medicalId: zod_1.z.string().min(3).max(30),

@@ -1,6 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteDependent = exports.createDependent = exports.getDependents = void 0;
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 const prisma_1 = require("../config/prisma");
 const getDependents = async (patientId) => {
     return prisma_1.prisma.patientDependent.findMany({

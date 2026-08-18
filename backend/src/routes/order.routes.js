@@ -1,5 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+/*
+ * Copyright (c) 2026 thinkSDET. All rights reserved.
+ */
 const express_1 = require("express");
 const order_controller_1 = require("../controllers/order.controller");
 const auth_1 = require("../middleware/auth");
@@ -33,7 +36,7 @@ router.patch("/:id/status", auth_1.authenticate, (0, auth_1.authorize)("ADMIN", 
 | Update Payment Status
 |--------------------------------------------------------------------------
 */
-router.patch("/:id/payment-status", auth_1.authenticate, (0, auth_1.authorize)("ADMIN", "PHARMACIST"), order_controller_1.updatePaymentStatus);
+router.patch("/:id/payment-status", auth_1.authenticate, (0, auth_1.authorize)("ADMIN", "PHARMACIST", "PATIENT"), order_controller_1.updatePaymentStatus);
 /*
 |--------------------------------------------------------------------------
 | Delete Order
