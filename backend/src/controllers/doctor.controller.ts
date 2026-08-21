@@ -122,6 +122,26 @@ export const deleteDoctor = async (
 };
 
 
+export const getPendingDoctorRegistrationRequestCount = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const count =
+      await doctorService.getPendingDoctorRegistrationRequestCount();
+
+    res.status(200).json({
+      success: true,
+      data: { count }
+    });
+  } catch {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch pending doctor registration count"
+    });
+  }
+};
+
 export const getDoctorRegistrationRequests = async (
   req: AuthRequest,
   res: Response
@@ -182,7 +202,15 @@ export const approveDoctorRegistrationRequest = async (
         ? error.message
         : "Failed to approve doctor registration";
 
-    res.status(400).json({
+    if (message === "DOCTOR_ALREADY_EXISTS") {
+      return res.status(409).json({
+        success: false,
+        message:
+          "Approval blocked: a doctor with the same email or license number already exists."
+      });
+    }
+
+    return res.status(400).json({
       success: false,
       message
     });

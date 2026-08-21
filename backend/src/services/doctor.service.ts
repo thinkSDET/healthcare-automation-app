@@ -61,6 +61,14 @@ export const deleteDoctor = async (id: number) => {
 };
 
 
+export const getPendingDoctorRegistrationRequestCount = async () => {
+  return prisma.doctorRegistrationRequest.count({
+    where: {
+      status: "PENDING"
+    }
+  });
+};
+
 export const getDoctorRegistrationRequests = async () => {
   return prisma.doctorRegistrationRequest.findMany({
     orderBy: {

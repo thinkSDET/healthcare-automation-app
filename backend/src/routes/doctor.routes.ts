@@ -10,6 +10,7 @@ import {
   updateDoctor,
   deleteDoctor,
   getDoctorRegistrationRequests,
+  getPendingDoctorRegistrationRequestCount,
   approveDoctorRegistrationRequest,
   rejectDoctorRegistrationRequest
 } from "../controllers/doctor.controller";
@@ -44,6 +45,13 @@ router.get(
   authenticate,
   authorize("ADMIN"),
   getDoctorRegistrationRequests
+);
+
+router.get(
+  "/registration-requests/pending-count",
+  authenticate,
+  authorize("ADMIN"),
+  getPendingDoctorRegistrationRequestCount
 );
 
 router.patch(

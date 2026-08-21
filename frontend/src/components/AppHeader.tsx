@@ -13,6 +13,7 @@ import {
 } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
+import api from "../services/api";
 
 type NavItem = {
   to: string;
@@ -27,14 +28,6 @@ function getPrimaryNav(role?: string): NavItem[] {
       { to: "/dashboard", label: "Dashboard" },
       { to: "/patients", label: "Patients" },
       { to: "/doctors", label: "Doctors" },
-      ...(normalized === "ADMIN"
-        ? [
-            {
-              to: "/doctor-registration-requests",
-              label: "Doctor Requests",
-            },
-          ]
-        : []),
       { to: "/appointments", label: "Appointments" },
       { to: "/appointment-requests", label: "Appt Requests" },
       { to: "/refill-requests", label: "Refills" },
@@ -84,6 +77,8 @@ function AppHeader() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [pendingDoctorRequestCount, setPendingDoctorRequestCount] =
+    useState(0);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   const displayName = [user?.firstName, user?.lastName]
@@ -94,6 +89,45 @@ function AppHeader() {
   const roleLabel = user?.role?.toUpperCase() || "";
 
   const primaryNav = getPrimaryNav(user?.role);
+
+  useEffect(() => {
+    if (roleLabel !== "ADMIN") {
+      setPendingDoctorRequestCount(0);
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchPendingDoctorRequestCount = async () => {
+      try {
+        const response = await api.get(
+          "/doctors/registration-requests/pending-count"
+        );
+
+        if (!cancelled) {
+          setPendingDoctorRequestCount(
+            Number(response.data?.data?.count ?? 0)
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setPendingDoctorRequestCount(0);
+        }
+      }
+    };
+
+    fetchPendingDoctorRequestCount();
+
+    const intervalId = window.setInterval(
+      fetchPendingDoctorRequestCount,
+      15000
+    );
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [roleLabel]);
 
   useEffect(() => {
     const handlePointerDown = (event: MouseEvent) => {
@@ -151,6 +185,51 @@ function AppHeader() {
               {item.label}
             </NavLink>
           ))}
+
+          {roleLabel === "ADMIN" && (
+            <NavLink
+              to="/doctor-registration-requests"
+              className={({ isActive }) =>
+                isActive
+                  ? "app-nav-link app-nav-link-active"
+                  : "app-nav-link"
+              }
+            >
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "7px",
+                }}
+              >
+                <span>Doctor Requests</span>
+                {pendingDoctorRequestCount > 0 && (
+                  <span
+                    aria-label={`${pendingDoctorRequestCount} pending doctor requests`}
+                    style={{
+                      minWidth: "18px",
+                      height: "18px",
+                      padding: "0 5px",
+                      borderRadius: "999px",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxSizing: "border-box",
+                      background: "#dc2626",
+                      color: "#ffffff",
+                      fontSize: "10px",
+                      fontWeight: 800,
+                      lineHeight: 1,
+                    }}
+                  >
+                    {pendingDoctorRequestCount > 99
+                      ? "99+"
+                      : pendingDoctorRequestCount}
+                  </span>
+                )}
+              </span>
+            </NavLink>
+          )}
         </nav>
 
         <div className="app-header-user" ref={menuRef}>
