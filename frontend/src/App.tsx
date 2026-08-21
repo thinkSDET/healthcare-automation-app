@@ -12,6 +12,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Patients from "./pages/Patients";
 import Doctors from "./pages/Doctors";
+import DoctorRegistrationRequests from "./pages/DoctorRegistrationRequests";
 import Appointments from "./pages/Appointments";
 import NewAppointment from "./pages/NewAppointment";
 import AppointmentDetails from "./pages/AppointmentDetails";
@@ -168,6 +169,28 @@ function App() {
             <Route
               path="/lab-orders/:id"
               element={<LabOrderDetails />}
+            />
+          </Route>
+        </Route>
+
+
+        {/* =========================
+            ADMIN ONLY - DOCTOR REGISTRATION REQUESTS
+           ========================= */}
+
+        <Route
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                "ADMIN",
+              ]}
+            />
+          }
+        >
+          <Route element={<AppLayout />}>
+            <Route
+              path="/doctor-registration-requests"
+              element={<DoctorRegistrationRequests />}
             />
           </Route>
         </Route>
