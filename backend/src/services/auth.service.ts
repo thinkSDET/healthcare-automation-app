@@ -25,10 +25,6 @@ interface LoginInput {
    REGISTER
 ========================================================= */
 
-/* =========================================================
-   REGISTER
-========================================================= */
-
 export const register = async (data: {
   firstName: string;
   lastName: string;
@@ -208,6 +204,7 @@ export const register = async (data: {
         await tx.patient.create({
           data: {
             userId: createdUser.id,
+
             medicalId,
 
             firstName:
@@ -275,6 +272,7 @@ export const register = async (data: {
     role: user.role,
   };
 };
+
 /* =========================================================
    LOGIN
 ========================================================= */
@@ -344,6 +342,12 @@ export const loginUser = async ({
   /* =======================================================
      USER STATUS CHECK
   ======================================================= */
+
+  if (user.status === "INVITED") {
+    throw new Error(
+      "ACCOUNT_ACTIVATION_REQUIRED"
+    );
+  }
 
   if (user.status === "INACTIVE") {
     throw new Error(
@@ -469,6 +473,7 @@ export const loginUser = async ({
       where: {
         userId: user.id,
       },
+
       select: {
         id: true,
       },
@@ -483,7 +488,8 @@ export const loginUser = async ({
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
-      patientId: linkedPatient?.id ?? null,
+      patientId:
+        linkedPatient?.id ?? null,
     },
 
     expiresIn: rememberMe
@@ -546,14 +552,12 @@ export const forgotPassword = async (
      REMOVE OLD UNUSED TOKENS
   ======================================================= */
 
-  await prisma.passwordResetToken.deleteMany(
-    {
-      where: {
-        userId: user.id,
-        used: false,
-      },
-    }
-  );
+  await prisma.passwordResetToken.deleteMany({
+    where: {
+      userId: user.id,
+      used: false,
+    },
+  });
 
   /* =======================================================
      CREATE RESET TOKEN
@@ -600,13 +604,11 @@ export const resetPassword = async (
       .digest("hex");
 
   const resetToken =
-    await prisma.passwordResetToken.findUnique(
-      {
-        where: {
-          tokenHash,
-        },
-      }
-    );
+    await prisma.passwordResetToken.findUnique({
+      where: {
+        tokenHash,
+      },
+    });
 
   if (!resetToken) {
     throw new Error(
@@ -629,65 +631,104 @@ export const resetPassword = async (
     );
   }
 
-  /* =======================================================
-     HASH NEW PASSWORD
-  ======================================================= */
-
   const hashedPassword =
     await bcrypt.hash(
       newPassword,
       10
     );
 
-  /* =======================================================
-     UPDATE PASSWORD
-  ======================================================= */
+  await prisma.$transaction(
+    async (tx) => {
+      const user =
+        await tx.user.findUnique({
+          where: {
+            id: resetToken.userId,
+          },
+        });
 
-  await prisma.$transaction([
-    prisma.user.update({
-      where: {
-        id: resetToken.userId,
-      },
+      if (!user) {
+        throw new Error(
+          "User not found"
+        );
+      }
 
-      data: {
-        // IMPORTANT:
-        // Prisma field is passwordHash
-        passwordHash:
-          hashedPassword,
-      },
-    }),
+      /*
+       * Password reset
+       */
+      await tx.user.update({
+        where: {
+          id: resetToken.userId,
+        },
+        data: {
+          passwordHash:
+            hashedPassword,
+        },
+      });
 
-    prisma.passwordResetToken.update({
-      where: {
-        id: resetToken.id,
-      },
+      /*
+       * Admin-created Doctor activation
+       *
+       * INVITED → ACTIVE
+       */
+      if (user.status === "INVITED") {
+        await tx.user.update({
+          where: {
+            id: user.id,
+          },
+          data: {
+            status: "ACTIVE",
+          },
+        });
 
-      data: {
-        used: true,
-      },
-    }),
+        /*
+         * Doctor account:
+         * INACTIVE → ACTIVE
+         */
+        await tx.doctor.updateMany({
+          where: {
+            email: user.email,
+          },
+          data: {
+            status: "ACTIVE",
+          },
+        });
+      }
 
-    prisma.accountSecurity.upsert({
-      where: {
-        userId: resetToken.userId,
-      },
+      /*
+       * Consume reset token
+       */
+      await tx.passwordResetToken.update({
+        where: {
+          id: resetToken.id,
+        },
+        data: {
+          used: true,
+        },
+      });
 
-      update: {
-        failedLoginAttempts: 0,
-        lockedUntil: null,
-        passwordChangedAt:
-          new Date(),
-      },
-
-      create: {
-        userId: resetToken.userId,
-        failedLoginAttempts: 0,
-        lockedUntil: null,
-        passwordChangedAt:
-          new Date(),
-      },
-    }),
-  ]);
+      /*
+       * Reset account security
+       */
+      await tx.accountSecurity.upsert({
+        where: {
+          userId: resetToken.userId,
+        },
+        update: {
+          failedLoginAttempts: 0,
+          lockedUntil: null,
+          passwordChangedAt:
+            new Date(),
+        },
+        create: {
+          userId: resetToken.userId,
+          failedLoginAttempts: 0,
+          lockedUntil: null,
+          passwordChangedAt:
+            new Date(),
+        },
+      });
+    }
+  );
 
   return {
     message:
@@ -781,24 +822,22 @@ export const changePassword = async (
      UPDATE SECURITY INFORMATION
   ======================================================= */
 
-  await prisma.accountSecurity.upsert(
-    {
-      where: {
-        userId,
-      },
+  await prisma.accountSecurity.upsert({
+    where: {
+      userId,
+    },
 
-      update: {
-        passwordChangedAt:
-          new Date(),
-      },
+    update: {
+      passwordChangedAt:
+        new Date(),
+    },
 
-      create: {
-        userId,
-        passwordChangedAt:
-          new Date(),
-      },
-    }
-  );
+    create: {
+      userId,
+      passwordChangedAt:
+        new Date(),
+    },
+  });
 
   return {
     message:

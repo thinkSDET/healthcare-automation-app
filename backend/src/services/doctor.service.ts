@@ -1,6 +1,8 @@
 /*
  * Copyright (c) 2026 thinkSDET. All rights reserved.
  */
+import crypto from "crypto";
+import bcrypt from "bcryptjs";
 import { prisma } from "../config/prisma";
 
 export const getDoctors = async (options?: {
@@ -32,8 +34,39 @@ export const createDoctor = async (data: {
   phone: string;
   experience: number;
 }) => {
-  return prisma.doctor.create({
-    data
+  const normalizedEmail = data.email.toLowerCase().trim();
+
+  /*
+   * Admin-created doctors get a linked User account in INVITED state.
+   *
+   * A random temporary hash is stored because passwordHash is required
+   * by the current User schema. The doctor cannot use this value to log in.
+   * Step 3 will add the one-time password setup flow.
+   */
+  const temporaryPasswordHash = await bcrypt.hash(
+    crypto.randomBytes(32).toString("hex"),
+    10
+  );
+
+  return prisma.$transaction(async (tx) => {
+    const user = await tx.user.create({
+      data: {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: normalizedEmail,
+        passwordHash: temporaryPasswordHash,
+        role: "DOCTOR",
+        status: "INVITED"
+      }
+    });
+
+    return tx.doctor.create({
+      data: {
+        ...data,
+        email: normalizedEmail,
+        status: "INACTIVE"
+      }
+    });
   });
 };
 

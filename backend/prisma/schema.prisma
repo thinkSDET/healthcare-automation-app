@@ -21,6 +21,7 @@ enum UserStatus {
   ACTIVE
   INACTIVE
   LOCKED
+  INVITED
 }
 
 enum DoctorRegistrationRequestStatus {
