@@ -76,16 +76,23 @@ function Dashboard() {
   return (
     <div className="dashboard-page">
 
-      <section className="dashboard-welcome-banner">
-        <h1>
-          Healthcare Dashboard
-        </h1>
+      <section className="dashboard-welcome-banner dashboard-hero">
+        <div className="dashboard-hero-content">
+          <div>
+            <span className="dashboard-eyebrow">HEALTHCARE OPERATIONS</span>
+            <h1>Healthcare Dashboard</h1>
+            <p>
+              Welcome{" "}
+              {user?.firstName || ""}{" "}
+              {user?.lastName || ""}!
+            </p>
+          </div>
 
-        <p>
-          Welcome{" "}
-          {user?.firstName || ""}{" "}
-          {user?.lastName || ""}!
-        </p>
+          <div className="dashboard-status-pill">
+            <span className="dashboard-status-dot" />
+            <span>System operational</span>
+          </div>
+        </div>
       </section>
 
       {showRejectionModal && rejectedRequest && (
@@ -142,8 +149,17 @@ function Dashboard() {
               style={{
                 display: "flex",
                 justifyContent: "flex-end",
+                gap: "12px",
               }}
             >
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => setShowRejectionModal(false)}
+              >
+                Review Later
+              </button>
+
               <button
                 type="button"
                 className="primary-button"
@@ -165,6 +181,14 @@ function Dashboard() {
 
       <main className="dashboard-content">
 
+        <section className="dashboard-section-heading">
+          <div>
+            <span className="dashboard-section-eyebrow">WORKSPACE</span>
+            <h2>Quick Access</h2>
+            <p>Access the healthcare workflows available to you.</p>
+          </div>
+        </section>
+
         <div className="dashboard-grid">
 
           {(isAdmin || isDoctor) && (
@@ -174,8 +198,8 @@ function Dashboard() {
                 navigate("/patients")
               }
             >
-              <div className="card-icon">
-                👤
+              <div className="card-icon" aria-hidden="true">
+                <span className="card-icon-symbol">👤</span>
               </div>
 
               <div>
@@ -199,8 +223,8 @@ function Dashboard() {
                 navigate("/doctors")
               }
             >
-              <div className="card-icon">
-                🩺
+              <div className="card-icon" aria-hidden="true">
+                <span className="card-icon-symbol">🩺</span>
               </div>
 
               <div>
@@ -224,8 +248,8 @@ function Dashboard() {
                 navigate("/appointments")
               }
             >
-              <div className="card-icon">
-                📅
+              <div className="card-icon" aria-hidden="true">
+                <span className="card-icon-symbol">📅</span>
               </div>
 
               <div>
@@ -249,8 +273,8 @@ function Dashboard() {
                 navigate("/my/profile")
               }
             >
-              <div className="card-icon">
-                👤
+              <div className="card-icon" aria-hidden="true">
+                <span className="card-icon-symbol">👤</span>
               </div>
 
               <div>
@@ -272,8 +296,8 @@ function Dashboard() {
                 navigate("/my/appointments")
               }
             >
-              <div className="card-icon">
-                📅
+              <div className="card-icon" aria-hidden="true">
+                <span className="card-icon-symbol">📅</span>
               </div>
 
               <div>
@@ -295,8 +319,8 @@ function Dashboard() {
                 navigate("/appointment-requests")
               }
             >
-              <div className="card-icon">
-                🗓️
+              <div className="card-icon" aria-hidden="true">
+                <span className="card-icon-symbol">🗓️</span>
               </div>
 
               <div>
@@ -318,8 +342,8 @@ function Dashboard() {
                 navigate("/my/prescriptions")
               }
             >
-              <div className="card-icon">
-                💊
+              <div className="card-icon" aria-hidden="true">
+                <span className="card-icon-symbol">💊</span>
               </div>
 
               <div>
@@ -341,8 +365,8 @@ function Dashboard() {
                 navigate("/my/orders")
               }
             >
-              <div className="card-icon">
-                📦
+              <div className="card-icon" aria-hidden="true">
+                <span className="card-icon-symbol">📦</span>
               </div>
 
               <div>
@@ -364,8 +388,8 @@ function Dashboard() {
                 navigate("/refill-requests")
               }
             >
-              <div className="card-icon">
-                🔁
+              <div className="card-icon" aria-hidden="true">
+                <span className="card-icon-symbol">🔁</span>
               </div>
 
               <div>
@@ -387,8 +411,8 @@ function Dashboard() {
                 navigate("/pharmacy")
               }
             >
-              <div className="card-icon">
-                💊
+              <div className="card-icon" aria-hidden="true">
+                <span className="card-icon-symbol">💊</span>
               </div>
 
               <div>
@@ -410,8 +434,8 @@ function Dashboard() {
                 navigate("/refill-requests")
               }
             >
-              <div className="card-icon">
-                🔁
+              <div className="card-icon" aria-hidden="true">
+                <span className="card-icon-symbol">🔁</span>
               </div>
 
               <div>
@@ -433,8 +457,8 @@ function Dashboard() {
                 navigate("/inventory")
               }
             >
-              <div className="card-icon">
-                📦
+              <div className="card-icon" aria-hidden="true">
+                <span className="card-icon-symbol">📦</span>
               </div>
 
               <div>
@@ -456,8 +480,8 @@ function Dashboard() {
                 navigate("/replenishment-requests")
               }
             >
-              <div className="card-icon">
-                📥
+              <div className="card-icon" aria-hidden="true">
+                <span className="card-icon-symbol">📥</span>
               </div>
 
               <div>
@@ -479,8 +503,8 @@ function Dashboard() {
                 navigate("/audit-logs")
               }
             >
-              <div className="card-icon">
-                📋
+              <div className="card-icon" aria-hidden="true">
+                <span className="card-icon-symbol">📋</span>
               </div>
 
               <div>
@@ -497,7 +521,7 @@ function Dashboard() {
 
         </div>
 
-        <section className="dashboard-welcome">
+        <section className="dashboard-welcome dashboard-info-panel">
 
           <h2>
             Healthcare Operations
