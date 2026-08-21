@@ -21,6 +21,11 @@ function Register() {
     gender: "MALE",
     phone: "",
     address: "",
+
+    // Doctor registration fields
+    specialization: "",
+    licenseNumber: "",
+    experience: "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -77,6 +82,39 @@ function Register() {
       }
     }
 
+    /*
+     * Doctor-specific validation
+     *
+     * This only prepares a doctor registration request.
+     * It does NOT create a Doctor record directly.
+     */
+    if (form.role === "DOCTOR") {
+      if (
+        !form.phone ||
+        !form.specialization ||
+        !form.licenseNumber ||
+        !form.experience
+      ) {
+        setError(
+          "Phone, specialization, license number and experience are required for doctors."
+        );
+        return;
+      }
+
+      const experience = Number(form.experience);
+
+      if (
+        !Number.isInteger(experience) ||
+        experience < 0 ||
+        experience > 60
+      ) {
+        setError(
+          "Experience must be a whole number between 0 and 60."
+        );
+        return;
+      }
+    }
+
     try {
       setLoading(true);
 
@@ -104,6 +142,16 @@ function Register() {
               gender: form.gender,
               phone: form.phone,
               address: form.address,
+            }),
+
+            /*
+             * Doctor registration request information
+             */
+            ...(form.role === "DOCTOR" && {
+              phone: form.phone,
+              specialization: form.specialization,
+              licenseNumber: form.licenseNumber,
+              experience: Number(form.experience),
             }),
           }),
         }
@@ -417,6 +465,100 @@ function Register() {
                     placeholder="Enter your address"
                     value={form.address}
                     onChange={handleChange}
+                  />
+
+                </div>
+              </>
+            )}
+
+            {/* =================================================
+                DOCTOR REGISTRATION
+            ================================================= */}
+
+            {form.role === "DOCTOR" && (
+              <>
+                <div className="register-grid">
+
+                  {/* SPECIALIZATION */}
+
+                  <div className="form-group">
+
+                    <label htmlFor="specialization">
+                      Specialization
+                    </label>
+
+                    <input
+                      id="specialization"
+                      name="specialization"
+                      type="text"
+                      placeholder="e.g. Cardiology"
+                      value={form.specialization}
+                      onChange={handleChange}
+                      required
+                    />
+
+                  </div>
+
+                  {/* EXPERIENCE */}
+
+                  <div className="form-group">
+
+                    <label htmlFor="experience">
+                      Experience (Years)
+                    </label>
+
+                    <input
+                      id="experience"
+                      name="experience"
+                      type="number"
+                      placeholder="e.g. 10"
+                      min="0"
+                      max="60"
+                      value={form.experience}
+                      onChange={handleChange}
+                      required
+                    />
+
+                  </div>
+
+                </div>
+
+                {/* LICENSE NUMBER */}
+
+                <div className="form-group">
+
+                  <label htmlFor="licenseNumber">
+                    License Number
+                  </label>
+
+                  <input
+                    id="licenseNumber"
+                    name="licenseNumber"
+                    type="text"
+                    placeholder="Enter medical license number"
+                    value={form.licenseNumber}
+                    onChange={handleChange}
+                    required
+                  />
+
+                </div>
+
+                {/* PHONE */}
+
+                <div className="form-group">
+
+                  <label htmlFor="doctorPhone">
+                    Phone Number
+                  </label>
+
+                  <input
+                    id="doctorPhone"
+                    name="phone"
+                    type="tel"
+                    placeholder="Enter phone number"
+                    value={form.phone}
+                    onChange={handleChange}
+                    required
                   />
 
                 </div>

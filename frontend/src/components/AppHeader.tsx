@@ -27,6 +27,14 @@ function getPrimaryNav(role?: string): NavItem[] {
       { to: "/dashboard", label: "Dashboard" },
       { to: "/patients", label: "Patients" },
       { to: "/doctors", label: "Doctors" },
+      ...(normalized === "ADMIN"
+        ? [
+            {
+              to: "/doctor-registration-requests",
+              label: "Doctor Requests",
+            },
+          ]
+        : []),
       { to: "/appointments", label: "Appointments" },
       { to: "/appointment-requests", label: "Appt Requests" },
       { to: "/refill-requests", label: "Refills" },

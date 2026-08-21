@@ -120,3 +120,124 @@ export const deleteDoctor = async (
     });
   }
 };
+
+
+export const getDoctorRegistrationRequests = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const requests =
+      await doctorService.getDoctorRegistrationRequests();
+
+    res.status(200).json({
+      success: true,
+      data: requests
+    });
+  } catch {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch doctor registration requests"
+    });
+  }
+};
+
+export const approveDoctorRegistrationRequest = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const requestId = Number(req.params.id);
+
+    if (!Number.isInteger(requestId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid registration request id"
+      });
+    }
+
+    const adminUserId = req.user?.userId;
+
+    if (!adminUserId) {
+      return res.status(401).json({
+        success: false,
+        message: "Authenticated admin user not found"
+      });
+    }
+
+    const doctor =
+      await doctorService.approveDoctorRegistrationRequest(
+        requestId,
+        adminUserId
+      );
+
+    res.status(200).json({
+      success: true,
+      data: doctor,
+      message: "Doctor registration approved"
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Failed to approve doctor registration";
+
+    res.status(400).json({
+      success: false,
+      message
+    });
+  }
+};
+
+export const rejectDoctorRegistrationRequest = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const requestId = Number(req.params.id);
+
+    if (!Number.isInteger(requestId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid registration request id"
+      });
+    }
+
+    const adminUserId = req.user?.userId;
+
+    if (!adminUserId) {
+      return res.status(401).json({
+        success: false,
+        message: "Authenticated admin user not found"
+      });
+    }
+
+    const rejectionReason =
+      typeof req.body?.rejectionReason === "string"
+        ? req.body.rejectionReason.trim()
+        : undefined;
+
+    const request =
+      await doctorService.rejectDoctorRegistrationRequest(
+        requestId,
+        adminUserId,
+        rejectionReason
+      );
+
+    res.status(200).json({
+      success: true,
+      data: request,
+      message: "Doctor registration rejected"
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Failed to reject doctor registration";
+
+    res.status(400).json({
+      success: false,
+      message
+    });
+  }
+};

@@ -19,6 +19,9 @@ export const register = async (
       gender,
       phone,
       address,
+    specialization,
+    licenseNumber,
+    experience,
     } = req.body;
 
     const allowedPublicRoles = [
@@ -55,6 +58,9 @@ export const register = async (
       gender,
       phone,
       address,
+      specialization,
+      licenseNumber,
+      experience,
     });
 
     return res.status(201).json({

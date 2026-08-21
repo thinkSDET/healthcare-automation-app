@@ -41,6 +41,11 @@ export const register = async (data: {
   gender?: "MALE" | "FEMALE" | "OTHER";
   phone?: string;
   address?: string;
+
+  // Doctor registration fields
+  specialization?: string;
+  licenseNumber?: string;
+  experience?: number;
 }) => {
   const {
     firstName,
@@ -52,6 +57,11 @@ export const register = async (data: {
     gender,
     phone,
     address,
+
+    // Doctor registration fields
+    specialization,
+    licenseNumber,
+    experience,
   } = data;
 
   const normalizedEmail =
@@ -103,6 +113,37 @@ export const register = async (data: {
     }
   }
 
+  /*
+   * Doctor registration does not create a
+   * Doctor record directly.
+   *
+   * It creates a User in INACTIVE state and
+   * a DoctorRegistrationRequest in PENDING state.
+   * Admin approval will create the actual Doctor record.
+   */
+  if (normalizedRole === "DOCTOR") {
+    if (
+      !phone ||
+      !specialization ||
+      !licenseNumber ||
+      experience === undefined
+    ) {
+      throw new Error(
+        "DOCTOR_REGISTRATION_DATA_REQUIRED"
+      );
+    }
+
+    if (
+      !Number.isInteger(experience) ||
+      experience < 0 ||
+      experience > 60
+    ) {
+      throw new Error(
+        "INVALID_DOCTOR_EXPERIENCE"
+      );
+    }
+  }
+
   const existingUser =
     await prisma.user.findUnique({
       where: {
@@ -132,6 +173,18 @@ export const register = async (data: {
             email: normalizedEmail,
             passwordHash,
             role: normalizedRole as any,
+
+            /*
+             * Doctor self-registration must wait for
+             * Admin approval.
+             *
+             * Existing Patient/Pharmacist registration
+             * keeps the current ACTIVE behavior.
+             */
+            status:
+              normalizedRole === "DOCTOR"
+                ? "INACTIVE"
+                : "ACTIVE",
           },
         });
 
@@ -177,6 +230,35 @@ export const register = async (data: {
 
             address:
               address || undefined,
+          },
+        });
+      }
+
+      /*
+       * Doctor self-registration creates a request,
+       * NOT a Doctor record.
+       *
+       * The existing Admin "Add Doctor" flow is
+       * intentionally untouched.
+       */
+      if (normalizedRole === "DOCTOR") {
+        await tx.doctorRegistrationRequest.create({
+          data: {
+            userId: createdUser.id,
+
+            firstName:
+              createdUser.firstName,
+
+            lastName:
+              createdUser.lastName,
+
+            email:
+              createdUser.email,
+
+            phone: phone!,
+            specialization: specialization!,
+            licenseNumber: licenseNumber!,
+            experience: experience!,
           },
         });
       }
