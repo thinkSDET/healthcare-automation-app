@@ -32,8 +32,34 @@ export const createDoctor = async (data: {
   phone: string;
   experience: number;
 }) => {
-  return prisma.doctor.create({
-    data
+  const normalizedEmail = data.email.toLowerCase().trim();
+
+  const bcrypt = await import("bcryptjs");
+  const crypto = await import("crypto");
+
+  const temporaryPasswordHash = await bcrypt.default.hash(
+    crypto.randomBytes(32).toString("hex"),
+    10
+  );
+
+  return prisma.$transaction(async (tx) => {
+    await tx.user.create({
+      data: {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: normalizedEmail,
+        passwordHash: temporaryPasswordHash,
+        role: "DOCTOR",
+        status: "INVITED"
+      }
+    });
+
+    return tx.doctor.create({
+      data: {
+        ...data,
+        email: normalizedEmail
+      }
+    });
   });
 };
 
@@ -60,6 +86,36 @@ export const deleteDoctor = async (id: number) => {
   });
 };
 
+
+export const getMyDoctorRegistrationRequest = async (userId: number) => {
+  return prisma.doctorRegistrationRequest.findUnique({
+    where: {
+      userId,
+    },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      phone: true,
+      specialization: true,
+      licenseNumber: true,
+      experience: true,
+      status: true,
+      rejectionReason: true,
+      reviewedAt: true,
+      createdAt: true,
+    },
+  });
+};
+
+export const getPendingDoctorRegistrationRequestCount = async () => {
+  return prisma.doctorRegistrationRequest.count({
+    where: {
+      status: "PENDING"
+    }
+  });
+};
 
 export const getDoctorRegistrationRequests = async () => {
   return prisma.doctorRegistrationRequest.findMany({
@@ -210,17 +266,34 @@ export const rejectDoctorRegistrationRequest = async (
       throw new Error("DOCTOR_REGISTRATION_REQUEST_ALREADY_REVIEWED");
     }
 
-    return tx.doctorRegistrationRequest.update({
+    const rejectedRequest =
+      await tx.doctorRegistrationRequest.update({
+        where: {
+          id: requestId
+        },
+        data: {
+          status: "REJECTED",
+          rejectionReason:
+            rejectionReason || null,
+          reviewedAt: new Date(),
+          reviewedByUserId: adminUserId
+        }
+      });
+
+    /*
+     * A rejected Doctor must be able to log in so the
+     * Doctor can see the rejection reason and resubmit.
+     * The Doctor domain record does not exist yet.
+     */
+    await tx.user.update({
       where: {
-        id: requestId
+        id: request.userId
       },
       data: {
-        status: "REJECTED",
-        rejectionReason:
-          rejectionReason || null,
-        reviewedAt: new Date(),
-        reviewedByUserId: adminUserId
+        status: "ACTIVE"
       }
     });
+
+    return rejectedRequest;
   });
 };

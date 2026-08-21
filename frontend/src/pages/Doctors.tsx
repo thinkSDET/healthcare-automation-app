@@ -468,7 +468,7 @@ function Doctors() {
       email: "",
       phone: "",
       experience: "",
-      status: "ACTIVE",
+      status: "INACTIVE",
     });
 
     setFormError("");
@@ -622,8 +622,6 @@ function Doctors() {
             email,
             phone,
             experience,
-            status:
-              doctorForm.status,
           }),
         }
       );
@@ -1525,32 +1523,6 @@ function Doctors() {
                     placeholder="+91 9876543210"
                     maxLength={20}
                   />
-                </div>
-
-                <div>
-                  <label>
-                    Status *
-                  </label>
-
-                  <select
-                    value={
-                      doctorForm.status
-                    }
-                    onChange={(e) =>
-                      handleDoctorFormChange(
-                        "status",
-                        e.target.value
-                      )
-                    }
-                  >
-                    <option value="ACTIVE">
-                      ACTIVE
-                    </option>
-
-                    <option value="INACTIVE">
-                      INACTIVE
-                    </option>
-                  </select>
                 </div>
 
               </div>

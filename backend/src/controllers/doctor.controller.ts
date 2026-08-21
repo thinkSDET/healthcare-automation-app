@@ -122,6 +122,62 @@ export const deleteDoctor = async (
 };
 
 
+export const getPendingDoctorRegistrationRequestCount = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const count =
+      await doctorService.getPendingDoctorRegistrationRequestCount();
+
+    return res.status(200).json({
+      success: true,
+      data: { count }
+    });
+  } catch {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch pending doctor registration request count"
+    });
+  }
+};
+
+export const getMyDoctorRegistrationRequest = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Authenticated user not found"
+      });
+    }
+
+    const request =
+      await doctorService.getMyDoctorRegistrationRequest(userId);
+
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        message: "Doctor registration request not found"
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: request
+    });
+  } catch {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch doctor registration request"
+    });
+  }
+};
+
 export const getDoctorRegistrationRequests = async (
   req: AuthRequest,
   res: Response
@@ -182,9 +238,31 @@ export const approveDoctorRegistrationRequest = async (
         ? error.message
         : "Failed to approve doctor registration";
 
-    res.status(400).json({
+    if (message === "DOCTOR_ALREADY_EXISTS") {
+      return res.status(409).json({
+        success: false,
+        message:
+          "Approval blocked: a doctor with the same email or license number already exists."
+      });
+    }
+
+    if (message === "DOCTOR_REGISTRATION_REQUEST_NOT_FOUND") {
+      return res.status(404).json({
+        success: false,
+        message: "Doctor registration request not found."
+      });
+    }
+
+    if (message === "DOCTOR_REGISTRATION_REQUEST_ALREADY_REVIEWED") {
+      return res.status(409).json({
+        success: false,
+        message: "This doctor registration request has already been reviewed."
+      });
+    }
+
+    return res.status(500).json({
       success: false,
-      message
+      message: "Failed to approve doctor registration."
     });
   }
 };

@@ -10,6 +10,8 @@ import {
   updateDoctor,
   deleteDoctor,
   getDoctorRegistrationRequests,
+  getPendingDoctorRegistrationRequestCount,
+  getMyDoctorRegistrationRequest,
   approveDoctorRegistrationRequest,
   rejectDoctorRegistrationRequest
 } from "../controllers/doctor.controller";
@@ -40,10 +42,24 @@ router.get(
  * "Add Doctor" flow.
  */
 router.get(
+  "/registration-requests/me",
+  authenticate,
+  authorize("DOCTOR"),
+  getMyDoctorRegistrationRequest
+);
+
+router.get(
   "/registration-requests",
   authenticate,
   authorize("ADMIN"),
   getDoctorRegistrationRequests
+);
+
+router.get(
+  "/registration-requests/pending-count",
+  authenticate,
+  authorize("ADMIN"),
+  getPendingDoctorRegistrationRequestCount
 );
 
 router.patch(

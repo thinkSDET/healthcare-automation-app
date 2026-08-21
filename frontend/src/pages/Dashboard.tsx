@@ -1,12 +1,16 @@
 /*
  * Copyright (c) 2026 thinkSDET. All rights reserved.
  */
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 function Dashboard() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
+
+  const [rejectedRequest, setRejectedRequest] = useState<any>(null);
+  const [showRejectionModal, setShowRejectionModal] = useState(false);
 
   const role =
     user?.role?.toUpperCase();
@@ -28,6 +32,47 @@ function Dashboard() {
     role === "VIEWER" ||
     role === "SUPPORT";
 
+  useEffect(() => {
+    if (!isDoctor || !token) {
+      return;
+    }
+
+    const loadRegistrationStatus = async () => {
+      try {
+        const response = await fetch(
+          "http://localhost:4000/api/doctors/registration-requests/me",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          return;
+        }
+
+        const result = await response.json();
+
+        if (
+          result.success &&
+          result.data?.status === "REJECTED"
+        ) {
+          setRejectedRequest(result.data);
+          setShowRejectionModal(true);
+        }
+      } catch (error) {
+        console.error(
+          "Failed to load doctor registration status:",
+          error
+        );
+      }
+    };
+
+    loadRegistrationStatus();
+  }, [isDoctor, token]);
+
+
   return (
     <div className="dashboard-page">
 
@@ -42,6 +87,81 @@ function Dashboard() {
           {user?.lastName || ""}!
         </p>
       </section>
+
+      {showRejectionModal && rejectedRequest && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "24px",
+            background: "rgba(15, 23, 42, 0.62)",
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "560px",
+              background: "#ffffff",
+              borderRadius: "18px",
+              padding: "28px",
+              boxShadow: "0 24px 70px rgba(0,0,0,0.25)",
+            }}
+          >
+            <div style={{ fontSize: "42px", marginBottom: "8px" }}>⚠️</div>
+
+            <h2 style={{ margin: "0 0 8px" }}>
+              Registration Update Required
+            </h2>
+
+            <p style={{ margin: "0 0 18px", lineHeight: 1.6 }}>
+              Your doctor registration was not approved by the Admin.
+              Please review the reason below and update your information.
+            </p>
+
+            <div
+              style={{
+                padding: "16px",
+                borderRadius: "12px",
+                background: "#fff7ed",
+                border: "1px solid #fed7aa",
+                marginBottom: "22px",
+              }}
+            >
+              <strong>Admin's reason</strong>
+              <p style={{ margin: "8px 0 0", lineHeight: 1.5 }}>
+                {rejectedRequest.rejectionReason ||
+                  "No rejection reason was provided. Please review your registration details."}
+              </p>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+              }}
+            >
+              <button
+                type="button"
+                className="primary-button"
+                onClick={() =>
+                  navigate("/register", {
+                    state: {
+                      resubmission: true,
+                      request: rejectedRequest,
+                    },
+                  })
+                }
+              >
+                Update & Resubmit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <main className="dashboard-content">
 
