@@ -2620,197 +2620,134 @@ function Doctors() {
 
             <>
 
-              <div className="table-container">
+              <div className="doctors-list">
 
-                <table>
+                {paginatedDoctors.map(
+                  (doctor) => (
 
-                  <thead>
+                    <article
+                      className="doctor-record-card"
+                      key={doctor.id}
+                    >
 
-                    <tr>
+                      <div className="doctor-record-main">
 
-                      <th>
-                        Doctor Code
-                      </th>
+                        <div className="doctor-avatar" aria-hidden="true">
+                          Dr
+                        </div>
 
-                      <th>
-                        Doctor
-                      </th>
-
-                      <th>
-                        Specialization
-                      </th>
-
-                      <th>
-                        License Number
-                      </th>
-
-                      <th>
-                        Experience
-                      </th>
-
-                      <th>
-                        Phone
-                      </th>
-
-                      <th>
-                        Status
-                      </th>
-
-                      <th>
-                        Actions
-                      </th>
-
-                    </tr>
-
-                  </thead>
-
-
-                  <tbody>
-
-                    {paginatedDoctors.map(
-                      (doctor) => (
-
-                        <tr
-                          key={
-                            doctor.id
-                          }
-                        >
-
-                          <td>
-                            {
-                              doctor.doctorCode
-                            }
-                          </td>
-
-
-                          <td>
-
+                        <div className="doctor-record-identity">
+                          <div className="doctor-record-name-row">
                             <strong>
                               Dr.{" "}
-                              {
-                                doctor.firstName
-                              }{" "}
-                              {
-                                doctor.lastName
-                              }
+                              {doctor.firstName}{" "}
+                              {doctor.lastName}
                             </strong>
 
-                            <small>
-                              {
-                                doctor.email
-                              }
-                            </small>
-
-                          </td>
-
-
-                          <td>
-                            {
-                              doctor.specialization
-                            }
-                          </td>
-
-
-                          <td>
-                            {
-                              doctor.licenseNumber
-                            }
-                          </td>
-
-
-                          <td>
-                            {
-                              doctor.experience
-                            }{" "}
-                            years
-                          </td>
-
-
-                          <td>
-                            {
-                              doctor.phone
-                            }
-                          </td>
-
-
-                          <td>
-
                             <span className="status-badge">
-                              {
-                                doctor.status
-                              }
+                              {doctor.status}
                             </span>
+                          </div>
 
-                          </td>
+                          <span className="doctor-record-email">
+                            {doctor.email}
+                          </span>
 
-                          <td>
+                          <span className="doctor-record-specialization">
+                            {doctor.specialization}
+                          </span>
+                        </div>
 
-                            <button
-                              type="button"
-                              className="secondary-button doctor-view-button"
-                              onClick={() =>
-                                handleViewDoctor(
-                                  doctor
-                                )
-                              }
-                            >
-                              View Details
-                            </button>
+                      </div>
 
-                            {isAdmin && (
-                              <button
-                                type="button"
-                                className="secondary-button doctor-view-button"
-                                onClick={() =>
-                                  handleEditDoctor(
-                                    doctor
-                                  )
-                                }
-                              >
-                                Edit
-                              </button>
-                            )}
+                      <div className="doctor-record-details">
 
-                            {isAdmin && (
-                              <button
-                                type="button"
-                                className="secondary-button doctor-view-button"
-                                onClick={() => {
-                                  setStatusChangeError("");
-                                  setChangingStatusDoctor(
-                                    doctor
-                                  );
-                                }}
-                              >
-                                {doctor.status.toUpperCase() ===
-                                "ACTIVE"
-                                  ? "Deactivate"
-                                  : "Activate"}
-                              </button>
-                            )}
+                        <div className="doctor-record-detail">
+                          <span>Doctor Code</span>
+                          <strong>{doctor.doctorCode}</strong>
+                        </div>
 
-                            <button
-                              type="button"
-                              className="secondary-button doctor-view-button"
-                              onClick={() =>
-                                openAvailability(
-                                  doctor
-                                )
-                              }
-                            >
-                              Availability
-                            </button>
+                        <div className="doctor-record-detail">
+                          <span>License Number</span>
+                          <strong>{doctor.licenseNumber}</strong>
+                        </div>
 
-                          </td>
+                        <div className="doctor-record-detail">
+                          <span>Experience</span>
+                          <strong>{doctor.experience} years</strong>
+                        </div>
 
-                        </tr>
+                        <div className="doctor-record-detail">
+                          <span>Phone</span>
+                          <strong>{doctor.phone}</strong>
+                        </div>
 
-                      )
-                    )}
+                      </div>
 
-                  </tbody>
+                      <div className="doctor-record-actions">
 
-                </table>
+                        <button
+                          type="button"
+                          className="secondary-button doctor-view-button"
+                          onClick={() =>
+                            handleViewDoctor(
+                              doctor
+                            )
+                          }
+                        >
+                          View Details
+                        </button>
+
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            className="secondary-button doctor-view-button"
+                            onClick={() =>
+                              handleEditDoctor(
+                                doctor
+                              )
+                            }
+                          >
+                            Edit
+                          </button>
+                        )}
+
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            className="secondary-button doctor-view-button"
+                            onClick={() => {
+                              setStatusChangeError("");
+                              setChangingStatusDoctor(
+                                doctor
+                              );
+                            }}
+                          >
+                            {doctor.status.toUpperCase() ===
+                            "ACTIVE"
+                              ? "Deactivate"
+                              : "Activate"}
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          className="secondary-button doctor-view-button"
+                          onClick={() =>
+                            openAvailability(
+                              doctor
+                            )
+                          }
+                        >
+                          Availability
+                        </button>
+
+                      </div>
+
+                    </article>
+
+                  )
+                )}
 
               </div>
 
