@@ -2,30 +2,45 @@
  * Copyright (c) 2026 thinkSDET. All rights reserved.
  */
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 function Register() {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const resubmissionRequest =
+    (location.state as {
+      resubmission?: boolean;
+      request?: {
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+        phone?: string;
+        specialization?: string;
+        licenseNumber?: string;
+        experience?: number;
+      };
+    } | null) || null;
 
   const [form, setForm] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
+    firstName: resubmissionRequest?.request?.firstName || "",
+    lastName: resubmissionRequest?.request?.lastName || "",
+    email: resubmissionRequest?.request?.email || "",
     password: "",
     confirmPassword: "",
 
-    role: "PATIENT",
+    role: resubmissionRequest?.resubmission ? "DOCTOR" : "PATIENT",
 
     // Patient profile fields
     dateOfBirth: "",
     gender: "MALE",
-    phone: "",
+    phone: resubmissionRequest?.request?.phone || "",
     address: "",
 
     // Doctor registration fields
-    specialization: "",
-    licenseNumber: "",
-    experience: "",
+    specialization: resubmissionRequest?.request?.specialization || "",
+    licenseNumber: resubmissionRequest?.request?.licenseNumber || "",
+    experience: resubmissionRequest?.request?.experience?.toString() || "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -355,6 +370,7 @@ function Register() {
                 name="role"
                 value={form.role}
                 onChange={handleChange}
+                disabled={Boolean(resubmissionRequest?.resubmission)}
               >
                 <option value="PATIENT">
                   Patient
@@ -576,6 +592,8 @@ function Register() {
             >
               {loading
                 ? "Creating account..."
+                : resubmissionRequest?.resubmission
+                ? "Resubmit Registration"
                 : "Create Account"}
             </button>
 

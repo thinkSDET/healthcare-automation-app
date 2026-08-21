@@ -1,8 +1,6 @@
 /*
  * Copyright (c) 2026 thinkSDET. All rights reserved.
  */
-import crypto from "crypto";
-import bcrypt from "bcryptjs";
 import { prisma } from "../config/prisma";
 
 export const getDoctors = async (options?: {
@@ -36,20 +34,16 @@ export const createDoctor = async (data: {
 }) => {
   const normalizedEmail = data.email.toLowerCase().trim();
 
-  /*
-   * Admin-created doctors get a linked User account in INVITED state.
-   *
-   * A random temporary hash is stored because passwordHash is required
-   * by the current User schema. The doctor cannot use this value to log in.
-   * Step 3 will add the one-time password setup flow.
-   */
-  const temporaryPasswordHash = await bcrypt.hash(
+  const bcrypt = await import("bcryptjs");
+  const crypto = await import("crypto");
+
+  const temporaryPasswordHash = await bcrypt.default.hash(
     crypto.randomBytes(32).toString("hex"),
     10
   );
 
   return prisma.$transaction(async (tx) => {
-    const user = await tx.user.create({
+    await tx.user.create({
       data: {
         firstName: data.firstName,
         lastName: data.lastName,
@@ -63,8 +57,7 @@ export const createDoctor = async (data: {
     return tx.doctor.create({
       data: {
         ...data,
-        email: normalizedEmail,
-        status: "INACTIVE"
+        email: normalizedEmail
       }
     });
   });
@@ -93,6 +86,28 @@ export const deleteDoctor = async (id: number) => {
   });
 };
 
+
+export const getMyDoctorRegistrationRequest = async (userId: number) => {
+  return prisma.doctorRegistrationRequest.findUnique({
+    where: {
+      userId,
+    },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      phone: true,
+      specialization: true,
+      licenseNumber: true,
+      experience: true,
+      status: true,
+      rejectionReason: true,
+      reviewedAt: true,
+      createdAt: true,
+    },
+  });
+};
 
 export const getPendingDoctorRegistrationRequestCount = async () => {
   return prisma.doctorRegistrationRequest.count({
@@ -251,17 +266,34 @@ export const rejectDoctorRegistrationRequest = async (
       throw new Error("DOCTOR_REGISTRATION_REQUEST_ALREADY_REVIEWED");
     }
 
-    return tx.doctorRegistrationRequest.update({
+    const rejectedRequest =
+      await tx.doctorRegistrationRequest.update({
+        where: {
+          id: requestId
+        },
+        data: {
+          status: "REJECTED",
+          rejectionReason:
+            rejectionReason || null,
+          reviewedAt: new Date(),
+          reviewedByUserId: adminUserId
+        }
+      });
+
+    /*
+     * A rejected Doctor must be able to log in so the
+     * Doctor can see the rejection reason and resubmit.
+     * The Doctor domain record does not exist yet.
+     */
+    await tx.user.update({
       where: {
-        id: requestId
+        id: request.userId
       },
       data: {
-        status: "REJECTED",
-        rejectionReason:
-          rejectionReason || null,
-        reviewedAt: new Date(),
-        reviewedByUserId: adminUserId
+        status: "ACTIVE"
       }
     });
+
+    return rejectedRequest;
   });
 };

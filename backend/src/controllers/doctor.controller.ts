@@ -71,41 +71,8 @@ export const createDoctor = async (
       success: true,
       data: doctor
     });
-  } catch (error: any) {
-    const code = error?.code;
-    const target = error?.meta?.target;
-
-    if (code === "P2002") {
-      if (Array.isArray(target) && target.includes("email")) {
-        return res.status(409).json({
-          success: false,
-          message: "A user account already exists with this email address."
-        });
-      }
-
-      if (Array.isArray(target) && target.includes("doctorCode")) {
-        return res.status(409).json({
-          success: false,
-          message: "A doctor already exists with this Doctor Code."
-        });
-      }
-
-      if (Array.isArray(target) && target.includes("licenseNumber")) {
-        return res.status(409).json({
-          success: false,
-          message: "A doctor already exists with this License Number."
-        });
-      }
-
-      return res.status(409).json({
-        success: false,
-        message: "A doctor or user with one of these details already exists."
-      });
-    }
-
-    console.error("Failed to create doctor:", error);
-
-    return res.status(500).json({
+  } catch {
+    res.status(500).json({
       success: false,
       message: "Failed to create doctor"
     });
@@ -154,6 +121,63 @@ export const deleteDoctor = async (
   }
 };
 
+
+export const getPendingDoctorRegistrationRequestCount = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const count =
+      await doctorService.getPendingDoctorRegistrationRequestCount();
+
+    return res.status(200).json({
+      success: true,
+      data: { count }
+    });
+  } catch {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch pending doctor registration request count"
+    });
+  }
+};
+
+export const getMyDoctorRegistrationRequest = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Authenticated user not found"
+      });
+    }
+
+    const request =
+      await doctorService.getMyDoctorRegistrationRequest(userId);
+
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        message: "Doctor registration request not found"
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: request
+    });
+  } catch {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch doctor registration request"
+    });
+  }
+};
+
 export const getDoctorRegistrationRequests = async (
   req: AuthRequest,
   res: Response
@@ -173,30 +197,6 @@ export const getDoctorRegistrationRequests = async (
     });
   }
 };
-export const getPendingDoctorRegistrationRequestCount = async (
-  req: AuthRequest,
-  res: Response
-) => {
-  try {
-    const count =
-      await doctorService.getPendingDoctorRegistrationRequestCount();
-
-    return res.status(200).json({
-      success: true,
-      data: {
-        count
-      }
-    });
-  } catch {
-    return res.status(500).json({
-      success: false,
-      message:
-        "Failed to fetch pending doctor registration request count"
-    });
-  }
-};
-
-
 
 export const approveDoctorRegistrationRequest = async (
   req: AuthRequest,
@@ -212,7 +212,7 @@ export const approveDoctorRegistrationRequest = async (
       });
     }
 
-    const adminUserId = req.user?.id;
+    const adminUserId = req.user?.userId;
 
     if (!adminUserId) {
       return res.status(401).json({
@@ -246,9 +246,23 @@ export const approveDoctorRegistrationRequest = async (
       });
     }
 
-    return res.status(400).json({
+    if (message === "DOCTOR_REGISTRATION_REQUEST_NOT_FOUND") {
+      return res.status(404).json({
+        success: false,
+        message: "Doctor registration request not found."
+      });
+    }
+
+    if (message === "DOCTOR_REGISTRATION_REQUEST_ALREADY_REVIEWED") {
+      return res.status(409).json({
+        success: false,
+        message: "This doctor registration request has already been reviewed."
+      });
+    }
+
+    return res.status(500).json({
       success: false,
-      message
+      message: "Failed to approve doctor registration."
     });
   }
 };
@@ -267,7 +281,7 @@ export const rejectDoctorRegistrationRequest = async (
       });
     }
 
-    const adminUserId = req.user?.id;
+    const adminUserId = req.user?.userId;
 
     if (!adminUserId) {
       return res.status(401).json({
@@ -299,7 +313,7 @@ export const rejectDoctorRegistrationRequest = async (
         ? error.message
         : "Failed to reject doctor registration";
 
-    return res.status(400).json({
+    res.status(400).json({
       success: false,
       message
     });

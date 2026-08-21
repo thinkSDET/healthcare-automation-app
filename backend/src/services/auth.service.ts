@@ -141,17 +141,96 @@ export const register = async (data: {
   }
 
   const existingUser =
-    await prisma.user.findUnique({
-      where: {
-        email: normalizedEmail,
-      },
-    });
+  await prisma.user.findUnique({
+    where: {
+      email: normalizedEmail,
+    },
+    include: {
+      doctorRegistrationRequest: true,
+    },
+  });
 
-  if (existingUser) {
-    throw new Error(
-      "EMAIL_ALREADY_EXISTS"
+/*
+ * Rejected Doctor Registration
+ *
+ * Allow the same Doctor to correct the
+ * registration details and resubmit.
+ */
+if (
+  existingUser &&
+  normalizedRole === "DOCTOR" &&
+  existingUser.role === "DOCTOR" &&
+  existingUser.doctorRegistrationRequest?.status ===
+    "REJECTED"
+) {
+  const request =
+    existingUser.doctorRegistrationRequest;
+
+  const updatedRequest =
+    await prisma.$transaction(
+      async (tx) => {
+        /*
+         * Update the existing registration request
+         * instead of creating another User.
+         */
+        const updated =
+          await tx.doctorRegistrationRequest.update({
+            where: {
+              id: request.id,
+            },
+            data: {
+              firstName,
+              lastName,
+              email: normalizedEmail,
+              phone: phone!,
+              specialization: specialization!,
+              licenseNumber: licenseNumber!,
+              experience: experience!,
+              status: "PENDING",
+              rejectionReason: null,
+              reviewedAt: null,
+              reviewedByUserId: null,
+            },
+          });
+
+        /*
+         * Keep the account inactive until
+         * Admin approves the new submission.
+         */
+        await tx.user.update({
+          where: {
+            id: existingUser.id,
+          },
+          data: {
+            firstName,
+            lastName,
+            passwordHash:
+              await bcrypt.hash(password, 10),
+            status: "ACTIVE",
+          },
+        });
+
+        return updated;
+      }
     );
-  }
+
+  return {
+    id: existingUser.id,
+    firstName: updatedRequest.firstName,
+    lastName: updatedRequest.lastName,
+    email: updatedRequest.email,
+    role: "DOCTOR",
+    registrationStatus: "PENDING",
+    message:
+      "Doctor registration resubmitted successfully.",
+  };
+}
+
+if (existingUser) {
+  throw new Error(
+    "EMAIL_ALREADY_EXISTS"
+  );
+}
 
   const passwordHash =
     await bcrypt.hash(password, 10);

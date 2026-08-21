@@ -11,6 +11,7 @@ import {
   deleteDoctor,
   getDoctorRegistrationRequests,
   getPendingDoctorRegistrationRequestCount,
+  getMyDoctorRegistrationRequest,
   approveDoctorRegistrationRequest,
   rejectDoctorRegistrationRequest
 } from "../controllers/doctor.controller";
@@ -40,6 +41,13 @@ router.get(
  * Doctor CRUD APIs. The existing POST / remains the Admin
  * "Add Doctor" flow.
  */
+router.get(
+  "/registration-requests/me",
+  authenticate,
+  authorize("DOCTOR"),
+  getMyDoctorRegistrationRequest
+);
+
 router.get(
   "/registration-requests",
   authenticate,
