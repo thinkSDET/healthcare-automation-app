@@ -110,13 +110,44 @@ export const deleteDoctor = async (
   try {
     const id = Number(req.params.id);
 
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid doctor id"
+      });
+    }
+
     await doctorService.deleteDoctor(id);
 
-    res.status(204).send();
-  } catch {
-    res.status(500).json({
+    return res.status(200).json({
+      success: true,
+      message: "Doctor deleted successfully"
+    });
+  } catch (error) {
+    console.error("DELETE DOCTOR ERROR:", error);
+
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Failed to delete doctor";
+
+    if (message === "DOCTOR_NOT_FOUND") {
+      return res.status(404).json({
+        success: false,
+        message: "Doctor not found"
+      });
+    }
+
+    if (message === "DOCTOR_MUST_BE_DEACTIVATED") {
+      return res.status(409).json({
+        success: false,
+        message: "Doctor must be deactivated before deletion."
+      });
+    }
+
+    return res.status(500).json({
       success: false,
-      message: "Failed to delete doctor"
+      message
     });
   }
 };
@@ -142,12 +173,31 @@ export const getPendingDoctorRegistrationRequestCount = async (
   }
 };
 
+export const getDoctorRegistrationRequests = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const requests =
+      await doctorService.getDoctorRegistrationRequests();
+
+    res.status(200).json({
+      success: true,
+      data: requests
+    });
+  } catch {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch doctor registration requests"
+    });
+  }
+};
 export const getMyDoctorRegistrationRequest = async (
   req: AuthRequest,
   res: Response
 ) => {
   try {
-    const userId = req.user?.userId;
+    const userId = req.user?.id;
 
     if (!userId) {
       return res.status(401).json({
@@ -170,30 +220,15 @@ export const getMyDoctorRegistrationRequest = async (
       success: true,
       data: request
     });
-  } catch {
+  } catch (error) {
+    console.error(
+      "Failed to fetch my doctor registration request:",
+      error
+    );
+
     return res.status(500).json({
       success: false,
       message: "Failed to fetch doctor registration request"
-    });
-  }
-};
-
-export const getDoctorRegistrationRequests = async (
-  req: AuthRequest,
-  res: Response
-) => {
-  try {
-    const requests =
-      await doctorService.getDoctorRegistrationRequests();
-
-    res.status(200).json({
-      success: true,
-      data: requests
-    });
-  } catch {
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch doctor registration requests"
     });
   }
 };
