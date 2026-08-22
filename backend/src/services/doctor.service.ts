@@ -56,8 +56,15 @@ export const createDoctor = async (data: {
 
     return tx.doctor.create({
       data: {
-        ...data,
-        email: normalizedEmail
+        doctorCode: data.doctorCode,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        specialization: data.specialization,
+        licenseNumber: data.licenseNumber,
+        email: normalizedEmail,
+        phone: data.phone,
+        experience: data.experience,
+        status: "INACTIVE"
       }
     });
   });
@@ -81,6 +88,18 @@ export const updateDoctor = async (
 };
 
 export const deleteDoctor = async (id: number) => {
+  const doctor = await prisma.doctor.findUnique({
+    where: { id }
+  });
+
+  if (!doctor) {
+    throw new Error("DOCTOR_NOT_FOUND");
+  }
+
+  if (doctor.status !== "INACTIVE") {
+    throw new Error("DOCTOR_MUST_BE_DEACTIVATED");
+  }
+
   return prisma.doctor.delete({
     where: { id }
   });

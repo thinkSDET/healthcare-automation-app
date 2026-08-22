@@ -2730,6 +2730,29 @@ function Doctors() {
                           </button>
                         )}
 
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            className="secondary-button doctor-view-button"
+                            disabled={
+                              doctor.status.toUpperCase() !==
+                              "INACTIVE"
+                            }
+                            title={
+                              doctor.status.toUpperCase() !==
+                              "INACTIVE"
+                                ? "Deactivate the doctor before deletion"
+                                : "Delete doctor"
+                            }
+                            onClick={() => {
+                              setDeleteDoctorError("");
+                              setDeletingDoctor(doctor);
+                            }}
+                          >
+                            Delete
+                          </button>
+                        )}
+
                         <button
                           type="button"
                           className="secondary-button doctor-view-button"
